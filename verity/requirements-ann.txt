@@ -1,0 +1,5 @@
+# Optional: Annoy, for approximate neighbor search (--nn-mode approximate, or auto at
+# 10,000 records or more). Exact search (--nn-mode exact) needs only requirements.txt.
+# On Windows, building Annoy needs the Microsoft C++ Build Tools.
+#   pip install -r verity/requirements-ann.txt
+annoy

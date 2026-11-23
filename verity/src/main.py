@@ -20,7 +20,17 @@ from typing import Any
 from dotenv import load_dotenv
 
 from column_classification import column_to_attr_type
-from config import DATA_DIR_ENV, DATA_DIR_MARKER, data_dir, record_label_from_csv
+from config import (
+    DATA_DIR_ENV,
+    DATA_DIR_MARKER,
+    NN_MODE_ENV,
+    NN_MODES,
+    annoy_installed,
+    data_dir,
+    nn_mode,
+    record_label_from_csv,
+    start_run_info,
+)
 
 _SRC = Path(__file__).resolve().parent
 if str(_SRC) not in sys.path:
@@ -232,6 +242,56 @@ def prepare_data_dir(*, full_run: bool, fresh: bool, input_csv: Path) -> None:
         _write_data_dir_marker(folder)
 
 
+def _git_info() -> dict[str, Any]:
+    """Commit of the checkout holding Verity, and whether verity/src has uncommitted changes."""
+    def _git(*argv: str) -> str | None:
+        try:
+            out = subprocess.run(
+                ["git", *argv], cwd=str(PROJECT_ROOT), capture_output=True,
+                text=True, check=True, timeout=30,
+            )
+        except (OSError, subprocess.SubprocessError):
+            return None
+        return out.stdout.strip()
+
+    commit = _git("rev-parse", "HEAD")
+    status = _git("status", "--porcelain", "--", str(_SRC))
+    return {
+        "git_commit": commit,
+        "git_src_uncommitted_changes": None if status is None else bool(status),
+    }
+
+
+def write_run_info(
+    *, nn_requested: str, nn_source: str, has_annoy: bool, input_csv: Path, mode: str
+) -> None:
+    """Start this invocation's entry in run_info.json (match adds resolved mode and n)."""
+    import platform
+    from importlib.metadata import PackageNotFoundError, version
+
+    from embed import MODEL_NAME
+
+    try:
+        st_version = version("sentence-transformers")
+    except PackageNotFoundError:
+        st_version = None
+    start_run_info(
+        started_utc=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        run_mode=mode,
+        input_csv=str(input_csv),
+        nn_mode_requested=nn_requested,
+        nn_mode_source=nn_source,
+        annoy_installed=has_annoy,
+        nn_mode_resolved=None,
+        n_records_in_index=None,
+        **_git_info(),
+        python_version=platform.python_version(),
+        sentence_transformers_version=st_version,
+        embedding_model=MODEL_NAME,
+        pythonhashseed=os.environ.get("PYTHONHASHSEED"),
+    )
+
+
 def run_phase(label: str, fn):
     t0 = time.perf_counter()
     result = fn()
@@ -441,6 +501,15 @@ def main(
             f"created the folder ({DATA_DIR_MARKER} marker)."
         ),
     )
+    parser.add_argument(
+        "--nn-mode",
+        choices=NN_MODES,
+        default=None,
+        help=(
+            f"Neighbor search: exact, approximate (Annoy) or auto. Overrides "
+            f"{NN_MODE_ENV}; default auto (Annoy at 10,000+ records when installed)."
+        ),
+    )
     args = parser.parse_args()
     incremental_requested = bool(incremental) or bool(args.incremental)
     full_run = not args.reuse_weights and not incremental_requested
@@ -448,6 +517,33 @@ def main(
     # where a relative VERITY_DATA_DIR would resolve differently).
     os.environ[DATA_DIR_ENV] = str(DATA_DIR)
     print(f"Data folder: {DATA_DIR}", flush=True)
+
+    hash_seed = os.environ.get("PYTHONHASHSEED")
+    if hash_seed != "0":
+        print(
+            "\n" + "!" * 72 + "\n"
+            f"  WARNING: PYTHONHASHSEED is {hash_seed!r}, not '0'. Scores can shift "
+            "between runs\n  (up to 0.0075 seen). Set PYTHONHASHSEED=0 for comparable "
+            "results.\n" + "!" * 72 + "\n",
+            flush=True,
+        )
+
+    if args.nn_mode is not None:
+        os.environ[NN_MODE_ENV] = args.nn_mode
+        nn_requested, nn_source = args.nn_mode, "--nn-mode"
+    else:
+        nn_requested, nn_source = nn_mode()
+    has_annoy = annoy_installed()
+    print(
+        f"Neighbor search mode: {nn_requested} (from {nn_source}); "
+        f"Annoy installed: {'yes' if has_annoy else 'no'}",
+        flush=True,
+    )
+    if nn_requested == "approximate" and not has_annoy:
+        raise SystemExit(
+            f"Neighbor search mode 'approximate' (from {nn_source}) needs Annoy, which "
+            "is not installed. Install verity/requirements-ann.txt or use --nn-mode exact."
+        )
 
     if args.reuse_weights and args.retrain_weights is not None:
         raise SystemExit(
@@ -476,6 +572,13 @@ def main(
 
     source_csv = resolve_input_path(args.input)
     prepare_data_dir(full_run=full_run, fresh=args.fresh, input_csv=source_csv)
+    write_run_info(
+        nn_requested=nn_requested,
+        nn_source=nn_source,
+        has_annoy=has_annoy,
+        input_csv=source_csv,
+        mode="full" if full_run else "delta",
+    )
     pipeline_csv, n_records = prepare_pipeline_csv(source_csv)
 
     record_label = record_label_from_csv(source_csv)

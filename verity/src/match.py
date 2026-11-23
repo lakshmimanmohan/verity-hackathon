@@ -35,7 +35,7 @@ except ImportError:
     _ANNOY_AVAILABLE = False
 
 from column_classification import apply_global_content_overlay
-from config import data_dir
+from config import data_dir, nn_mode, update_run_info
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_INPUT_PATH = None
@@ -56,6 +56,7 @@ MATCH_CANDIDATES_FIELDNAMES = [
     "field_contributions",
     "field_similarities",
 ]
+EXACT_DUPLICATE_SHARED_ATTRIBUTES = "exact_duplicate"
 COLUMN_CLASSIFICATION_NAME = "column_classification.json"
 DATA_COLUMN_CLASSIFICATION_PATH = data_dir() / COLUMN_CLASSIFICATION_NAME
 GLOBAL_EMBEDDINGS_PATH = data_dir() / "embeddings_global.pkl"
@@ -1401,16 +1402,33 @@ def neighbor_pairs(
         return out
 
     k_query = min(n, max(2, top_k + 1))
-    use_annoy = n >= APPROXIMATE_NN_THRESHOLD and _ANNOY_AVAILABLE
+    mode, mode_source = nn_mode()
+    if mode == "approximate":
+        if not _ANNOY_AVAILABLE:
+            raise SystemExit(
+                f"Neighbor search mode 'approximate' (from {mode_source}) needs Annoy, "
+                "which is not installed. Install verity/requirements-ann.txt or use "
+                "--nn-mode exact."
+            )
+        use_annoy = True
+    elif mode == "exact":
+        use_annoy = False
+    else:
+        use_annoy = n >= APPROXIMATE_NN_THRESHOLD and _ANNOY_AVAILABLE
+    update_run_info(
+        nn_mode_resolved="approximate" if use_annoy else "exact",
+        n_records_in_index=n,
+    )
 
     if use_annoy:
         assert AnnoyIndex is not None
         print(
-            "Neighbor search: approximate (Annoy, angular distance, n_trees=50), "
-            f"n={n} (approximate for n >= {APPROXIMATE_NN_THRESHOLD})"
+            "Neighbor search: approximate (Annoy, angular distance, n_trees=50, seed=0), "
+            f"n={n} (mode approximate)"
         )
         dim = int(X.shape[1])
         index = AnnoyIndex(dim, "angular")
+        index.set_seed(0)
         x_f32 = np.ascontiguousarray(X, dtype=np.float32)
         for i in range(n):
             index.add_item(i, x_f32[i].tolist())
@@ -1435,15 +1453,17 @@ def neighbor_pairs(
                 out.add((a, b))
         return out
 
-    if n >= APPROXIMATE_NN_THRESHOLD and not _ANNOY_AVAILABLE:
+    if mode == "auto" and n >= APPROXIMATE_NN_THRESHOLD and not _ANNOY_AVAILABLE:
         warnings.warn(
             "annoy is not installed; using exact sklearn NearestNeighbors, which will "
-            "be slow for large datasets. Install with: pip install annoy",
+            "be slow for large datasets. Install with: "
+            "pip install -r verity/requirements-ann.txt",
             UserWarning,
             stacklevel=2,
         )
     print(
-        f"Neighbor search: exact (sklearn NearestNeighbors, cosine, brute), n={n}"
+        f"Neighbor search: exact (sklearn NearestNeighbors, cosine, brute), n={n} "
+        "(mode exact)"
     )
     nn = NearestNeighbors(
         n_neighbors=k_query,
@@ -1488,21 +1508,26 @@ def canonical_match_candidate_row(r: dict[str, Any]) -> dict[str, Any]:
 def dedupe_match_candidate_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """
     At most one row per undirected pair, with ``record_a`` < ``record_b``.
-    If duplicates remain after canonicalization, keep the row with the higher score.
+    When a pair appears more than once, keep the row that ranks highest on:
+    exact duplicate first, then stronger match type (full_signal, weak_signal,
+    embedding_only), then higher score. Ties keep the earlier row.
     """
+    type_rank = {"full_signal": 2, "weak_signal": 1}
+
+    def rank(r: dict[str, Any]) -> tuple[int, int, float]:
+        is_exact = int(r.get("shared_attributes") == EXACT_DUPLICATE_SHARED_ATTRIBUTES)
+        return (
+            is_exact,
+            type_rank.get(str(r.get("match_type", "")), 0),
+            float(r["score"]),
+        )
+
     best: dict[tuple[str, str], dict[str, Any]] = {}
     for r in rows:
         c = canonical_match_candidate_row(r)
-        ra = str(c["record_a"])
-        rb = str(c["record_b"])
-        key = (ra, rb)
+        key = (str(c["record_a"]), str(c["record_b"]))
         prev = best.get(key)
-        type_rank = {"full_signal": 2, "weak_signal": 1}
-        curr_rank = type_rank.get(str(c.get("match_type", "")), 0)
-        prev_rank = type_rank.get(str(prev.get("match_type", "")), 0) if prev else -1
-        if prev is None or c["score"] > prev["score"] or (
-            c["score"] == prev["score"] and curr_rank > prev_rank
-        ):
+        if prev is None or rank(c) > rank(prev):
             best[key] = c
     return list(best.values())
 
@@ -1692,28 +1717,23 @@ def main(
             if a in new_id_set or b in new_id_set
         ]
     print(f"Exact-duplicate pairs (composite name+location key): {len(exact_pairs)}")
-    if exact_pairs:
-        OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-        _write_header = (not OUTPUT_PATH.is_file()) or OUTPUT_PATH.stat().st_size == 0
-        with OUTPUT_PATH.open("a", newline="", encoding="utf-8") as _f:
-            _w = csv.DictWriter(_f, fieldnames=MATCH_CANDIDATES_FIELDNAMES)
-            if _write_header:
-                _w.writeheader()
-            for _rid_a, _rid_b in exact_pairs:
-                _w.writerow(
-                    {
-                        "record_a": _rid_a,
-                        "record_b": _rid_b,
-                        "score": "1.000000",
-                        "shared_attributes": "exact_duplicate",
-                        "match_type": "full_signal",
-                        "evidence_mass": "1.000000",
-                        "conflict_mass": "0.000000",
-                        "evidence_detail": "exact duplicate (normalized name+location composite key)",
-                        "field_contributions": "",
-                        "field_similarities": "",
-                    }
-                )
+    # Written together with the neighbor rows below, through one dedupe, so a pair
+    # found both ways appears once in match_candidates.csv.
+    exact_rows: list[dict[str, Any]] = [
+        {
+            "record_a": _rid_a,
+            "record_b": _rid_b,
+            "score": 1.0,
+            "shared_attributes": EXACT_DUPLICATE_SHARED_ATTRIBUTES,
+            "match_type": "full_signal",
+            "evidence_mass": 1.0,
+            "conflict_mass": 0.0,
+            "evidence_detail": "exact duplicate (normalized name+location composite key)",
+            "field_contributions": {},
+            "field_similarities": {},
+        }
+        for _rid_a, _rid_b in exact_pairs
+    ]
 
     load_dotenv(PROJECT_ROOT / ".env")
 
@@ -2009,12 +2029,19 @@ def main(
     )
     n_dropped_below = sum(1 for r in rows_out if r["match_type"] == "below_threshold")
 
-    rows_to_write = dedupe_match_candidate_rows(
-        [
-            r
-            for r in rows_out
-            if r["match_type"] in MATCH_CANDIDATES_WRITE_MATCH_TYPES
-        ]
+    neighbor_rows = [
+        r for r in rows_out if r["match_type"] in MATCH_CANDIDATES_WRITE_MATCH_TYPES
+    ]
+    rows_to_write = dedupe_match_candidate_rows(exact_rows + neighbor_rows)
+    exact_keys = {tuple(sorted((str(a), str(b)))) for a, b in exact_pairs}
+    n_exact_also_neighbor = sum(
+        1
+        for r in neighbor_rows
+        if tuple(sorted((str(r["record_a"]), str(r["record_b"])))) in exact_keys
+    )
+    print(
+        f"Exact-duplicate pairs also found by neighbor search: {n_exact_also_neighbor} "
+        "(one row kept per pair)"
     )
     rows_to_write.sort(key=lambda r: (-r["score"], r["record_a"], r["record_b"]))
 
