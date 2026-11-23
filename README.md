@@ -41,7 +41,11 @@ pip install -r requirements.txt    # includes verity/requirements.txt
 cp .env.example .env               # add the LLM key; never commit .env
 ```
 
-Verity keeps its records in a local SQLite file (`verity/data/verity_store.sqlite`). No database server is needed.
+Verity keeps its records in a local SQLite file (`verity_store.sqlite`) in its data folder. No database server is needed.
+
+Every file Verity reads or writes, apart from the input CSV, lives in one data folder: `VERITY_DATA_DIR` if set in the shell, otherwise `verity/data/`. Give each run its own folder. A full run stops if the folder is not empty, so nothing from an earlier run can leak in. `--fresh` empties the folder first, but only one Verity created (it holds a `.verity_data_dir` marker).
+
+Two `.env` files are in play. The repo-root `.env` (copied from `.env.example`) holds the LLM key for the options that call the LLM; Verity never reads it. Verity loads only `verity/.env`, reads no setting from it today, and stops if `VERITY_DATA_DIR` is set there: set it in the shell.
 
 ## Reproduce the results
 
@@ -55,9 +59,10 @@ export PYTHONUTF8=1
 #    the freeze run below; never generate or tune on it before then.
 python data/generate_data_org.py --output data/orgs_raw.csv
 
-# 2. Run Verity to produce candidate pairs and borderline pairs.
-#    Verity writes its outputs to verity/data/; copy them into a new results/<run>/ folder.
-python verity/src/main.py --input "$PWD/data/orgs_raw.csv"   # absolute path: Verity resolves relative paths from verity/
+# 2. Run Verity to produce candidate pairs and borderline pairs, into a new folder per run.
+#    Relative paths resolve from the current directory.
+export VERITY_DATA_DIR=results/<run>/verity_data
+python verity/src/main.py --input data/orgs_raw.csv
 
 # 3. Score each option on the test split
 python options/a_threshold.py
@@ -67,7 +72,7 @@ python options/d_hybrid.py
 python options/e_slm.py
 
 # 4. Evaluate and price
-python eval/evaluate_matches.py --truth data/orgs_raw_truth.csv --matches results/<run>/match_candidates.csv
+python eval/evaluate_matches.py --truth data/orgs_raw_truth.csv --matches results/<run>/verity_data/match_candidates.csv
 python cost/cost_model.py --results results/<run>
 ```
 

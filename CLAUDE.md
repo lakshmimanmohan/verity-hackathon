@@ -20,13 +20,14 @@ to fit results.
 
 ## Where things go
 
-- Core Verity changes (threshold fix, review band, per-field similarity export): in `verity/src/`, which is vendored source, not a submodule. Commit them here, one change per commit, separate from experiment code. Verity's dependencies go in `verity/requirements.txt`.
+- Core Verity changes (threshold fix, review band, per-field similarity export): in `verity/src/`, which is vendored source, not a submodule, so there is no submodule pin to update. Commit them here, one change per commit, separate from experiment code; each run's README.txt records the commit it used. Verity's dependencies go in `verity/requirements.txt`.
+- Run outputs: each run gets its own data folder, set with `VERITY_DATA_DIR` in the shell (never in `.env`). A full run stops if that folder is not empty; `--fresh` empties it, but only if Verity created it (marker file `.verity_data_dir`).
 - Experiment code (options A to E, cost model, eval): in this repo only.
 - No company, product or people names in anything under `verity/`.
 
 ## Secrets and data
 
-- LLM key goes in `.env` only. Never print it, log it or commit it.
+- LLM key goes in the repo-root `.env` only. Never print it, log it or commit it. Verity never reads that file; it loads only `verity/.env`, and stops if `VERITY_DATA_DIR` is set there.
 - Synthetic data only. No customer, personal or confidential data.
 - Open-weight models: pinned revision hash, safetensors only, `trust_remote_code=False`.
 
@@ -35,7 +36,8 @@ to fit results.
 ```
 export PYTHONHASHSEED=0
 export PYTHONUTF8=1    # Windows: Verity prints characters the default console codepage can't encode
+export VERITY_DATA_DIR=results/<run>/verity_data   # new folder per run; shell only, never .env
 python data/generate_data_org.py --output data/orgs_raw.csv
-python verity/src/main.py --input "$PWD/data/orgs_raw.csv"   # absolute path: Verity resolves relative paths from verity/
-python eval/evaluate_matches.py --truth data/orgs_raw_truth.csv --matches verity/data/match_candidates.csv
+python verity/src/main.py --input data/orgs_raw.csv   # relative paths resolve from the current directory
+python eval/evaluate_matches.py --truth data/orgs_raw_truth.csv --matches "$VERITY_DATA_DIR/match_candidates.csv"
 ```

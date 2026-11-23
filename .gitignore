@@ -12,6 +12,6 @@ models/
 verity/data/
 Verity_Hackathon_Plan.xlsx
 # Run outputs over 5 MB (also covered by *.sqlite / *.pkl above)
-results/*/verity_store.sqlite
-results/*/embeddings_global.pkl
-results/*/*/embeddings.pkl
+results/*/verity_data/verity_store.sqlite
+results/*/verity_data/embeddings_global.pkl
+results/*/verity_data/*/embeddings.pkl
