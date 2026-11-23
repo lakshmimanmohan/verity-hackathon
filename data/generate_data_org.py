@@ -26,7 +26,7 @@ import string
 from pathlib import Path
 
 DEFAULT_ROWS = 10_000
-DEFAULT_SEED = 2026          # different from the seed used during tuning (42)
+DEFAULT_SEED = 42            # development seed; the evaluation set uses --seed 7919 (protocol.md)
 DECOY_SHARE = 0.05           # share of entities that get a same-name twin
 P_ACRONYM = 0.12             # per duplicate record, if the name is eligible
 P_TRUNCATION = 0.12

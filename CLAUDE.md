@@ -12,7 +12,7 @@ to fit results.
 - Verity uses the SQLite record store only (`verity/src/record_store.py`). Never add Neo4j code or dependencies.
 - No column names hardcoded in Verity. Logic works from semantic types (NAME, STREET_ADDRESS, DESCRIPTIVE) assigned by `rule_learner.py`. Reject fixes that break this.
 - Ground truth lives only in the sidecar `*_truth.csv`. Never put an answer-key column in a CSV that Verity reads: the classifier treats an integer label column as content, so it would leak into matching.
-- Evaluation seed is 2026. Never tune thresholds or features on data generated with it.
+- Evaluation seed is 7919 (changed Nov 23, see the protocol's Amendments). Never tune thresholds or features on data generated with it, and don't generate it until the eval run. 42 (the generator default) and 2026 are development seeds.
 - Every option scores the same candidate pairs on the same held-out test split.
 - Run everything with `PYTHONHASHSEED=0`. Without it, scores shift up to 0.0075 between runs.
 - Also set `PYTHONUTF8=1`. Without it, Verity crashes on Windows when printing its column report.
