@@ -51,9 +51,9 @@ Verity keeps its records in a local SQLite file (`verity/data/verity_store.sqlit
 export PYTHONHASHSEED=0
 export PYTHONUTF8=1
 
-# 1. Generate data. The default seed (42) is for development; the evaluation run uses
-#    seed 7919 (see Amendments in protocol.md). Never tune on seed 7919 data.
-python data/generate_data_org.py --seed 7919 --output data/orgs_raw.csv
+# 1. Generate data with the development seed (default 42). Seed 7919 is reserved for
+#    the freeze run below; never generate or tune on it before then.
+python data/generate_data_org.py --output data/orgs_raw.csv
 
 # 2. Run Verity to produce candidate pairs and borderline pairs.
 #    Verity writes its outputs to verity/data/; copy them into a new results/<run>/ folder.
@@ -72,6 +72,16 @@ python cost/cost_model.py --results results/<run>
 ```
 
 Each run writes its config, metrics and timings to `results/<run>/`, so any number in the results table traces back to a folder.
+
+## Freeze run (Dec 4 only)
+
+The evaluation set uses seed 7919 (see Amendments in `protocol.md`). Generate it once, on Dec 4, after every threshold, feature and prompt is fixed. Then run steps 2 to 4 above unchanged.
+
+```
+export PYTHONHASHSEED=0
+export PYTHONUTF8=1
+python data/generate_data_org.py --seed 7919 --output data/orgs_raw.csv
+```
 
 ## Data and models
 

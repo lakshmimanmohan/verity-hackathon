@@ -10,3 +10,4 @@ models/
 *.safetensors
 *.gguf
 verity/data/
+Verity_Hackathon_Plan.xlsx
