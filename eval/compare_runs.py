@@ -9,6 +9,11 @@ Ignored, because they differ between runs by design:
     embedded inside a longer text value is not masked and would show as a difference)
   - the "Source file:" line in learned_rules.md (absolute input path) and the "Generated:"
     line in match_explorer.html (generation time)
+  - in run_info.json: started_utc and input_csv (start time, run folder path)
+
+Reported, not failed: run_info.json's git_commit and git_src_uncommitted_changes are
+printed as INFO lines with both values, since two runs of the same code can record
+different commits (e.g. a docs-only commit on top).
 
 Everything else is compared exactly. README.txt and *.log are run notes and are listed,
 not compared. A CSV whose rows match only after sorting is reported as SAME_ROWS_REORDERED.
@@ -39,6 +44,9 @@ IGNORED_LINES = {
     "learned_rules.md": re.compile(r"^Source file: `[^`]*`\s*$"),
     "match_explorer.html": re.compile(r"^\s*<span>Generated: <strong>[^<]*</strong></span>\s*$"),
 }
+RUN_INFO_NAME = "run_info.json"
+RUN_INFO_IGNORED_KEYS = frozenset({"started_utc", "input_csv"})
+RUN_INFO_INFO_KEYS = ("git_commit", "git_src_uncommitted_changes")
 NOT_COMPARED_NAMES = frozenset({"README.txt"})
 NOT_COMPARED_SUFFIXES = frozenset({".log"})
 
@@ -86,6 +94,29 @@ def compare_json(a: Path, b: Path) -> tuple[str, str]:
     keys = sorted(set(sa) | set(sb)) if isinstance(sa, dict) and isinstance(sb, dict) else []
     differing = [k for k in keys if sa.get(k) != sb.get(k)]
     return "DIFF", f"differing keys: {', '.join(differing[:8]) or '(structure)'}"
+
+
+def compare_run_info(a: Path, b: Path, info: list[str]) -> tuple[str, str]:
+    ra = json.loads(a.read_text(encoding="utf-8")).get("runs") or []
+    rb = json.loads(b.read_text(encoding="utf-8")).get("runs") or []
+    if len(ra) != len(rb):
+        return "DIFF", f"{len(ra)} vs {len(rb)} run entries"
+    skip = RUN_INFO_IGNORED_KEYS | set(RUN_INFO_INFO_KEYS)
+    differing: set[str] = set()
+    for i, (ea, eb) in enumerate(zip(ra, rb)):
+        for key in RUN_INFO_INFO_KEYS:
+            info.append(
+                f"INFO  {RUN_INFO_NAME} run {i} {key}: A={ea.get(key)!r}  B={eb.get(key)!r}"
+            )
+        for key in set(ea) | set(eb):
+            if key not in skip and ea.get(key) != eb.get(key):
+                differing.add(key)
+    if differing:
+        return "DIFF", "differing keys: " + ", ".join(sorted(differing))
+    return "SAME_IGNORING", (
+        "ignored " + ", ".join(sorted(RUN_INFO_IGNORED_KEYS))
+        + "; " + ", ".join(RUN_INFO_INFO_KEYS) + " reported as INFO"
+    )
 
 
 def compare_csv(a: Path, b: Path) -> tuple[str, str]:
@@ -177,6 +208,7 @@ def main() -> int:
     mask = golden_ids(a_root) | golden_ids(b_root)
 
     results: list[tuple[str, str, str]] = []
+    info: list[str] = []
     for rel in sorted(files_a | files_b):
         fa, fb = a_root / rel, b_root / rel
         name = Path(rel).name
@@ -185,6 +217,10 @@ def main() -> int:
             continue
         if name in NOT_COMPARED_NAMES or Path(rel).suffix in NOT_COMPARED_SUFFIXES:
             results.append(("NOT_COMPARED", rel, "run notes / log"))
+            continue
+        if name == RUN_INFO_NAME:
+            status, note = compare_run_info(fa, fb, info)
+            results.append((status, rel, note))
             continue
         if sha256(fa) == sha256(fb):
             results.append(("SAME", rel, ""))
@@ -206,6 +242,11 @@ def main() -> int:
     width = max(len(s) for s, _, _ in results)
     for status, rel, note in results:
         print(f"{status:<{width}}  {rel}" + (f"  ({note})" if note else ""))
+
+    if info:
+        print()
+        for line in info:
+            print(line)
 
     ok = {"SAME", "SAME_IGNORING", "NOT_COMPARED"}
     bad = [r for r in results if r[0] not in ok]
