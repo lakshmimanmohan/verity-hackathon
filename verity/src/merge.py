@@ -2,7 +2,7 @@
 Build golden entities from scored match pairs: graph communities, golden records, metrics.
 Record nodes use the same record label as ``build_graph`` (derived from the input CSV stem).
 Survivorship uses semantic types from ``attribute_weights.json`` (data-driven), read from
-the same directory as the input CSV. Ground truth uses that CSV and the record store as fallback.
+the data folder (``config.data_dir()``). Ground truth uses that CSV and the record store as fallback.
 """
 
 from __future__ import annotations
@@ -24,10 +24,11 @@ import networkx as nx
 from dotenv import load_dotenv
 
 from column_classification import apply_global_content_overlay
+from config import data_dir
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_INPUT_PATH = None
-GOLDEN_CSV_PATH = PROJECT_ROOT / "data" / "golden_records.csv"
+GOLDEN_CSV_PATH = data_dir() / "golden_records.csv"
 COLUMN_CLASSIFICATION_NAME = "column_classification.json"
 
 SKIP_NEO_PROPS = frozenset({"embedding"})
@@ -146,17 +147,12 @@ def load_attribute_semantics(path: Path) -> tuple[dict[str, str], list[str]]:
 
 
 def resolve_column_classification_path(csv_path: Path) -> Path:
-    adjacent = csv_path.parent / COLUMN_CLASSIFICATION_NAME
-    if adjacent.is_file():
-        return adjacent
-    legacy = PROJECT_ROOT / "data" / COLUMN_CLASSIFICATION_NAME
-    if legacy.is_file():
-        return legacy
+    path = data_dir() / COLUMN_CLASSIFICATION_NAME
+    if path.is_file():
+        return path
     raise SystemExit(
         f"Missing column classification file. Expected:\n"
-        f"  {adjacent}\n"
-        f"or:\n"
-        f"  {legacy}\n"
+        f"  {path}\n"
         "Run src/rule_learner.py on your CSV first."
     )
 
@@ -936,8 +932,8 @@ def main(
 ) -> dict[str, Any]:
     """
     Read ``attribute_weights.json``, ``column_classification.json``, and
-    ``match_candidates.csv`` from the same directory as the resolved ``input_path`` CSV.
-    ``content_columns`` are unioned with ``data/column_classification_global.json`` when
+    ``match_candidates.csv`` from the data folder (``config.data_dir()``).
+    ``content_columns`` are unioned with ``column_classification_global.json`` there when
     that file exists. Survivorship runs only on those content columns; ``metadata_columns``
     are copied from one representative member record without merge rules.
     When ``incremental`` is True, skip full community detection; update ``golden_records.csv``
@@ -956,9 +952,8 @@ def main(
         else eval_path
     )
     record_label = record_label_from_csv(label_path)
-    data_dir = eval_path.parent
-    weights_path = data_dir / "attribute_weights.json"
-    match_path = data_dir / "match_candidates.csv"
+    weights_path = data_dir() / "attribute_weights.json"
+    match_path = data_dir() / "match_candidates.csv"
 
     load_dotenv(PROJECT_ROOT / ".env")
 

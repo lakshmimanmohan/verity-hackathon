@@ -9,6 +9,7 @@ import argparse
 import csv
 import json
 import os
+import shutil
 import statistics
 import subprocess
 import sys
@@ -19,14 +20,14 @@ from typing import Any
 from dotenv import load_dotenv
 
 from column_classification import column_to_attr_type
-from config import record_label_from_csv
+from config import DATA_DIR_ENV, DATA_DIR_MARKER, data_dir, record_label_from_csv
 
 _SRC = Path(__file__).resolve().parent
 if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
 PROJECT_ROOT = _SRC.parent
-DATA_DIR = PROJECT_ROOT / "data"
+DATA_DIR = data_dir()
 LEARNED_RULES_MD = DATA_DIR / "learned_rules.md"
 RULE_LEARNER_SCRIPT = _SRC / "rule_learner.py"
 DEFAULT_CLASSIFICATION_JSON = DATA_DIR / "column_classification.json"
@@ -148,6 +149,89 @@ def assert_reuse_weights_artifacts_present() -> None:
         )
 
 
+def _fresh_protected_dirs() -> list[Path]:
+    """Folders ``--fresh`` must never empty: Verity's own tree and the folder above it."""
+    host_root = PROJECT_ROOT.parent
+    return [_SRC, PROJECT_ROOT, host_root, host_root / "data"]
+
+
+def _data_dir_entries(folder: Path) -> list[Path]:
+    return sorted(p for p in folder.iterdir() if p.name != DATA_DIR_MARKER)
+
+
+def _write_data_dir_marker(folder: Path) -> None:
+    (folder / DATA_DIR_MARKER).write_text(
+        "Created by Verity. --fresh may empty this folder.\n", encoding="utf-8"
+    )
+
+
+def prepare_data_dir(*, full_run: bool, fresh: bool, input_csv: Path) -> None:
+    """
+    Make sure a full run starts from an empty data folder, so no file from an
+    earlier run can leak in. Delta runs (--reuse-weights / --incremental) build on
+    what is already there and are not checked.
+    """
+    folder = DATA_DIR
+    if folder.exists() and not folder.is_dir():
+        raise SystemExit(f"Data folder is not a directory: {folder}")
+
+    if fresh:
+        if not full_run:
+            raise SystemExit(
+                "--fresh cannot be combined with --reuse-weights or --incremental: "
+                "delta runs need the existing data folder."
+            )
+        resolved = folder.resolve()
+        for protected in _fresh_protected_dirs():
+            p = protected.resolve()
+            if resolved == p or resolved in p.parents:
+                raise SystemExit(f"--fresh refuses to empty {resolved}: protected folder.")
+        if folder.exists():
+            if not (folder / DATA_DIR_MARKER).is_file():
+                raise SystemExit(
+                    f"--fresh refuses to empty {resolved}: it has no {DATA_DIR_MARKER} "
+                    "marker, so Verity did not create it. Empty it by hand or set "
+                    f"{DATA_DIR_ENV} to a new folder."
+                )
+            if resolved in input_csv.resolve().parents:
+                raise SystemExit(
+                    f"--fresh refuses to empty {resolved}: the input CSV is inside it."
+                )
+            entries = _data_dir_entries(folder)
+            for entry in entries:
+                if entry.is_dir() and not entry.is_symlink():
+                    shutil.rmtree(entry)
+                else:
+                    entry.unlink()
+            print(f"--fresh: removed {len(entries)} item(s) from {resolved}")
+
+    if not folder.exists():
+        if not full_run:
+            raise SystemExit(
+                f"Data folder does not exist: {folder}. A delta run needs the folder "
+                "from an earlier full run."
+            )
+        folder.mkdir(parents=True)
+        _write_data_dir_marker(folder)
+        print(f"Created data folder: {folder}")
+        return
+
+    if not full_run:
+        return
+    entries = _data_dir_entries(folder)
+    if entries:
+        shown = "\n  ".join(e.name + ("/" if e.is_dir() else "") for e in entries[:10])
+        more = f"\n  … and {len(entries) - 10} more" if len(entries) > 10 else ""
+        raise SystemExit(
+            f"Data folder is not empty: {folder}\n  {shown}{more}\n"
+            "A full run must start from an empty folder so no earlier output leaks in. "
+            f"Set {DATA_DIR_ENV} to a new folder, or pass --fresh to empty this one "
+            f"(only folders Verity created, marked with {DATA_DIR_MARKER})."
+        )
+    if not (folder / DATA_DIR_MARKER).is_file():
+        _write_data_dir_marker(folder)
+
+
 def run_phase(label: str, fn):
     t0 = time.perf_counter()
     result = fn()
@@ -175,7 +259,7 @@ def print_learned_rules_markdown() -> None:
         return
     text = LEARNED_RULES_MD.read_text(encoding="utf-8")
     print("\n" + "=" * 72)
-    print(f"  Contents of {LEARNED_RULES_MD.relative_to(PROJECT_ROOT)}")
+    print(f"  Contents of {LEARNED_RULES_MD}")
     print("=" * 72)
     print(text)
     if not text.endswith("\n"):
@@ -332,7 +416,7 @@ def main(
     parser.add_argument(
         "--reuse-weights",
         action="store_true",
-        help="Skip rule learning; use existing data/ weight and classification JSON.",
+        help="Skip rule learning; use the weight and classification JSON in the data folder.",
     )
     parser.add_argument(
         "--retrain-weights",
@@ -349,8 +433,21 @@ def main(
             "(stable golden_id); skips full community detection in merge."
         ),
     )
+    parser.add_argument(
+        "--fresh",
+        action="store_true",
+        help=(
+            "Full runs only: empty the data folder first. Refused unless Verity "
+            f"created the folder ({DATA_DIR_MARKER} marker)."
+        ),
+    )
     args = parser.parse_args()
     incremental_requested = bool(incremental) or bool(args.incremental)
+    full_run = not args.reuse_weights and not incremental_requested
+    # Pin the resolved folder for child processes (rule_learner runs with cwd=verity/,
+    # where a relative VERITY_DATA_DIR would resolve differently).
+    os.environ[DATA_DIR_ENV] = str(DATA_DIR)
+    print(f"Data folder: {DATA_DIR}", flush=True)
 
     if args.reuse_weights and args.retrain_weights is not None:
         raise SystemExit(
@@ -378,6 +475,7 @@ def main(
         )
 
     source_csv = resolve_input_path(args.input)
+    prepare_data_dir(full_run=full_run, fresh=args.fresh, input_csv=source_csv)
     pipeline_csv, n_records = prepare_pipeline_csv(source_csv)
 
     record_label = record_label_from_csv(source_csv)
@@ -417,7 +515,7 @@ def main(
         validate_reuse_weights_vs_delta(disk_classification, pipeline_csv)
         print(
             "\n(Phase 1 rule_learner skipped — using existing weights "
-            "and classification from data/.)\n"
+            "and classification from the data folder.)\n"
         )
         print_phase_banner(
             "1. Learn rules from data (skipped)", time.perf_counter() - t_rules
@@ -478,7 +576,7 @@ def main(
                 "continuing pipeline.\n"
             )
             return
-        print("Match explorer saved to: data/match_explorer.html")
+        print(f"Match explorer saved to: {DATA_DIR / 'match_explorer.html'}")
         print("Open this file in your browser to review matches.")
 
     run_phase("6. explore matches", lambda: _phase6_explore_matches())
@@ -486,7 +584,7 @@ def main(
     def _phase6b_match_summary() -> None:
         from explore_matches import run_match_summary
         run_match_summary(input_path=pipeline_csv)
-        print("Match summary saved to: data/match_summary.csv")
+        print(f"Match summary saved to: {DATA_DIR / 'match_summary.csv'}")
 
     run_phase("6b. match summary", lambda: _phase6b_match_summary())
 

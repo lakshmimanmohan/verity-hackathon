@@ -24,6 +24,8 @@ import numpy as np
 from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
 
+from config import data_dir
+
 MODEL_NAME = "all-MiniLM-L6-v2"
 WRITE_BATCH_SIZE = 50
 STORE_FETCH_PAGE_SIZE = 5000
@@ -31,11 +33,11 @@ ENCODE_SEGMENT_BATCH = 512
 PICKLE_SAVE_EVERY_NEW_RECORDS = 5000
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_INPUT_PATH = None
-GLOBAL_EMBEDDINGS_PATH = PROJECT_ROOT / "data" / "embeddings_global.pkl"
+GLOBAL_EMBEDDINGS_PATH = data_dir() / "embeddings_global.pkl"
 # Reserved pickle key for ``content_columns`` fingerprint and related metadata (not a record id).
 EMBEDDINGS_STORE_META_KEY = "__embeddings_store_meta__"
 COLUMN_CLASSIFICATION_NAME = "column_classification.json"
-DATA_COLUMN_CLASSIFICATION_PATH = PROJECT_ROOT / "data" / COLUMN_CLASSIFICATION_NAME
+DATA_COLUMN_CLASSIFICATION_PATH = data_dir() / COLUMN_CLASSIFICATION_NAME
 
 
 def slug_for(attr_type: str) -> str:
@@ -202,16 +204,11 @@ def resolve_input_csv(input_path: str | Path) -> Path:
 
 
 def resolve_column_classification_path(csv_path: Path) -> Path:
-    """Prefer ``column_classification.json`` next to the input CSV, then project ``data/``."""
-    adjacent = csv_path.parent / COLUMN_CLASSIFICATION_NAME
-    if adjacent.is_file():
-        return adjacent
+    """``column_classification.json`` in the data folder."""
     if DATA_COLUMN_CLASSIFICATION_PATH.is_file():
         return DATA_COLUMN_CLASSIFICATION_PATH
     raise SystemExit(
         f"Missing column classification file. Expected:\n"
-        f"  {adjacent}\n"
-        f"or:\n"
         f"  {DATA_COLUMN_CLASSIFICATION_PATH}\n"
         "Run src/rule_learner.py on your CSV first."
     )
@@ -303,8 +300,8 @@ def save_global_embeddings_store(
 
 
 def file_scoped_embeddings_path(csv_path: Path) -> Path:
-    """``data/{csv_stem}/embeddings.pkl`` under project root."""
-    return PROJECT_ROOT / "data" / csv_path.stem / "embeddings.pkl"
+    """``{csv_stem}/embeddings.pkl`` in the data folder."""
+    return data_dir() / csv_path.stem / "embeddings.pkl"
 
 
 def _embedding_to_plain_list(

@@ -11,13 +11,14 @@ from typing import Any
 
 import pandas as pd
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+from config import data_dir
+
 COLUMN_CLASSIFICATION_GLOBAL_NAME = "column_classification_global.json"
 
 
 def global_column_classification_path() -> Path:
-    """``data/column_classification_global.json`` under the project root."""
-    return PROJECT_ROOT / "data" / COLUMN_CLASSIFICATION_GLOBAL_NAME
+    """``column_classification_global.json`` in the data folder."""
+    return data_dir() / COLUMN_CLASSIFICATION_GLOBAL_NAME
 
 
 EMAILISH_RE = re.compile(r"^[^@\s]+@.+\..+$")
@@ -505,8 +506,8 @@ def apply_global_content_overlay(base: dict[str, Any]) -> dict[str, Any]:
 
 
 def classification_or_infer(csv_path: Path) -> dict[str, Any]:
-    """Load ``column_classification.json`` next to CSV, or build it with pandas."""
-    p = csv_path.parent / "column_classification.json"
+    """Load ``column_classification.json`` from the data folder, or build it with pandas."""
+    p = data_dir() / "column_classification.json"
     loaded = load_column_classification(p)
     if loaded is not None:
         return loaded

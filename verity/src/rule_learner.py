@@ -33,14 +33,17 @@ from column_classification import (
     print_classification_report,
     write_file_scoped_column_classification,
 )
+from config import data_dir
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_INPUT_PATH = None
-OUT_WEIGHTS = PROJECT_ROOT / "data" / "attribute_weights.json"
-OUT_THRESHOLD = PROJECT_ROOT / "data" / "learned_threshold.json"
-OUT_PLOT = PROJECT_ROOT / "data" / "threshold_similarity_distribution.png"
-OUT_RULES = PROJECT_ROOT / "data" / "learned_rules.md"
-GLOBAL_EMBEDDINGS_PATH = PROJECT_ROOT / "data" / "embeddings_global.pkl"
+OUT_WEIGHTS = data_dir() / "attribute_weights.json"
+OUT_THRESHOLD = data_dir() / "learned_threshold.json"
+OUT_PLOT = data_dir() / "threshold_similarity_distribution.png"
+OUT_RULES = data_dir() / "learned_rules.md"
+# Read in phase 1, before this run's embed phase writes it: on a fresh data folder the
+# file is absent and weights/threshold are learned without embeddings (Jaccard only).
+GLOBAL_EMBEDDINGS_PATH = data_dir() / "embeddings_global.pkl"
 EMBEDDINGS_STORE_META_KEY = "__embeddings_store_meta__"
 
 PAIR_SAMPLE = 1000
@@ -829,7 +832,7 @@ def main(input_path: str | Path = DEFAULT_INPUT_PATH) -> None:
     df.columns = [str(c).strip() for c in df.columns]
     df = df.where(pd.notna(df), None)
     classification = classify_columns(df)
-    cls_out = csv_path.parent / "column_classification.json"
+    cls_out = data_dir() / "column_classification.json"
     print_classification_report(classification)
 
     headers = list(df.columns)
@@ -1040,7 +1043,7 @@ def run_similarity_self_tests() -> None:
     if emb_store:
         # Pick two records known to be the same entity but different descriptions
         # Load products_semantic.csv and find a pair with low jaccard but same MPN
-        csv_path = PROJECT_ROOT / "data" / "products_semantic.csv"
+        csv_path = data_dir() / "products_semantic.csv"
         if csv_path.is_file():
             mpn_to_rows: dict[str, list[dict[str, str]]] = {}
             with csv_path.open(newline="", encoding="utf-8-sig") as f:

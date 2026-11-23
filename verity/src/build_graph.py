@@ -26,11 +26,12 @@ from column_classification import (
     column_to_attr_type,
     neo_property_key,
 )
+from config import data_dir
 
 BATCH_SIZE = 2000
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_INPUT_PATH = None
-DEFAULT_CLASSIFICATION_JSON = PROJECT_ROOT / "data" / "column_classification.json"
+DEFAULT_CLASSIFICATION_JSON = data_dir() / "column_classification.json"
 
 # Loaded at import; merged into inferred classification when the default JSON is absent.
 _DISK_COLUMN_CLASSIFICATION: dict[str, Any] = {}
@@ -62,11 +63,7 @@ def _col_ci(name: str) -> str:
 
 
 def load_classification_at_start(csv_path: Path) -> dict[str, Any]:
-    """Prefer ``data/column_classification.json``; else infer and merge disk metadata_columns."""
-    local_classification_json = csv_path.parent / "column_classification.json"
-    if local_classification_json.is_file():
-        with local_classification_json.open(encoding="utf-8") as f:
-            return json.load(f)
+    """Prefer ``column_classification.json`` in the data folder; else infer and merge disk metadata_columns."""
     if DEFAULT_CLASSIFICATION_JSON.is_file():
         with DEFAULT_CLASSIFICATION_JSON.open(encoding="utf-8") as f:
             return json.load(f)

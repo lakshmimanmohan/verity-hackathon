@@ -35,10 +35,11 @@ except ImportError:
     _ANNOY_AVAILABLE = False
 
 from column_classification import apply_global_content_overlay
+from config import data_dir
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_INPUT_PATH = None
-OUTPUT_PATH = PROJECT_ROOT / "data" / "match_candidates.csv"
+OUTPUT_PATH = data_dir() / "match_candidates.csv"
 # Align with ``merge.COMMUNITY_DETECTION_MATCH_TYPES`` — only these rows become merge edges.
 MATCH_CANDIDATES_WRITE_MATCH_TYPES = frozenset(
     {"full_signal", "weak_signal", "embedding_only"}
@@ -56,13 +57,13 @@ MATCH_CANDIDATES_FIELDNAMES = [
     "field_similarities",
 ]
 COLUMN_CLASSIFICATION_NAME = "column_classification.json"
-DATA_COLUMN_CLASSIFICATION_PATH = PROJECT_ROOT / "data" / COLUMN_CLASSIFICATION_NAME
-GLOBAL_EMBEDDINGS_PATH = PROJECT_ROOT / "data" / "embeddings_global.pkl"
-MERGED_INPUT_CSV = PROJECT_ROOT / "data" / "merged_input.csv"
+DATA_COLUMN_CLASSIFICATION_PATH = data_dir() / COLUMN_CLASSIFICATION_NAME
+GLOBAL_EMBEDDINGS_PATH = data_dir() / "embeddings_global.pkl"
+MERGED_INPUT_CSV = data_dir() / "merged_input.csv"
 # Must match ``embed.EMBEDDINGS_STORE_META_KEY`` (not a record id).
 EMBEDDINGS_STORE_META_KEY = "__embeddings_store_meta__"
 # Optional: ``{"files": {"customers_raw_1.csv": ["C1", "C2"], ...}}`` or flat ``{"C1": "file_a.csv"}``.
-EMBEDDINGS_FILE_REGISTRY_PATH = PROJECT_ROOT / "data" / "embeddings_file_registry.json"
+EMBEDDINGS_FILE_REGISTRY_PATH = data_dir() / "embeddings_file_registry.json"
 
 TOP_K = 30
 APPROXIMATE_NN_THRESHOLD = 10000
@@ -124,10 +125,10 @@ def record_label_from_csv(csv_path: Path) -> str:
 
 def resolve_match_column_classification_path(csv_path: Path) -> Path:
     """
-    Prefer ``data/{{input_stem}}/column_classification.json`` (file-scoped artifact).
-    Fall back to ``data/column_classification.json`` with a warning when missing.
+    Prefer ``{{input_stem}}/column_classification.json`` in the data folder (file-scoped
+    artifact). Fall back to ``column_classification.json`` there with a warning when missing.
     """
-    stem_scoped = PROJECT_ROOT / "data" / csv_path.stem / COLUMN_CLASSIFICATION_NAME
+    stem_scoped = data_dir() / csv_path.stem / COLUMN_CLASSIFICATION_NAME
     if stem_scoped.is_file():
         return stem_scoped
     print(
@@ -136,9 +137,6 @@ def resolve_match_column_classification_path(csv_path: Path) -> Path:
     )
     if DATA_COLUMN_CLASSIFICATION_PATH.is_file():
         return DATA_COLUMN_CLASSIFICATION_PATH
-    adjacent = csv_path.parent / COLUMN_CLASSIFICATION_NAME
-    if adjacent.is_file():
-        return adjacent
     raise SystemExit(
         f"Missing column classification file. Expected:\n"
         f"  {stem_scoped}\n"
@@ -792,9 +790,9 @@ def load_customer_rows_union_sources(
     """
     Rows keyed by record id for minimum-evidence and CSV fallback across pipeline runs.
 
-    Prefer ``data/merged_input.csv`` when present; otherwise merge the primary CSV with
-    any paths listed under ``files`` in ``embeddings_file_registry.json`` (values resolved
-    under ``PROJECT_ROOT/data/`` when relative).
+    Prefer ``merged_input.csv`` in the data folder when present; otherwise merge the
+    primary CSV with any paths listed under ``files`` in ``embeddings_file_registry.json``
+    (values resolved under the data folder when relative).
     """
     rid_key = str(record_id_column_lower).strip().lower()
     if MERGED_INPUT_CSV.is_file():
@@ -827,7 +825,7 @@ def load_customer_rows_union_sources(
                     continue
                 pth = Path(fn)
                 if not pth.is_absolute():
-                    pth = PROJECT_ROOT / "data" / fn
+                    pth = data_dir() / fn
                 _add_path(pth)
 
     merged_rows: dict[str, dict[str, str]] = {}
@@ -1656,9 +1654,8 @@ def main(
         f"  CSV row union for evidence / fallback ({len(rows_by_id)} ids): {src_msg}"
     )
 
-    data_dir = csv_path.parent
-    weights_path = data_dir / "attribute_weights.json"
-    threshold_path = data_dir / "learned_threshold.json"
+    weights_path = data_dir() / "attribute_weights.json"
+    threshold_path = data_dir() / "learned_threshold.json"
 
     mw = load_match_weights(weights_path, threshold_path)
     sem_by_lower = load_column_semantic_types(classification, weights_path)

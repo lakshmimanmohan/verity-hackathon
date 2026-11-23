@@ -1,27 +1,25 @@
 """
 Local record store for the pipeline: a single SQLite file, Python standard library only.
 
-The file defaults to ``data/verity_store.sqlite``; set ``VERITY_STORE_PATH`` to move it.
+The file is ``verity_store.sqlite`` in the data folder (``config.data_dir()``).
 
 What the pipeline stores per record:
   - a property map (record id, source system, every non-metadata CSV field)
   - a set of (attr_type, value) pairs, the normalized content values
 Golden records are also written here, alongside ``golden_records.csv``.
-Embeddings live in ``data/embeddings_global.pkl``.
+Embeddings live in ``embeddings_global.pkl`` in the same folder.
 """
 
 from __future__ import annotations
 
 import json
-import os
 import sqlite3
 from pathlib import Path
 from typing import Any, Iterable
 
-from dotenv import load_dotenv
+from config import data_dir
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_SQLITE_PATH = PROJECT_ROOT / "data" / "verity_store.sqlite"
+STORE_FILENAME = "verity_store.sqlite"
 GOLDEN_LABEL = "GoldenRecord"
 
 
@@ -247,10 +245,5 @@ def _chunks(items: list[str], size: int) -> Iterable[list[str]]:
 # --------------------------------------------------------------------------- factory
 
 def open_store() -> SQLiteStore:
-    """Open the record store at ``VERITY_STORE_PATH`` or the default path."""
-    load_dotenv(PROJECT_ROOT / ".env")
-    p = os.environ.get("VERITY_STORE_PATH")
-    path = Path(p).expanduser() if p else DEFAULT_SQLITE_PATH
-    if not path.is_absolute():
-        path = PROJECT_ROOT / path
-    return SQLiteStore(path)
+    """Open the record store in the data folder."""
+    return SQLiteStore(data_dir() / STORE_FILENAME)

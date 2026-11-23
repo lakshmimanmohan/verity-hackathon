@@ -22,8 +22,10 @@ from datetime import datetime, timezone
 from itertools import combinations
 from pathlib import Path
 
+from config import data_dir
+
 ROOT = Path(__file__).resolve().parent.parent
-DATA = ROOT / "data"
+DATA = data_dir()
 MATCH_CSV = DATA / "match_candidates.csv"
 WEIGHTS_JSON = DATA / "attribute_weights.json"
 COLUMN_CLASSIFICATION_NAME = "column_classification.json"
@@ -158,16 +160,11 @@ def load_json(path: Path, default):
 
 
 def resolve_column_classification_path(csv_path: Path) -> Path:
-    """Prefer JSON next to the CSV, else ``data/column_classification.json``."""
-    adjacent = csv_path.parent / COLUMN_CLASSIFICATION_NAME
-    if adjacent.is_file():
-        return adjacent
+    """``column_classification.json`` in the data folder."""
     if DEFAULT_CLASS_JSON.is_file():
         return DEFAULT_CLASS_JSON
     raise FileNotFoundError(
         f"Missing column classification file. Expected:\n"
-        f"  {adjacent}\n"
-        f"or:\n"
         f"  {DEFAULT_CLASS_JSON}"
     )
 
