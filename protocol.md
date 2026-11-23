@@ -81,3 +81,7 @@ Every option sees the same pairs, the same record fields and the same test split
 - The SLM is run zero-shot first. A fine-tuned version, if any, is reported as a separate row.
 - Any option that fails a bar is still reported, with the bar it missed.
 - **Limitations:** synthetic data may not reflect real customer noise. Results cover English B2B organization records only. Token counts and prices are measured on the test date and will change.
+
+## Amendments
+
+**Nov 23, 2026: evaluation seed changed from 2026 to 7919.** A full Verity run was made on data generated with seed 2026 and its metrics were viewed before any option was scored. Seed 2026 is now a development seed, alongside 42. The evaluation set is generated with seed 7919, which had not been used for any run when this note was written. No quality bar, the borderline band or any volume assumption changed.
