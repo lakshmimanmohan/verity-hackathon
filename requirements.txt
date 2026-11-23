@@ -1,0 +1,27 @@
+# Top-level dependencies for the experiment scripts.
+# Verity's own dependencies come from verity/requirements.txt (installed by the line below).
+#
+# After a working run, lock exact versions so results can be reproduced:
+#   pip freeze > requirements.lock.txt
+# and commit requirements.lock.txt alongside the results.
+
+-r verity/requirements.txt
+
+# Option C: decision model
+lightgbm
+scikit-learn
+
+# Option E: SLM and cross-encoder (weights pinned by revision hash in options/e_slm.py)
+torch
+transformers
+sentence-transformers
+safetensors
+
+# Option B / D: frontier LLM baseline (swap for the client of the approved access channel)
+anthropic
+
+# Shared
+pandas
+numpy
+python-dotenv
+tqdm

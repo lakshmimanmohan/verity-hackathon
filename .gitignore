@@ -1,0 +1,12 @@
+.env
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+.venv/
+__pycache__/
+data/*.csv
+*.pkl
+models/
+*.safetensors
+*.gguf
+verity/data/

@@ -1,0 +1,41 @@
+# Verity hackathon repo
+
+Experiment: can Verity (schema-agnostic entity matching) resolve borderline record pairs
+as well as a frontier LLM, at lower cost and latency? Demo is Dec 7, numbers freeze Dec 4.
+
+See @README.md for layout and run steps, and @protocol.md for the quality bars,
+borderline definition and volume assumptions. The protocol is fixed: never edit it
+to fit results.
+
+## Hard rules
+
+- Verity uses the SQLite record store only (`verity/src/record_store.py`). Never add Neo4j code or dependencies.
+- No column names hardcoded in Verity. Logic works from semantic types (NAME, STREET_ADDRESS, DESCRIPTIVE) assigned by `rule_learner.py`. Reject fixes that break this.
+- Ground truth lives only in the sidecar `*_truth.csv`. Never put an answer-key column in a CSV that Verity reads: the classifier treats an integer label column as content, so it would leak into matching.
+- Evaluation seed is 2026. Never tune thresholds or features on data generated with it.
+- Every option scores the same candidate pairs on the same held-out test split.
+- Run everything with `PYTHONHASHSEED=0`. Without it, scores shift up to 0.0075 between runs.
+- Also set `PYTHONUTF8=1`. Without it, Verity crashes on Windows when printing its column report.
+- Verify claims by running the code. Say plainly when something was not run.
+
+## Where things go
+
+- Core Verity changes (threshold fix, review band, per-field similarity export): in `verity/src/`, which is vendored source, not a submodule. Commit them here, one change per commit, separate from experiment code. Verity's dependencies go in `verity/requirements.txt`.
+- Experiment code (options A to E, cost model, eval): in this repo only.
+- No company, product or people names in anything under `verity/`.
+
+## Secrets and data
+
+- LLM key goes in `.env` only. Never print it, log it or commit it.
+- Synthetic data only. No customer, personal or confidential data.
+- Open-weight models: pinned revision hash, safetensors only, `trust_remote_code=False`.
+
+## Commands
+
+```
+export PYTHONHASHSEED=0
+export PYTHONUTF8=1    # Windows: Verity prints characters the default console codepage can't encode
+python data/generate_data_org.py --output data/orgs_raw.csv
+python verity/src/main.py --input "$PWD/data/orgs_raw.csv"   # absolute path: Verity resolves relative paths from verity/
+python eval/evaluate_matches.py --truth data/orgs_raw_truth.csv --matches verity/data/match_candidates.csv
+```
