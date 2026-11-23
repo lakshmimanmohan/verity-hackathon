@@ -1,0 +1,12 @@
+True pairs: 12386   Matched pairs: 8234
+TP 6336  FP 1898  FN 6050
+Precision 0.7695  Recall 0.5115  F1 0.6145
+
+Recall by hard-case slice (pairs where either record carries the tag):
+  acronym         878 / 1997   recall 0.4397
+  truncation     1114 / 2141   recall 0.5203
+  po_box          431 / 1895   recall 0.2274
+  easy           4054 / 6798   recall 0.5964
+
+Decoy pairs (same name, different entity): 482
+  wrongly matched 1  (0.21%)
