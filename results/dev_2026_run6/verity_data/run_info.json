@@ -1,0 +1,20 @@
+{
+  "runs": [
+    {
+      "started_utc": "2026-11-23T19:50:59Z",
+      "run_mode": "full",
+      "input_csv": "C:\\verity-hackathon\\results\\dev_2026_run6\\orgs_raw.csv",
+      "nn_mode_requested": "exact",
+      "nn_mode_source": "--nn-mode",
+      "annoy_installed": false,
+      "nn_mode_resolved": "exact",
+      "n_records_in_index": 10000,
+      "git_commit": "35b6a1adcd47443f2507b0ef510452c4e098717d",
+      "git_src_uncommitted_changes": false,
+      "python_version": "3.13.16",
+      "sentence_transformers_version": "6.3.0",
+      "embedding_model": "all-MiniLM-L6-v2",
+      "pythonhashseed": "0"
+    }
+  ]
+}
