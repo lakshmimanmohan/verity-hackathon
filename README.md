@@ -6,7 +6,7 @@ This repo holds the experiment. The matcher itself, Verity, is vendored as sourc
 
 ## What is compared
 
-Every option judges the same candidate pairs, produced by Verity's ANN blocking, on the same held-out test split.
+Every option judges the same candidate pairs, produced by Verity's nearest-neighbor blocking (exact search for evaluation runs), on the same held-out test split.
 
 | Option | What decides a borderline pair | Code |
 | --- | --- | --- |
@@ -21,7 +21,7 @@ Quality bars, the borderline definition and volume assumptions are fixed in [`pr
 ## Layout
 
 ```
-verity/     vendored Verity source (src/) and its requirements.txt
+verity/     vendored Verity source (src/), requirements.txt, and requirements-ann.txt (optional Annoy)
 data/       generate_data_org.py   synthetic B2B records + sidecar truth file
 eval/       evaluate_matches.py    precision, recall, hard-case slices, decoy false matches
 options/    one script per option (A to E)
@@ -38,12 +38,17 @@ git clone https://github.com/lakshmimanmohan/verity-hackathon.git
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt    # includes verity/requirements.txt
+# Optional, only for approximate neighbor search (ANN timing for the cost model).
+# On Windows it needs the Microsoft C++ Build Tools.
+pip install -r verity/requirements-ann.txt
 cp .env.example .env               # add the LLM key; never commit .env
 ```
 
 Verity keeps its records in a local SQLite file (`verity_store.sqlite`) in its data folder. No database server is needed.
 
 Every file Verity reads or writes, apart from the input CSV, lives in one data folder: `VERITY_DATA_DIR` if set in the shell, otherwise `verity/data/`. Give each run its own folder. A full run stops if the folder is not empty, so nothing from an earlier run can leak in. `--fresh` empties the folder first, but only one Verity created (it holds a `.verity_data_dir` marker).
+
+Neighbor search mode is set with `--nn-mode exact|approximate|auto`, or `VERITY_NN_MODE` in the shell (never in `.env`); the flag wins. `auto`, the default, uses Annoy at 10,000 records or more when it is installed, otherwise exact search. `approximate` stops if Annoy is not installed. Each run writes `run_info.json` into its data folder: requested and resolved mode, Annoy installed, record count, git commit, Python and sentence-transformers versions, embedding model and `PYTHONHASHSEED`.
 
 Two `.env` files are in play. The repo-root `.env` (copied from `.env.example`) holds the LLM key for the options that call the LLM; Verity never reads it. Verity loads only `verity/.env`, reads no setting from it today, and stops if `VERITY_DATA_DIR` is set there: set it in the shell.
 
@@ -62,7 +67,8 @@ python data/generate_data_org.py --output data/orgs_raw.csv
 # 2. Run Verity to produce candidate pairs and borderline pairs, into a new folder per run.
 #    Relative paths resolve from the current directory.
 export VERITY_DATA_DIR=results/<run>/verity_data
-python verity/src/main.py --input data/orgs_raw.csv
+#    Evaluation runs use exact neighbor search (see Amendments in protocol.md).
+python verity/src/main.py --nn-mode exact --input data/orgs_raw.csv
 
 # 3. Score each option on the test split
 python options/a_threshold.py

@@ -14,13 +14,14 @@ to fit results.
 - Ground truth lives only in the sidecar `*_truth.csv`. Never put an answer-key column in a CSV that Verity reads: the classifier treats an integer label column as content, so it would leak into matching.
 - Evaluation seed is 7919 (changed Nov 23, see the protocol's Amendments). Never tune thresholds or features on data generated with it, and don't generate it until the eval run. 42 (the generator default) and 2026 are development seeds.
 - Every option scores the same candidate pairs on the same held-out test split.
+- Evaluation runs use exact neighbor search (`--nn-mode exact`, see the protocol's Amendments). ANN timing is measured separately, for the cost model only.
 - Run everything with `PYTHONHASHSEED=0`. Without it, scores shift up to 0.0075 between runs.
 - Also set `PYTHONUTF8=1`. Without it, Verity crashes on Windows when printing its column report.
 - Verify claims by running the code. Say plainly when something was not run.
 
 ## Where things go
 
-- Core Verity changes (threshold fix, review band, per-field similarity export): in `verity/src/`, which is vendored source, not a submodule, so there is no submodule pin to update. Commit them here, one change per commit, separate from experiment code; each run's README.txt records the commit it used. Verity's dependencies go in `verity/requirements.txt`.
+- Core Verity changes (threshold fix, review band, per-field similarity export): in `verity/src/`, which is vendored source, not a submodule, so there is no submodule pin to update. Commit them here, one change per commit, separate from experiment code; each run's README.txt records the commit it used (from the run's `run_info.json`). Verity's dependencies go in `verity/requirements.txt`; Annoy is optional and lives in `verity/requirements-ann.txt`.
 - Run outputs: each run gets its own data folder, set with `VERITY_DATA_DIR` in the shell (never in `.env`). A full run stops if that folder is not empty; `--fresh` empties it, but only if Verity created it (marker file `.verity_data_dir`).
 - Experiment code (options A to E, cost model, eval): in this repo only.
 - No company, product or people names in anything under `verity/`.
@@ -38,6 +39,6 @@ export PYTHONHASHSEED=0
 export PYTHONUTF8=1    # Windows: Verity prints characters the default console codepage can't encode
 export VERITY_DATA_DIR=results/<run>/verity_data   # new folder per run; shell only, never .env
 python data/generate_data_org.py --output data/orgs_raw.csv
-python verity/src/main.py --input data/orgs_raw.csv   # relative paths resolve from the current directory
+python verity/src/main.py --nn-mode exact --input data/orgs_raw.csv   # relative paths resolve from the current directory
 python eval/evaluate_matches.py --truth data/orgs_raw_truth.csv --matches "$VERITY_DATA_DIR/match_candidates.csv"
 ```
