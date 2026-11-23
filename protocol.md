@@ -87,3 +87,8 @@ Every option sees the same pairs, the same record fields and the same test split
 **Nov 23, 2026: evaluation seed changed from 2026 to 7919.** A full Verity run was made on data generated with seed 2026 and its metrics were viewed before any option was scored. Seed 2026 is now a development seed, alongside 42. The evaluation set is generated with seed 7919, which had not been used for any run when this note was written. No quality bar, the borderline band or any volume assumption changed.
 
 **Nov 23, 2026: evaluation runs use exact neighbor search.** Candidate pairs for every option come from exact cosine nearest-neighbor search (`VERITY_NN_MODE=exact`), so they don't depend on whether Annoy is installed. This replaces "ANN blocking" in Scope as the source of candidate pairs. Approximate (Annoy) index build and query time is measured separately on the same data and reported for the cost model only. No quality bar, the borderline band or any volume assumption changed.
+
+**Nov 23, 2026: three clarifications, made before any option was scored.**
+1. The borderline band is centered on the effective threshold, max(learned threshold, 0.82), for every pair, including pairs with no shared field values.
+2. "Weighted similarity" is the final pair score Verity writes to scored_pairs.csv. Band membership is decided by that score alone. Outside the band, every option uses Verity's own decision unchanged. Inside the band, each option makes its own decision.
+3. The 60/40 split is made by connected component of the candidate-pair graph, so all pairs touching the same records land on the same side. The split seed is fixed at 0.
