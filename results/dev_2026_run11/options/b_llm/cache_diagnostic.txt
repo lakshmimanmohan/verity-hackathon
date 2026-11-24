@@ -47,3 +47,42 @@ Notes (added by hand)
     the uncached price. Total of this diagnostic $0.0868, step cap $0.20, nothing further spent.
   - Not changed: no setting of the real request path. The diagnostic script is options/b_cache_diagnostic.py
     (not committed).
+
+
+ROUND 2. Caching diagnostic, gpt-5.4-2026-03-05 (max_output_tokens=64;reasoning_effort=none), 2026-11-24 21:56:55Z
+cap $0.25; TRAIN band pairs only; 5 different pairs per variant, 4 s apart; base system prompt 5,847 characters
+
+P1: shared prefix about 2,400 tokens; system text 8,460 characters
+  call cache key sent   input  cached  write  output     cost $  latency s
+  1    verity-b-v1       2884       0      0      18   0.007480       4.10
+  raw usage object of call 1 (token fields only): {"input_tokens": 2884, "input_tokens_details": {"cache_write_tokens": 0, "cached_tokens": 0, "cache_write_tokens_details": {"ttl_12h_tokens": 0, "ttl_30m_tokens": 0}}, "output_tokens": 18, "output_tokens_details": {"reasoning_tokens": 0}, "total_tokens": 2902}
+  2    verity-b-v1       2887    1792      0      18   0.003455       1.29
+  3    verity-b-v1       2894    1792      0      18   0.003473       1.36
+  4    verity-b-v1       2889    1792      0      18   0.003461       1.28
+  5    verity-b-v1       2881    1792      0      18   0.003440       1.02
+  real input tokens (call 1): 2884; if caching worked, about 2688 tokens (the prefix of about 2734 rounded down to 128) would be read from the cache: expected cost per call about $0.001432 (cached at 0.25, rest at 2.50, 18 output tokens at 15.00 per million) against about $0.007480 uncached
+
+P1: cached tokens above 0 from the second call onward. Later variants not run.
+
+5 calls. Ledger total $0.1323 (this round $0.0213), remaining $44.8677
+
+Notes on round 2 (added by hand)
+  - P1 cached. With the shared prefix padded to about 2,730 tokens (2,884 input tokens in all), calls 2 to 5 each
+    read 1,792 tokens from the cache (cached_tokens 1792 = 14 x 128; the 1st call 0, as expected). So the
+    hypothesis that the original prefix (about 1,670 tokens) is too short for caching held in this test.
+    P2, P3 and P4 were not run (stop rule), so the shortest prefix that caches and the cache granularity are not
+    established. cache_write_tokens stayed 0 on all calls, so it is not a sign of caching on this model.
+  - The cached part was 1,792 tokens, less than the 2,688 tokens that rounding the whole prefix down to 128
+    would give. Cached tokens therefore seem to stop at some earlier breakpoint, not at the prefix end; the
+    expected cost of $0.001432 per call above was an upper bound on the saving, not what happened.
+  - Cost per call, calls 2 to 5: $0.00344 to $0.00347 (about $0.00346), against $0.00748 for the 1st (uncached)
+    call and about $0.0048 for the unpadded prompt. At this length caching saves about 28% against the unpadded
+    prompt. Not tested: whether a longer prefix caches more (a later breakpoint), or caching in a batch.
+  - What this does to the plan (arithmetic on the numbers above, not a measurement of the full run): live, about
+    $0.00346 per pair is about $17 for the 5,000-pair sample and about $155 for the full test band (over the $45
+    cap). Batch with cache hits at the listed 0.13 cached price would be about $0.0017 per pair, $8.7 for the
+    sample and $78 for the full band; a batch with no cache hits about $0.0037 per pair, $19 for the sample.
+  - The padded text is part of the prompt. Using it in option B means the frozen prompt changes, and the answers
+    on train pairs must be checked again (the appendix is generic, but that is not shown). Nothing in
+    options/b_system_prompt.txt or the real request path was changed.
+  - Spent this round $0.0213 (5 calls); ledger total $0.1323.
