@@ -1,0 +1,48 @@
+{
+  "_readme": "Prices and request settings for option B. USD per million tokens. A model can make live or batch calls only when approved is true; edit approved yourself after checking the numbers against the provider's pricing page on the run date. A null price means unknown: dry-run then reports tokens only, and live calls are refused.",
+  "models": {
+    "claude-sonnet-5-5": {
+      "provider": "anthropic",
+      "approved": false,
+      "price_date": "2026-11-03",
+      "source": "claude-api skill model table (cached 2026-11-03) and its prompt-caching notes: $2 / $10 per MTok, cache reads $0.10 (0.05x), cache writes 1.25x input for the 5-minute TTL and 2x for the 1-hour TTL, Message Batches 50% of standard. Not checked against the live pricing page.",
+      "input": 2.0,
+      "output": 10.0,
+      "cache_read": 0.10,
+      "cache_write_5m": 2.50,
+      "cache_write_1h": 4.00,
+      "batch_multiplier": 0.5,
+      "request_settings": {
+        "max_tokens": 64,
+        "thinking": {"type": "between_tools"},
+        "effort": "low",
+        "cache_ttl_live": "5m",
+        "cache_ttl_batch": "1h",
+        "temperature": "not set: non-default values are rejected on this model"
+      },
+      "notes": [
+        "thinking: {type: disabled} returns a 400 on Claude Sonnet 5.5; {type: between_tools} is its way to turn thinking off, accepted only at effort high or below, with no other field.",
+        "No fallbacks parameter: the model string recorded with every answer must be the model that answered.",
+        "Structured output through output_config.format (json_schema); prefill is not allowed."
+      ]
+    },
+    "gpt-5.4": {
+      "provider": "openai",
+      "approved": false,
+      "price_date": null,
+      "source": "none. UNCONFIRMED: no prices, request parameters or batch details for this model were checked. Fill in from OpenAI's documentation before approving.",
+      "input": null,
+      "output": null,
+      "cache_read": null,
+      "batch_multiplier": null,
+      "request_settings": {
+        "max_completion_tokens": 64,
+        "reasoning_effort": null,
+        "reasoning_effort_note": "UNCONFIRMED: set to the lowest reasoning effort this model accepts."
+      },
+      "notes": [
+        "The OpenAI request, usage and batch code in b_llm_baseline.py is written from memory of the API and has not been run against it."
+      ]
+    }
+  }
+}
