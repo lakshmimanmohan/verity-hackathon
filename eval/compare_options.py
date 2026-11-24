@@ -25,6 +25,9 @@ first option as the candidate and the second as B:
   pass          interval lower end above -0.02
   fail          interval upper end below -0.02
   inconclusive  otherwise
+When an option has no errors of one kind its own bootstrap interval is degenerate, so the exact one-sided 95%
+Clopper-Pearson upper bounds on its false-match and false-non-match rates and the worst-case precision and
+recall they imply on the band are printed under it (eval/error_bounds.py).
 For reference the script also reports the unpaired interval of the F1 difference: each option
 resampled independently (seeds 0 and 1) and the two resampled F1 values subtracted.
 """
@@ -39,6 +42,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import make_sample as ms  # noqa: E402
+import error_bounds as EB  # noqa: E402
 
 RESAMPLES = 1000
 SEED = 0
@@ -142,11 +146,15 @@ def main() -> int:
           f"{RESAMPLES} resamples, seed {SEED}, same resample for both options; percentile 95% intervals\n")
     names = ("band precision", "band recall", "band F1")
     order = (2, 0, 1)                                              # report F1, precision, recall
-    for nm, pt, res in ((n1, pt1, res1), (n2, pt2, res2)):
+    band_true, band_false = float((w * truth).sum()), float((w * ~truth).sum())
+    for nm, pt, res, pr in ((n1, pt1, res1, p1), (n2, pt2, res2, p2)):
         print(f"{nm}")
         for j in order:
             lo, hi = ci(res[j])
-            print(f"  {names[j]:<15} {pt[j]:.4f}  95% CI [{lo:.4f}, {hi:.4f}]")
+            print(f"  {names[j]:<15} {pt[j]:.4f}  95% CI [{lo:.4f}, {hi:.4f}]" + ("  (degenerate)" if lo == hi else ""))
+        for line in EB.bound_lines(int((pr & ~truth).sum()), int((~truth).sum()), int((~pr & truth).sum()),
+                                   int(truth.sum()), pt[1], band_true=band_true, band_false=band_false):
+            print(line)
     print(f"\nDifference (first minus second) = {n1} minus {n2}")
     diff_f1 = None
     for j in order:

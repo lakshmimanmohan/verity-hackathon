@@ -34,7 +34,10 @@ A true pair in the test group that was never scored counts as a miss (weight 1).
 Reports (same-entity = positive)
   band: F1 with a bootstrap 95% interval (1,000 resamples of the band rows, seed 0,
   percentile interval; weighted mode resamples sampled rows and sums their weights),
-  accuracy, precision, recall, confusion counts
+  accuracy, precision, recall, confusion counts; when an error count is 0 the bootstrap interval is
+  degenerate, so the exact one-sided 95% Clopper-Pearson upper bounds on the false-match and
+  false-non-match rates and the worst-case precision and recall they imply on the same band are
+  printed next to it (eval/error_bounds.py)
   overall (test group): precision, recall, F1, TP / FP / FN
   recall by hard-case slice (acronym, truncation, po_box, easy) on the test group
   decoy pairs (same decoy group, different entity) in the test group wrongly matched
@@ -50,6 +53,9 @@ from itertools import combinations
 from pathlib import Path
 
 import numpy as np
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import error_bounds as EB  # noqa: E402
 
 HARD_TAGS = ("acronym", "truncation", "po_box")
 BOOTSTRAP_RESAMPLES = 1000
@@ -266,6 +272,9 @@ def main() -> int:
           f"{100 * (btp + bfn) / btot if btot else 0:.2f}%)")
     print(f"  F1 {bf1:.4f}  95% CI [{lo:.4f}, {hi:.4f}]  (bootstrap, {BOOTSTRAP_RESAMPLES} "
           f"resamples, seed {BOOTSTRAP_SEED})")
+    for line in EB.bound_lines(int((pred & ~tru).sum()), int((~tru).sum()), int((~pred & tru).sum()), int(tru.sum()),
+                               br, band_true=btp + bfn, band_false=bfp + btn):
+        print(line)
     print(f"  accuracy {acc:.4f}  precision {bp:.4f}  recall {br:.4f}")
     print(f"  TP {fmt(btp, weighted)}  FP {fmt(bfp, weighted)}  FN {fmt(bfn, weighted)}  "
           f"TN {fmt(btn, weighted)}\n")
