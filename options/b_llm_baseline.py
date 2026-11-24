@@ -455,7 +455,7 @@ class OpenAIProvider(Provider):
             key = os.environ.get("OPENAI_API_KEY")
             if not key:
                 raise SystemExit("OPENAI_API_KEY is not set (put it in the repo-root .env).")
-            self._client = openai.OpenAI(api_key=key, max_retries=5)
+            self._client = openai.OpenAI(api_key=key, max_retries=2)
         return self._client
 
     def require_approved(self) -> None:
@@ -618,9 +618,12 @@ def est_request_bytes(system: str, user: str) -> int:
 def run_items(provider: Provider, items: list[Item], system: str, *, ledger: Ledger, cache: PairCache,
               run_id: str, run_cap_usd: float, mode: str, concurrency: int, out_dir: Path,
               batch_max_requests: int | None = None, batch_max_bytes: int | None = None,
-              poll_s: float = 30.0, sleep=time.sleep, log=print) -> Outcome:
+              poll_s: float = 30.0, sleep=time.sleep, log=print,
+              call_spacing_s: float = 0.0, stop_on_error: bool = False) -> Outcome:
     """Answer every distinct item: from the cache when possible, otherwise by live calls or batches,
-    each reserved in the ledger first. Stops early (outcome.stopped) if the ledger refuses."""
+    each reserved in the ledger first. Stops early (outcome.stopped) if the ledger refuses. Live calls with
+    call_spacing_s > 0 run one after another with that pause between them; stop_on_error stops the run at
+    the first call that errors or returns an unusable answer (nothing further is sent or spent)."""
     out_dir.mkdir(parents=True, exist_ok=True)
     lim_req, lim_bytes = provider.batch_limits()
     batch_max_requests = batch_max_requests or lim_req
@@ -675,6 +678,10 @@ def run_items(provider: Provider, items: list[Item], system: str, *, ledger: Led
                                                                               os.environ.get("OPENAI_API_KEY", "")]))
                 with lock:
                     oc.n_calls += 1
+                    if stop_on_error:
+                        oc.stopped = oc.stopped or f"call error, stopped at once: {res.error}"
+                if stop_on_error:
+                    stop.set()
                 log_call(it, res, 0.0, "live")
                 return
             usd = provider.cost_of(res.usage, "live")
@@ -690,9 +697,21 @@ def run_items(provider: Provider, items: list[Item], system: str, *, ledger: Led
                 if res.answered:
                     oc.results[it.key] = res
             log_call(it, res, usd, "live")
+            if stop_on_error and not res.answered:
+                with lock:
+                    oc.stopped = oc.stopped or f"unusable answer, stopped at once: {res.error}"
+                stop.set()
 
-        with ThreadPoolExecutor(max_workers=max(1, concurrency)) as ex:
-            list(ex.map(one, todo))
+        if call_spacing_s > 0:
+            for n_done, it in enumerate(todo):
+                if stop.is_set():
+                    break
+                if n_done:
+                    sleep(call_spacing_s)
+                one(it)
+        else:
+            with ThreadPoolExecutor(max_workers=max(1, concurrency)) as ex:
+                list(ex.map(one, todo))
     else:
         i = 0
         ub_cache: dict[str, float] = {}
@@ -910,6 +929,9 @@ def main() -> int:
     ap.add_argument("--approve-final-run", action="store_true", help="--final: confirm the test band may be sent")
     ap.add_argument("--max-usd", type=float, default=10.0, help="Cap for this run (default 10)")
     ap.add_argument("--concurrency", type=int, default=8)
+    ap.add_argument("--call-spacing-s", type=float, default=0.0,
+                    help="live calls one after another with this pause between them (default: concurrent)")
+    ap.add_argument("--stop-on-error", action="store_true", help="stop at the first call that errors or is unusable")
     ap.add_argument("--label", default=None)
     ap.add_argument("--ledger", type=Path, default=DEFAULT_LEDGER)
     args = ap.parse_args()
@@ -1008,7 +1030,8 @@ def main() -> int:
     run_id = f"{run.name}/b_llm/{provider.name}/{label}"
     print(f"{provider.name} / {provider.model}: {split_note}, mode {mode}, run cap ${args.max_usd:.2f}")
     oc = run_items(provider, items, system, ledger=ledger, cache=cache, run_id=run_id, run_cap_usd=args.max_usd,
-                   mode=mode, concurrency=args.concurrency, out_dir=out_dir)
+                   mode=mode, concurrency=args.concurrency, out_dir=out_dir,
+                   call_spacing_s=args.call_spacing_s, stop_on_error=args.stop_on_error)
     write_timings(out_dir, provider, oc, len(items), mode)
     models_seen = Counter(r.model for r in oc.results.values())
     meta = {"provider": provider.name, "requested_model": provider.model, "models_reported": dict(models_seen),
