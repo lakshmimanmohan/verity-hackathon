@@ -18,9 +18,10 @@ sentence-transformers
 safetensors
 
 # Option B / D: frontier LLM baseline (swap for the client of the approved access channel)
-# anthropic 2.7.0: released 2026-11-09, pure-Python wheel, Python >= 3.10. The openai package is not
-# installed or pinned yet (its prices and request details are unconfirmed; see options/prices.json).
+# anthropic 2.7.0: released 2026-11-09, pure-Python wheel, Python >= 3.10.
 anthropic==2.7.0
+# openai 3.49.0: released 2026-11-10, pure-Python wheel, Python >= 3.10 (Responses API, Batch API).
+openai==3.49.0
 
 # Shared
 pandas
