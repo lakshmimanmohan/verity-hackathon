@@ -1,0 +1,13 @@
+Dry run: test band, 44,882 pairs, anthropic / claude-sonnet-5-5
+  tokens are ESTIMATES at 3.5 characters per token (no tokenizer, no API call); the pilot measures them
+  system prompt: 5,847 characters, ~1,671 tokens
+  user turn: mean ~133 tokens, max ~150
+  output: ~25 tokens per answer (max_tokens 64)
+  tokens for the whole set: input ~80.97M uncached-equivalent, output ~1122K
+  as one Message Batch the payload is ~310 MB (the system prompt travels with every request): 2 batch(es) of at most 100,000 requests / 200 MB
+  prices: $2.0/M in, $10.0/M out, cache read $0.1/M; price date 2026-11-03; approved: False
+  STANDARD, system prompt cached:     $30.67   ($0.683 per 1,000 pairs)
+  STANDARD, no caching:               $173.16
+  BATCH, cache hits on the prompt:    $15.33   ($0.342 per 1,000 pairs)
+  BATCH, no cache hits at all:        $86.58   (cache hits inside a batch are not guaranteed)
+  ledger reservations if run as batches: $232.67 in all (pessimistic upper bounds, reserved batch by batch and settled to actual cost; lifetime cap $45)

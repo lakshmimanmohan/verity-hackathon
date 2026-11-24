@@ -1,0 +1,8 @@
+Dry run: test band, 44,882 pairs, openai / gpt-5.4
+  tokens are ESTIMATES at 3.5 characters per token (no tokenizer, no API call); the pilot measures them
+  system prompt: 5,847 characters, ~1,671 tokens
+  user turn: mean ~133 tokens, max ~150
+  output: ~25 tokens per answer (max_tokens 64)
+  tokens for the whole set: input ~80.97M uncached-equivalent, output ~1122K
+  as one Message Batch the payload is ~310 MB (the system prompt travels with every request): 2 batch(es) of at most 100,000 requests / 200 MB
+  cost: NOT COMPUTED, no confirmed prices for gpt-5.4 in options/prices.json
