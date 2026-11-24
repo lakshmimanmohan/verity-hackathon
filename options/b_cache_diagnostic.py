@@ -5,6 +5,14 @@ record, never a pair of an earlier smoke test or diagnostic round.
 
   python options/b_cache_diagnostic.py results/dev_2026_run11 --round 1 --max-usd 0.20
   python options/b_cache_diagnostic.py results/dev_2026_run11 --round 2 --max-usd 0.25
+  python options/b_cache_diagnostic.py results/dev_2026_run11 --round 3 --max-usd 0.10 --extra-chars 700 --attempt 0
+
+ROUND 3 (5 different pairs, one variant H1): hypothesis that breakpoints fall every 2,048 tokens counted
+from the hidden system message, so cached tokens would be 1,792 once the shared prefix is longer than about
+1,920 visible tokens. The shared prefix is the real system prompt plus --extra-chars characters of the round 2
+appendix (whole lines). The first call's input_tokens should be about 2,100 (prefix about 1,950 + pair about
+150); if it is off by more than 100 the run stops after that call and prints a suggested --extra-chars, to be
+rerun with --attempt 1 (then 2) so that new pairs are used.
 
 ROUND 1 (6 different pairs per variant, calls one after another, 4 s apart):
   V1  one fixed prompt_cache_key for every call ("verity-b-v1"), instructions in a developer message
@@ -99,15 +107,24 @@ def padded_system(system: str, target_tokens: int) -> str:
     return text + "\n"
 
 
+ROUND3_TARGET_INPUT = 2100
+ROUND3_TOLERANCE = 100
+APPENDIX_CHARS_PER_TOKEN = 2.46      # measured in round 2: 2,613 appendix characters added about 1,063 tokens
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("run", type=Path)
     ap.add_argument("--max-usd", type=float, default=0.20)
     ap.add_argument("--spacing-s", type=float, default=4.0)
-    ap.add_argument("--round", type=int, choices=(1, 2), default=2)
+    ap.add_argument("--round", type=int, choices=(1, 2, 3), default=2)
+    ap.add_argument("--extra-chars", type=int, default=700, help="round 3: appendix characters added to the system prompt")
+    ap.add_argument("--attempt", type=int, default=0, help="round 3: 0, 1 or 2; each attempt uses a new set of 5 pairs")
     args = ap.parse_args()
     per_variant = 6 if args.round == 1 else 5
     variants = ROUND1 if args.round == 1 else ROUND2
+    if args.round == 3:
+        variants = (("H1", f"shared prefix = real system prompt + {args.extra_chars} appendix characters", KEY, "developer", None),)
     run = args.run
     provider = B.make_provider("openai", None, live=True)
     provider.require_approved()
@@ -123,10 +140,13 @@ def main() -> int:
     avail = [p for p in pool if (p[0], p[1]) not in smoke]
     round1_pairs = avail[:18]                      # what round 1 used (6 x 3)
     pairs = avail if args.round == 1 else avail[18:]
+    if args.round == 3:
+        assert 0 <= args.attempt <= 2
+        pairs = avail[38 + 5 * args.attempt:]       # rounds 1 and 2 reserved avail[:38]
     need = per_variant * len(variants)
     assert len(pairs) >= need and not any(p[0] in fs_records or p[1] in fs_records for p in pairs)
     pairs = pairs[:need]
-    if args.round == 2:
+    if args.round >= 2:
         assert not ({(p[0], p[1]) for p in pairs} & {(p[0], p[1]) for p in round1_pairs})
     assert not ({(p[0], p[1]) for p in pairs} & smoke)
     ledger = Ledger(B.DEFAULT_LEDGER)
@@ -151,8 +171,11 @@ def main() -> int:
     cached_from_second = False
     n = 0
     for v, (name, desc, key, where, retention) in enumerate(variants):
-        sysv = padded_system(system, PAD_TARGET_TOKENS[name]) if args.round == 2 else system
-        out(f"\n{name}: {desc}" + (f"; system text {len(sysv):,} characters" if args.round == 2 else ""))
+        if args.round == 3:
+            sysv = padded_system(system, (len(system) + args.extra_chars) / CHARS_PER_TOKEN)
+        else:
+            sysv = padded_system(system, PAD_TARGET_TOKENS[name]) if args.round == 2 else system
+        out(f"\n{name}: {desc}" + (f"; system text {len(sysv):,} characters" if args.round >= 2 else ""))
         out(f"  {'call':<5}{'cache key sent':<15}{'input':>7}{'cached':>8}{'write':>7}{'output':>8}{'cost $':>11}{'latency s':>11}")
         first_input = None
         for i in range(per_variant):
@@ -196,6 +219,12 @@ def main() -> int:
             if i == 0:
                 first_input = res.usage["input_tokens"]
                 out(f"  raw usage object of call 1 (token fields only): {json.dumps(resp.usage.model_dump() if resp.usage else None)}")
+            if args.round == 3 and i == 0 and abs(res.usage["input_tokens"] - ROUND3_TARGET_INPUT) > ROUND3_TOLERANCE:
+                have = res.usage["input_tokens"]
+                add = int((ROUND3_TARGET_INPUT - have) * APPENDIX_CHARS_PER_TOKEN)
+                out(f"  STOPPED after call 1: input_tokens {have} is off the target {ROUND3_TARGET_INPUT} by more than "
+                    f"{ROUND3_TOLERANCE}. Suggested --extra-chars {max(args.extra_chars + add, 0)} with --attempt {args.attempt + 1}.")
+                return finish(3)
             if raw_cached != res.usage["cached_tokens"]:
                 out(f"  PARSING BUG: raw cached_tokens {raw_cached} but the parser recorded {res.usage['cached_tokens']}")
             if i and res.usage["cached_tokens"] > 0:

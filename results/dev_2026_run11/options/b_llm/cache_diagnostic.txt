@@ -86,3 +86,36 @@ Notes on round 2 (added by hand)
     on train pairs must be checked again (the appendix is generic, but that is not shown). Nothing in
     options/b_system_prompt.txt or the real request path was changed.
   - Spent this round $0.0213 (5 calls); ledger total $0.1323.
+
+
+ROUND 3. Caching diagnostic, gpt-5.4-2026-03-05 (max_output_tokens=64;reasoning_effort=none), 2026-11-24 22:00:31Z
+cap $0.10; TRAIN band pairs only; 5 different pairs per variant, 4 s apart; base system prompt 5,847 characters
+
+H1: shared prefix = real system prompt + 700 appendix characters; system text 6,579 characters
+  call cache key sent   input  cached  write  output     cost $  latency s
+  1    verity-b-v1       2022    1792      0      18   0.001293       2.44
+  raw usage object of call 1 (token fields only): {"input_tokens": 2022, "input_tokens_details": {"cache_write_tokens": 0, "cached_tokens": 1792, "cache_write_tokens_details": {"ttl_12h_tokens": 0, "ttl_30m_tokens": 0}}, "output_tokens": 18, "output_tokens_details": {"reasoning_tokens": 0}, "total_tokens": 2040}
+  2    verity-b-v1       2033    1792      0      18   0.001321       1.44
+  3    verity-b-v1       2021    1792      0      18   0.001290       1.50
+  4    verity-b-v1       2033    1792      0      18   0.001321       1.02
+  5    verity-b-v1       2026    1792      0      18   0.001303       1.03
+  real input tokens (call 1): 2022; if caching worked, about 1792 tokens (the prefix of about 1872 rounded down to 128) would be read from the cache: expected cost per call about $0.001293 (cached at 0.25, rest at 2.50, 18 output tokens at 15.00 per million) against about $0.005325 uncached
+
+H1: cached tokens above 0 from the second call onward. Later variants not run.
+
+5 calls. Ledger total $0.1388 (this round $0.0065), remaining $44.8612
+
+Notes on round 3 (added by hand)
+  - Prefix: the real system prompt plus 732 characters of the round 2 appendix (6,579 characters in all). Call 1
+    had 2,022 input tokens, 78 under the 2,100 target (inside the 100-token tolerance), so no padding adjustment
+    was needed. The visible shared prefix is about 1,870 tokens (2,022 minus about 150 for the pair).
+  - Result: cached_tokens was 1,792 on all 5 calls, including call 1. That matches the hypothesis (a first
+    breakpoint that leaves 1,792 cached tokens) but call 1 is not a clean first call: the first 1,792 tokens of
+    this prefix are the same as in round 2 (same key, about 4 minutes earlier, 1,792 tokens cached then), so call 1
+    most likely read the entry that round 2 created. Calls 2 to 5 do not depend on that. The round was not run
+    from a cold cache, so "cold start" behaviour at this length is untested.
+  - Cost per call, calls 2 to 5: $0.001290 to $0.001321, mean $0.001309, against the predicted $0.0015 (13% lower).
+    Call 1 $0.001293. For comparison, the same pair content with no cache hit would cost about $0.0053.
+  - Consistent with the earlier rounds: unpadded prefix (about 1,670 tokens) cached 0; prefix about 2,730 cached 1,792;
+    prefix about 1,870 cached 1,792. Where the next breakpoint is (above 1,792) was not tested.
+  - Spent this round $0.0065 (5 calls); ledger total $0.1388.
