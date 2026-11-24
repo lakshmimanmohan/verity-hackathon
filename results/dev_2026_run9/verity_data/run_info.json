@@ -1,0 +1,31 @@
+{
+  "runs": [
+    {
+      "started_utc": "2026-11-24T14:24:13Z",
+      "run_mode": "full",
+      "input_csv": "C:\\verity-hackathon\\results\\dev_2026_run9\\orgs_raw.csv",
+      "nn_mode_requested": "exact",
+      "nn_mode_source": "--nn-mode",
+      "annoy_installed": false,
+      "nn_mode_resolved": "exact",
+      "n_records_in_index": 10000,
+      "git_commit": "38cd6dcea3e634c9a959c6b69e49595cef3c5faf",
+      "git_src_uncommitted_changes": false,
+      "python_version": "3.13.16",
+      "sentence_transformers_version": "6.3.0",
+      "embedding_model": "all-MiniLM-L6-v2",
+      "pythonhashseed": "0",
+      "neighbor_pairs": 216458,
+      "skipped_missing_store_context": 0,
+      "skipped_missing_embeddings": 0,
+      "skipped_no_semantic_field": 0,
+      "skipped_single_token_semantic_fields": 0,
+      "embedding_only_blocked_same_file": 1898,
+      "scored_neighbor_pairs": 216458,
+      "exact_duplicate_pairs": 729,
+      "exact_only_pairs": 0,
+      "scored_pairs_rows": 216458,
+      "match_candidates_rows": 6334
+    }
+  ]
+}

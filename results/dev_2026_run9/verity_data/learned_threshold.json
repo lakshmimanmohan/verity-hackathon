@@ -1,0 +1,20 @@
+{
+  "threshold": 0.411965,
+  "columns_excluded_from_learning": [
+    "record_id",
+    "source_system"
+  ],
+  "n_pairs": 1000,
+  "similarity_statistics": {
+    "min": 0.14016011448630294,
+    "max": 0.6177502571034288,
+    "mean": 0.4207274288911242,
+    "std": 0.0726061681812304
+  },
+  "plot_path": "C:\\verity-hackathon\\results\\dev_2026_run9\\verity_data\\threshold_similarity_distribution.png",
+  "n_rows": 10000,
+  "cluster_center_low": 0.3543170200897299,
+  "cluster_center_high": 0.4696128687032617,
+  "inertia": 2.025153615601105,
+  "method": "KMeans with k=2 was fit on 1D similarity scores from random row pairs. The two cluster centroids approximate 'clearly different' vs 'possibly same' groups; their midpoint is used as a data-driven match cutoff."
+}
