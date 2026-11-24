@@ -1,0 +1,21 @@
+Paired comparison on the sample: results\dev_2026_run11\options\b_llm\test_sample5000.csv
+  run C:\verity-hackathon\results\dev_2026_run11
+  5,000 sample pairs (340 same-entity), weights sum 44,882.0 = test band pairs; 1000 resamples, seed 0, same resample for both options; percentile 95% intervals
+
+C v1 logistic regression
+  band F1         0.9416  95% CI [0.9073, 0.9678]
+  band precision  0.9702  95% CI [0.9097, 1.0000]
+  band recall     0.9147  95% CI [0.8872, 0.9429]
+C v1 LightGBM
+  band F1         0.9507  95% CI [0.9031, 0.9920]
+  band precision  0.9209  95% CI [0.8353, 1.0000]
+  band recall     0.9824  95% CI [0.9676, 0.9942]
+
+Difference (first minus second) = C v1 logistic regression minus C v1 LightGBM
+  band F1         -0.0090  95% CI [-0.0609, +0.0449]  (width 0.1057)
+  band precision  +0.0492  95% CI [-0.0545, +0.1469]  (width 0.2014)
+  band recall     -0.0676  95% CI [-0.0957, -0.0414]  (width 0.0542)
+
+Bar: band F1 difference vs -0.02 (C v1 logistic regression against C v1 LightGBM as the baseline): -0.0090 [-0.0609, +0.0449] -> INCONCLUSIVE  (pass: lower end > -0.02; fail: upper end < -0.02; else inconclusive)
+
+For reference, unpaired (independent resamples): band F1 difference interval [-0.0634, +0.0443] (width 0.1077) against paired width 0.1057
