@@ -1,0 +1,103 @@
+{
+ "provider": "openai",
+ "requested_model": "gpt-5.4-2026-03-05",
+ "models_reported": {
+  "gpt-5.4-2026-03-05": 1000
+ },
+ "settings": "max_output_tokens=64;reasoning_effort=none",
+ "system_prompt_sha256": "99232406609e75d41753eb25f12d02044a2f8c3bb83ca8de93afb935dd222d69",
+ "answer_settings": {
+  "max_output_tokens": 64,
+  "reasoning_effort": "none"
+ },
+ "mode": "live",
+ "pairs": 1000,
+ "distinct_prompts": 1000,
+ "cache_hits": 0,
+ "calls": 1000,
+ "spent_usd": 1.530414,
+ "pending": 0,
+ "stopped": null,
+ "refusals": 0,
+ "api_errors": 0,
+ "unusable_answers": 0,
+ "prefix_check": {
+  "predicted_tokens": 1924,
+  "predicted_status": "ok",
+  "first_call": {
+   "input_tokens": 2073,
+   "cached_tokens": 0,
+   "pair_tokens_estimate": 117,
+   "observed_prefix_tokens": 1956,
+   "status": "outside"
+  }
+ },
+ "prompt_cache_keys": 8,
+ "key_rpm": 12.0,
+ "concurrency": 2,
+ "prompt_cache": {
+  "calls": 1000,
+  "input_tokens": 2089548,
+  "cached_tokens": 1761536,
+  "hit_ratio": 0.8430225101313777,
+  "calls_excl_first_per_key": 992,
+  "input_tokens_excl_first": 2072849,
+  "cached_tokens_excl_first": 1754368,
+  "hit_ratio_excl_first": 0.8463559091858597,
+  "keys_used": 8,
+  "per_key": {
+   "0": {
+    "calls": 125,
+    "input_tokens": 261156,
+    "cached_tokens": 220416
+   },
+   "1": {
+    "calls": 125,
+    "input_tokens": 261235,
+    "cached_tokens": 220416
+   },
+   "2": {
+    "calls": 125,
+    "input_tokens": 261303,
+    "cached_tokens": 224000
+   },
+   "3": {
+    "calls": 125,
+    "input_tokens": 261157,
+    "cached_tokens": 216832
+   },
+   "4": {
+    "calls": 125,
+    "input_tokens": 261139,
+    "cached_tokens": 220416
+   },
+   "5": {
+    "calls": 125,
+    "input_tokens": 261143,
+    "cached_tokens": 220416
+   },
+   "6": {
+    "calls": 125,
+    "input_tokens": 261144,
+    "cached_tokens": 216832
+   },
+   "7": {
+    "calls": 125,
+    "input_tokens": 261271,
+    "cached_tokens": 222208
+   }
+  }
+ },
+ "hit_log": [
+  "hit ratio after 100 calls: overall 0.806 (168,448 / 208,986 input tokens); excluding each key's first call 0.839 (92 calls)",
+  "hit ratio after 200 calls: overall 0.823 (344,064 / 417,901 input tokens); excluding each key's first call 0.840 (192 calls)",
+  "hit ratio after 300 calls: overall 0.818 (512,512 / 626,857 input tokens); excluding each key's first call 0.828 (292 calls)",
+  "hit ratio after 400 calls: overall 0.823 (688,128 / 835,819 input tokens); excluding each key's first call 0.831 (392 calls)",
+  "hit ratio after 500 calls: overall 0.830 (867,328 / 1,044,825 input tokens); excluding each key's first call 0.837 (492 calls)",
+  "hit ratio after 600 calls: overall 0.835 (1,046,528 / 1,253,793 input tokens); excluding each key's first call 0.840 (592 calls)",
+  "hit ratio after 700 calls: overall 0.838 (1,225,728 / 1,462,769 input tokens); excluding each key's first call 0.843 (692 calls)",
+  "hit ratio after 800 calls: overall 0.840 (1,404,928 / 1,671,650 input tokens); excluding each key's first call 0.845 (792 calls)",
+  "hit ratio after 900 calls: overall 0.841 (1,582,336 / 1,880,596 input tokens); excluding each key's first call 0.845 (892 calls)",
+  "hit ratio after 1000 calls: overall 0.843 (1,761,536 / 2,089,548 input tokens); excluding each key's first call 0.846 (992 calls)"
+ ]
+}

@@ -1,0 +1,46 @@
+Option B tuning round tune1: openai, 1000 TRAIN band pairs (labels from the truth file, train records only)
+models reported: {'gpt-5.4-2026-03-05': 1000}; settings: max_output_tokens=64;reasoning_effort=none
+sample: 250 same, 68 decoy different, 682 other different
+
+Confusion matrix (unweighted; same-entity = positive)
+                    truth same   truth different
+  decided same             250                 0
+  decided different          0               750
+  precision 1.0000  recall 1.0000  F1 1.0000  accuracy 1.0000
+
+Weighted to the train band mix: true weight 410 / 250 = 1.6400, false weight 62863 / 750 = 83.8173 (as specified)
+  precision 1.0000 [1.0000, 1.0000]  recall 1.0000 [1.0000, 1.0000]  F1 1.0000 [1.0000, 1.0000]  (bootstrap 95%, 1000 resamples, seed 0)
+  weighted TP 410.0  FP 0.0  FN 0.0
+
+Weighted to the train band mix: by sampling stratum from the sampler pool (63,203 pairs: 395 same, 68 decoy, 62,740 other): same 1.580, decoy 1.000, other 91.994
+  precision 1.0000 [1.0000, 1.0000]  recall 1.0000 [1.0000, 1.0000]  F1 1.0000 [1.0000, 1.0000]  (bootstrap 95%, 1000 resamples, seed 0)
+  weighted TP 395.0  FP 0.0  FN 0.0
+
+Errors by tag (a pair counts under every hard tag either record carries)
+  tag           pairs   same   diff    FN    FP   recall   FP rate
+  acronym         165    111     54     0     0    1.000     0.000
+  truncation      127     43     84     0     0    1.000     0.000
+  po_box          190    142     48     0     0    1.000     0.000
+  decoy            68      0     68     0     0      -       0.000
+  easy            122      8    114     0     0    1.000     0.000
+  no tag          394      1    393     0     0    1.000     0.000
+
+False negatives (same organization, decided different): 0 in all, up to 15 shown (most confident first)
+
+False positives (different organizations, decided same): 0 in all, up to 15 shown (most confident first)
+
+Confidence in 5 bins, read as P(same) as the system prompt defines it
+  bin           pairs   same  frac same  mean P(same)  decided same
+  [0.0, 0.2)      470      0      0.000         0.017             0
+  [0.2, 0.4)        0
+  [0.4, 0.6)        0
+  [0.6, 0.8)        1      1      1.000         0.790             1
+  [0.8, 1.0]      529    249      0.471         0.974           249
+  confidence contradicting the decision: 0 'same' answers below 0.5; 280 of 750 'different' answers at 0.5 or above (most common values {'0.99': 237, '0.98': 30, '0.97': 7, '0.96': 5, '0.94': 1}). Those 'different' answers read like confidence in the decision, not P(same) as the prompt asks.
+
+Calls (calls.jsonl)
+  live calls 1000; tokens: input 2,089,548, cached 1,761,536, output 18,000 (per call: input 2090, cached 1762, output 18.0)
+  hit ratio (cached / input tokens): overall 0.843; excluding each key's first call 0.846 (8 keys)
+  cost: total $1.5304, per call $0.001530 (min $0.001421, max $0.005520)
+  latency per call: p50 0.95 s, p95 1.30 s, max 1346.09 s
+  refusals 0, parse failures 0, API errors 0
