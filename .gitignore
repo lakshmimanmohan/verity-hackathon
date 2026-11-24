@@ -15,3 +15,4 @@ Verity_Hackathon_Plan.xlsx
 results/*/verity_data/verity_store.sqlite
 results/*/verity_data/embeddings_global.pkl
 results/*/verity_data/*/embeddings.pkl
+results/*/verity_data/scored_pairs.csv

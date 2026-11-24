@@ -57,6 +57,30 @@ MATCH_CANDIDATES_FIELDNAMES = [
     "field_similarities",
 ]
 EXACT_DUPLICATE_SHARED_ATTRIBUTES = "exact_duplicate"
+# Every scored pair, whatever its match_type, plus exact-duplicate pairs; one row per pair.
+SCORED_PAIRS_PATH = data_dir() / "scored_pairs.csv"
+# Written once per run: column -> semantic type, and the constants of the score formula.
+SCORED_PAIRS_COLUMNS_PATH = data_dir() / "scored_pairs_columns.json"
+SCORED_PAIRS_FIELDNAMES = [
+    "record_a",
+    "record_b",
+    "score",
+    "score_uncapped",
+    "cosine",
+    "diversity_bonus",
+    "match_type",
+    "pair_source",
+    "applied_threshold",
+    "effective_threshold",
+    "evidence_passes",
+    "evidence_mass",
+    "conflict_mass",
+    "field_similarities",
+    "field_weights",
+    "evidence_field_similarities",
+]
+# Semantic types whose field similarity blends the record cosine with char Jaccard.
+HYBRID_SEMANTIC_TYPES = ("DESCRIPTIVE", "NAME", "STREET_ADDRESS")
 COLUMN_CLASSIFICATION_NAME = "column_classification.json"
 DATA_COLUMN_CLASSIFICATION_PATH = data_dir() / COLUMN_CLASSIFICATION_NAME
 GLOBAL_EMBEDDINGS_PATH = data_dir() / "embeddings_global.pkl"
@@ -1301,10 +1325,17 @@ def weighted_field_similarity(
     semantic_by_col: dict[str, str] | None = None,
     record_emb_a: np.ndarray | None = None,
     record_emb_b: np.ndarray | None = None,
-) -> tuple[float, float, dict[str, float], dict[str, float]]:
+) -> tuple[
+    float, float, dict[str, float], dict[str, float], dict[str, float], dict[str, float]
+]:
     """
-    Returns (similarity, mass, per_field_contributions, per_field_display_similarities).
+    Returns (similarity, mass, per_field_contributions, per_field_display_similarities,
+    per_field_char_jaccard, per_field_weight).
     Uses discriminative_score-derived weights, renormalized over overlapping keys.
+
+    ``per_field_char_jaccard`` and ``per_field_weight`` (the renormalized weight ``wn``)
+    are the field-specific inputs the similarity is built from; the embedding part of a
+    hybrid field is the whole-record cosine, the same for every hybrid field.
 
     For columns whose semantic type is NAME or DESCRIPTIVE, when record-level
     embeddings are available, blends cosine similarity of record vectors with
@@ -1320,20 +1351,24 @@ def weighted_field_similarity(
         if w > 0:
             weights.append((k, w))
     if not weights:
-        return 0.0, 0.0, {}, {}
+        return 0.0, 0.0, {}, {}, {}, {}
     sem = semantic_by_col or {}
     hybrid_ok = record_emb_a is not None and record_emb_b is not None
     s_w = sum(w for _, w in weights)
     num = 0.0
     per_field: dict[str, float] = {}
     per_field_sim: dict[str, float] = {}
+    per_field_jaccard: dict[str, float] = {}
+    per_field_weight: dict[str, float] = {}
     for k, w in weights:
         wn = w / s_w
         va = str(attrs_a[k])
         vb = str(attrs_b[k])
         field_sem = str(sem.get(k, "")).strip().upper()
         raw_sim = char_jaccard(va, vb)
-        if hybrid_ok and field_sem in ("DESCRIPTIVE", "NAME", "STREET_ADDRESS"):
+        per_field_jaccard[k] = raw_sim
+        per_field_weight[k] = wn
+        if hybrid_ok and field_sem in HYBRID_SEMANTIC_TYPES:
             sim = (
                 HYBRID_EMBED_WEIGHT * cosine_similarity(record_emb_a, record_emb_b)
                 + HYBRID_CHAR_WEIGHT * raw_sim
@@ -1351,7 +1386,7 @@ def weighted_field_similarity(
             if field_sem == "DESCRIPTIVE" and len(va.split()) == 1
             else sequence_similarity(va, vb)
         )
-    return float(num), float(s_w), per_field, per_field_sim
+    return float(num), float(s_w), per_field, per_field_sim, per_field_jaccard, per_field_weight
 
 
 def fingerprint_to_label(fp: str) -> str:
@@ -1532,6 +1567,134 @@ def dedupe_match_candidate_rows(rows: list[dict[str, Any]]) -> list[dict[str, An
     return list(best.values())
 
 
+def _fmt6(x: Any) -> str:
+    return "" if x is None else f"{float(x):.6f}"
+
+
+def _json6(d: dict[str, float] | None) -> str:
+    if d is None:
+        return ""
+    return json.dumps(
+        {str(k): round(float(v), 6) for k, v in sorted(d.items())}, ensure_ascii=False
+    )
+
+
+def build_scored_pair_rows(
+    exact_rows: list[dict[str, Any]], scored_rows: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """
+    One row per unordered pair over exact-duplicate pairs and every scored neighbor pair,
+    with the same dedupe as match_candidates.csv. score and match_type come from the
+    winning row; the scoring columns come from the neighbor scoring of the pair (blank for
+    an exact-duplicate pair that neighbor search did not find).
+    """
+    neighbor_by_key: dict[tuple[str, str], dict[str, Any]] = {}
+    for r in scored_rows:
+        c = canonical_match_candidate_row(r)
+        neighbor_by_key[(str(c["record_a"]), str(c["record_b"]))] = c
+    out: list[dict[str, Any]] = []
+    for r in dedupe_match_candidate_rows(exact_rows + scored_rows):
+        key = (str(r["record_a"]), str(r["record_b"]))
+        is_exact = r.get("shared_attributes") == EXACT_DUPLICATE_SHARED_ATTRIBUTES
+        nb = neighbor_by_key.get(key)
+        if is_exact:
+            source = "both" if nb is not None else "exact"
+        else:
+            source = "neighbor"
+        out.append(
+            {
+                "record_a": key[0],
+                "record_b": key[1],
+                "score": float(r["score"]),
+                "match_type": r["match_type"],
+                "pair_source": source,
+                "nb": nb,
+            }
+        )
+    return out
+
+
+def write_scored_pairs(
+    rows: list[dict[str, Any]], effective_threshold: float
+) -> None:
+    write_header = (not SCORED_PAIRS_PATH.is_file()) or SCORED_PAIRS_PATH.stat().st_size == 0
+    SCORED_PAIRS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with SCORED_PAIRS_PATH.open("a", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=SCORED_PAIRS_FIELDNAMES)
+        if write_header:
+            w.writeheader()
+        for r in rows:
+            nb = r["nb"]
+            w.writerow(
+                {
+                    "record_a": r["record_a"],
+                    "record_b": r["record_b"],
+                    "score": _fmt6(r["score"]),
+                    "score_uncapped": _fmt6(nb["score_uncapped"]) if nb else "",
+                    "cosine": _fmt6(nb["cosine"]) if nb else "",
+                    "diversity_bonus": _fmt6(nb["diversity_bonus"]) if nb else "",
+                    "match_type": r["match_type"],
+                    "pair_source": r["pair_source"],
+                    "applied_threshold": _fmt6(nb["applied_threshold"]) if nb else "",
+                    "effective_threshold": _fmt6(effective_threshold),
+                    "evidence_passes": (
+                        ("true" if nb["evidence_passes"] else "false") if nb else ""
+                    ),
+                    "evidence_mass": _fmt6(nb["evidence_mass"]) if nb else "",
+                    "conflict_mass": _fmt6(nb["conflict_mass"]) if nb else "",
+                    "field_similarities": _json6(nb["field_jaccard"]) if nb else "",
+                    "field_weights": _json6(nb["field_weights"]) if nb else "",
+                    "evidence_field_similarities": (
+                        _json6(nb["field_similarities"]) if nb else ""
+                    ),
+                }
+            )
+
+
+def write_scored_pairs_columns(
+    semantic_by_col_lower: dict[str, str], mw: Any
+) -> None:
+    """Column -> semantic type, and the constants needed to rebuild score_uncapped."""
+    doc = {
+        "field_semantic_types": {
+            str(k): str(v).strip().upper() for k, v in sorted(semantic_by_col_lower.items())
+        },
+        "score_formula": {
+            "w_embed_blend": mw.w_embed_blend,
+            "w_field_blend": mw.w_field_blend,
+            "w_when_field_weights_empty": {"embed": 1.0, "field": 0.0},
+            "hybrid_embed_weight": HYBRID_EMBED_WEIGHT,
+            "hybrid_char_weight": HYBRID_CHAR_WEIGHT,
+            "hybrid_semantic_types": list(HYBRID_SEMANTIC_TYPES),
+            "score_cap": 1.0,
+            "rule": (
+                "score_uncapped = w_e*cosine + w_f*sum_k(field_weights[k]*s_k) + "
+                "diversity_bonus, where s_k = hybrid_embed_weight*cosine + "
+                "hybrid_char_weight*field_similarities[k] if field_semantic_types[k] is "
+                "in hybrid_semantic_types, else field_similarities[k]; (w_e, w_f) = "
+                "(w_embed_blend, w_field_blend), or (1, 0) when field_weights is empty; "
+                "score = min(score_uncapped, score_cap). Exact-duplicate rows "
+                "(pair_source exact or both) have score 1.0 by rule."
+            ),
+        },
+        "learned_threshold": mw.learned_threshold,
+        "effective_threshold": mw.effective_threshold,
+        "column_notes": {
+            "field_similarities": "per-field char Jaccard: the field-only part the score uses",
+            "evidence_field_similarities": (
+                "per-field display similarity read by the evidence gate, not by the score"
+            ),
+            "applied_threshold": (
+                "threshold Verity applied: learned threshold for pairs with no shared "
+                "keys, effective threshold otherwise"
+            ),
+        },
+    }
+    SCORED_PAIRS_COLUMNS_PATH.write_text(
+        json.dumps(doc, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
+
+
 def summarize_scores(
     scores: list[float],
     threshold: float,
@@ -1665,6 +1828,7 @@ def main(
     is_full_match_run = not new_id_set or new_id_set == all_union_ids
     if is_full_match_run:
         OUTPUT_PATH.unlink(missing_ok=True)
+        SCORED_PAIRS_PATH.unlink(missing_ok=True)
         print(f"Run mode: FULL — {len(all_union_ids)} records")
     else:
         print(f"Run mode: DELTA — {len(new_id_set)} new records")
@@ -1768,6 +1932,8 @@ def main(
     disc = mw.discriminative_by_col
     skipped_missing_store_context = 0
     skipped_missing_embeddings = 0
+    skipped_no_semantic_field = 0
+    skipped_single_token_semantic_fields = 0
 
     record_labels = store.record_labels()
     context = fetch_record_context(store, record_labels)
@@ -1812,13 +1978,22 @@ def main(
         )
         if sem_fields:
             if not any(k in aa for k in sem_fields) or not any(k in ab for k in sem_fields):
+                skipped_no_semantic_field += 1
                 continue
             has_a = any(" " in str(aa.get(k, "")) for k in sem_fields)
             has_b = any(" " in str(ab.get(k, "")) for k in sem_fields)
             if not has_a or not has_b:
+                skipped_single_token_semantic_fields += 1
                 continue
 
-        field_sim, mass, field_contributions, field_similarities = weighted_field_similarity(
+        (
+            field_sim,
+            mass,
+            field_contributions,
+            field_similarities,
+            field_jaccard,
+            field_weights,
+        ) = weighted_field_similarity(
             aa,
             ab,
             disc,
@@ -1836,8 +2011,8 @@ def main(
         src_b = cb["source_system"]
         div = diversity_bonus(src_a, src_b, mw.learned_threshold)
 
-        score = w_e * cos_part + w_f * field_sim + div
-        score = min(score, 1.0)
+        score_uncapped = w_e * cos_part + w_f * field_sim + div
+        score = min(score_uncapped, 1.0)
 
         rid_a = str(ca["record_id"])
         rid_b = str(cb["record_id"])
@@ -1913,6 +2088,10 @@ def main(
                 "src_b": src_b,
                 "field_contributions": field_contributions,
                 "field_similarities": field_similarities,
+                "score_uncapped": score_uncapped,
+                "diversity_bonus": div,
+                "field_jaccard": field_jaccard,
+                "field_weights": field_weights,
             }
         )
 
@@ -1973,6 +2152,14 @@ def main(
                 "evidence_detail": item.get("evidence_detail", ""),
                 "field_contributions": item.get("field_contributions") or {},
                 "field_similarities": item.get("field_similarities") or {},
+                # Extra fields for scored_pairs.csv only; match_candidates.csv ignores them.
+                "cosine": cos_part,
+                "score_uncapped": item["score_uncapped"],
+                "diversity_bonus": item["diversity_bonus"],
+                "applied_threshold": effective_score_threshold,
+                "evidence_passes": evidence_passes,
+                "field_jaccard": item["field_jaccard"],
+                "field_weights": item["field_weights"],
             }
         )
 
@@ -2095,6 +2282,37 @@ def main(
 
     store.close()
 
+    scored_pair_rows = build_scored_pair_rows(exact_rows, rows_out)
+    if new_id_set and not is_full_match_run:
+        new_ids_sp = frozenset(new_id_set)
+        scored_pair_rows = [
+            r
+            for r in scored_pair_rows
+            if r["record_a"] in new_ids_sp or r["record_b"] in new_ids_sp
+        ]
+    scored_pair_rows.sort(key=lambda r: (-r["score"], r["record_a"], r["record_b"]))
+    write_scored_pairs(scored_pair_rows, threshold)
+    write_scored_pairs_columns(sem_by_lower, mw)
+    n_exact_only = sum(1 for r in scored_pair_rows if r["pair_source"] == "exact")
+    if skipped_no_semantic_field or skipped_single_token_semantic_fields:
+        print(
+            f"Skipped {skipped_no_semantic_field} neighbour pair(s) — a record has no "
+            "NAME/DESCRIPTIVE/STREET_ADDRESS value; "
+            f"{skipped_single_token_semantic_fields} — no such value contains a space."
+        )
+    update_run_info(
+        neighbor_pairs=len(pairs),
+        skipped_missing_store_context=skipped_missing_store_context,
+        skipped_missing_embeddings=skipped_missing_embeddings,
+        skipped_no_semantic_field=skipped_no_semantic_field,
+        skipped_single_token_semantic_fields=skipped_single_token_semantic_fields,
+        scored_neighbor_pairs=len(rows_out),
+        exact_duplicate_pairs=len(exact_pairs),
+        exact_only_pairs=n_exact_only,
+        scored_pairs_rows=len(scored_pair_rows),
+        match_candidates_rows=len(rows_to_write),
+    )
+
     type_counts: dict[str, int] = {}
     for r in rows_out:
         t = str(r["match_type"])
@@ -2110,6 +2328,10 @@ def main(
     print(f"Dropped {n_dropped_insufficient} insufficient_evidence pairs")
     print(f"Dropped {n_dropped_below} below_threshold pairs")
     print(f"Wrote {len(rows_to_write)} row(s) to match_candidates.csv")
+    print(
+        f"Wrote {len(scored_pair_rows)} row(s) to scored_pairs.csv "
+        f"({n_exact_only} exact-duplicate pair(s) not found by neighbor search)"
+    )
     print("Done.")
 
 
