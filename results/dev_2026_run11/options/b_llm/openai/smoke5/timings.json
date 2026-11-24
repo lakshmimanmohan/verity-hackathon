@@ -1,0 +1,23 @@
+{
+  "option": "B",
+  "provider": "openai",
+  "model": "gpt-5.4-2026-03-05",
+  "host": {
+    "cpu_model": "Intel(R) Core(TM) Ultra 7 265U",
+    "logical_cores": 14,
+    "ram_gb": 31.5,
+    "os": "Windows-11-10.0.26300-SP0",
+    "python": "3.13.16",
+    "torch_threads": 12,
+    "omp_num_threads": null
+  },
+  "timings": [],
+  "timing_summary": {
+    "mode": "live",
+    "pairs": 5,
+    "calls": 0,
+    "cache_hits": 5,
+    "spent_usd": 0.0,
+    "settings": "max_output_tokens=64;reasoning_effort=none"
+  }
+}

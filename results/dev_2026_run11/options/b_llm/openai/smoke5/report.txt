@@ -1,0 +1,4 @@
+Option B openai / gpt-5.4-2026-03-05 (max_output_tokens=64;reasoning_effort=none): 5 stratified TRAIN band pairs
+calls 0, cache hits 5, spent $0.0000, pending 0, refusals 0, models reported {'gpt-5.4-2026-03-05': 5}
+decisions: results\dev_2026_run11\options\b_llm\openai\smoke5\decisions.csv
+quality on this stratified TRAIN sample (not representative: ~25% same): precision 1.0000 recall 1.0000 F1 1.0000 TP 1 FP 0 FN 0 TN 4
