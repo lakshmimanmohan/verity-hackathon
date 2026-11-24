@@ -143,6 +143,8 @@ def main() -> int:
     ap.add_argument("--n", type=int, default=None, help="Train on a nested subset of n band pairs")
     ap.add_argument("--true-share", type=float, default=0.25)
     ap.add_argument("--k", type=int, default=5)
+    ap.add_argument("--sample-seed", type=int, default=SEED,
+                    help="Seed for the --n subset only (folds, model and grid stay at seed 0)")
     args = ap.parse_args()
     csv.field_size_limit(10**8)
     t_start = time.perf_counter()
@@ -193,7 +195,7 @@ def main() -> int:
     idx = np.arange(len(train_band))
     pop_w = {1: 1.0, 0: 1.0}
     if args.n is not None:
-        rng = random.Random(SEED)
+        rng = random.Random(args.sample_seed)
         pos = [i for i in idx if y_all[i] == 1]
         neg = [i for i in idx if y_all[i] == 0]
         rng.shuffle(pos)
@@ -310,6 +312,7 @@ def main() -> int:
         "config": cfg, "fixed_params": LGBM_FIXED if args.model == "lgbm" else
         {"C": 1.0, "class_weight": "balanced", "standardized": True},
         "cutoff": t_star, "seed": SEED, "k_folds": k, "n": args.n, "true_share": args.true_share if args.n else None,
+        "sample_seed": args.sample_seed if args.n else None,
     }, indent=1), encoding="utf-8")
     rel = reliability(pc, yo, wo)
     (out / "oof_reliability.json").write_text(json.dumps(rel, indent=1), encoding="utf-8")
@@ -321,7 +324,7 @@ def main() -> int:
         "",
         f"Train band pairs: {len(train_band)} ({N_pos_all} true, {N_neg_all} false)",
         f"Training set: {len(sub)} pairs ({int(y.sum())} true, {int(len(y) - y.sum())} false)"
-        + (f"; nested subset n={args.n}, true share {args.true_share:.0%}; population weights "
+        + (f"; nested subset n={args.n} (sample seed {args.sample_seed}), true share {args.true_share:.0%}; population weights "
            f"true {pop_w[1]:.3f}, false {pop_w[0]:.3f}" if args.n else "; all train band pairs"),
         f"Test band pairs scored: {len(test_band)} (no test labels read)",
         "",

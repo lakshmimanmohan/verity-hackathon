@@ -267,6 +267,9 @@ def main() -> int:
         ece_hi = sum(abs(float((w[hi_m & (bins == i)] * tru[hi_m & (bins == i)]).sum())
                          - float((w[hi_m & (bins == i)] * pc[hi_m & (bins == i)]).sum()))
                      for i in range(10)) / whi if whi else 0.0
+        from sklearn.metrics import average_precision_score
+        ap_band = float(average_precision_score(tru, pc, sample_weight=w)) if tru.any() else 0.0
+        print(f"\nBand average precision (cutoff-free, ranked by confidence){est}: {ap_band:.4f}")
         print(f"\nCalibration (test band, 10 equal-width bins){est}")
         print(f"  ECE {ece:.4f}   (bar: <= 0.05)")
         print(f"  ECE among pairs with confidence >= 0.05: {ece_hi:.4f}  ({fmt(whi, weighted)} pairs)")
