@@ -68,6 +68,7 @@ SCORED_PAIRS_FIELDNAMES = [
     "score_uncapped",
     "cosine",
     "match_type",
+    "decision_status",
     "pair_source",
     "applied_threshold",
     "effective_threshold",
@@ -78,6 +79,9 @@ SCORED_PAIRS_FIELDNAMES = [
     "field_weights",
     "evidence_field_similarities",
 ]
+# Review band for scored_pairs.csv decision_status: a pair is "review" when its score is
+# within this margin of the effective threshold, inclusive (protocol.md borderline band).
+REVIEW_MARGIN = 0.05
 # Semantic types whose field similarity blends the record cosine with char Jaccard.
 HYBRID_SEMANTIC_TYPES = ("DESCRIPTIVE", "NAME", "STREET_ADDRESS")
 COLUMN_CLASSIFICATION_NAME = "column_classification.json"
@@ -1622,9 +1626,28 @@ def build_scored_pair_rows(
     return out
 
 
+def _micro(x: float) -> int:
+    """A value as an integer number of millionths, as written to the CSV (%.6f)."""
+    return int(round(float(f"{float(x):.6f}") * 1_000_000))
+
+
+def decision_status_for(score: float, match_type: str, effective_threshold: float) -> str:
+    """
+    review when the written score is within REVIEW_MARGIN of the written effective
+    threshold, inclusive; otherwise Verity's own decision: match when the pair is written
+    to match_candidates.csv, else non_match. Compared on the 6-decimal values written to
+    the file, in integer millionths, so the band edges are exact.
+    """
+    if abs(_micro(score) - _micro(effective_threshold)) <= _micro(REVIEW_MARGIN):
+        return "review"
+    return "match" if match_type in MATCH_CANDIDATES_WRITE_MATCH_TYPES else "non_match"
+
+
 def write_scored_pairs(
     rows: list[dict[str, Any]], effective_threshold: float
-) -> None:
+) -> Counter:
+    """Append rows to scored_pairs.csv; return decision_status counts."""
+    status_counts: Counter = Counter()
     write_header = (not SCORED_PAIRS_PATH.is_file()) or SCORED_PAIRS_PATH.stat().st_size == 0
     SCORED_PAIRS_PATH.parent.mkdir(parents=True, exist_ok=True)
     with SCORED_PAIRS_PATH.open("a", newline="", encoding="utf-8") as f:
@@ -1633,6 +1656,8 @@ def write_scored_pairs(
             w.writeheader()
         for r in rows:
             nb = r["nb"]
+            status = decision_status_for(r["score"], r["match_type"], effective_threshold)
+            status_counts[status] += 1
             w.writerow(
                 {
                     "record_a": r["record_a"],
@@ -1641,6 +1666,7 @@ def write_scored_pairs(
                     "score_uncapped": _fmt6(nb["score_uncapped"]) if nb else "",
                     "cosine": _fmt6(nb["cosine"]) if nb else "",
                     "match_type": r["match_type"],
+                    "decision_status": status,
                     "pair_source": r["pair_source"],
                     "applied_threshold": _fmt6(nb["applied_threshold"]) if nb else "",
                     "effective_threshold": _fmt6(effective_threshold),
@@ -1656,6 +1682,7 @@ def write_scored_pairs(
                     ),
                 }
             )
+    return status_counts
 
 
 def write_scored_pairs_columns(
@@ -1685,6 +1712,12 @@ def write_scored_pairs_columns(
             ),
         },
         "learned_threshold": mw.learned_threshold,
+        "review_margin": REVIEW_MARGIN,
+        "decision_status_rule": (
+            "review when |score - effective_threshold| <= review_margin (inclusive, on the "
+            "6-decimal values); otherwise match when match_type is full_signal, weak_signal "
+            "or embedding_only (the rows of match_candidates.csv), else non_match"
+        ),
         "effective_threshold": mw.effective_threshold,
         "column_notes": {
             "field_similarities": "per-field char Jaccard: the field-only part the score uses",
@@ -2311,7 +2344,7 @@ def main(
             if r["record_a"] in new_ids_sp or r["record_b"] in new_ids_sp
         ]
     scored_pair_rows.sort(key=lambda r: (-r["score"], r["record_a"], r["record_b"]))
-    write_scored_pairs(scored_pair_rows, threshold)
+    decision_status_counts = write_scored_pairs(scored_pair_rows, threshold)
     write_scored_pairs_columns(sem_by_lower, mw)
     record_timing(
         "verity.write_outputs", time.perf_counter() - t_write, parent="verity.match",
@@ -2337,6 +2370,10 @@ def main(
         exact_only_pairs=n_exact_only,
         scored_pairs_rows=len(scored_pair_rows),
         match_candidates_rows=len(rows_to_write),
+        review_margin=REVIEW_MARGIN,
+        decision_status_counts={
+            s: decision_status_counts.get(s, 0) for s in ("match", "non_match", "review")
+        },
     )
 
     type_counts: dict[str, int] = {}
