@@ -5,6 +5,12 @@ learn rules from CSV → record store → embed → match → merge → match ex
 
 from __future__ import annotations
 
+import time
+
+# Process clock for the verity.startup and verity.total timings (taken before the heavy
+# imports below; Python interpreter start-up itself is not included).
+_T_START = time.perf_counter()
+
 import argparse
 import csv
 import json
@@ -13,7 +19,6 @@ import shutil
 import statistics
 import subprocess
 import sys
-import time
 from pathlib import Path
 from typing import Any
 
@@ -27,9 +32,13 @@ from config import (
     NN_MODES,
     annoy_installed,
     data_dir,
+    host_info,
     nn_mode,
     record_label_from_csv,
+    record_timing,
+    recorded_timings,
     start_run_info,
+    update_run_info,
 )
 
 _SRC = Path(__file__).resolve().parent
@@ -292,11 +301,25 @@ def write_run_info(
     )
 
 
-def run_phase(label: str, fn):
+def run_phase(label: str, fn, stage: str | None = None):
     t0 = time.perf_counter()
     result = fn()
-    print_phase_banner(label, time.perf_counter() - t0)
+    elapsed = time.perf_counter() - t0
+    print_phase_banner(label, elapsed)
+    if stage:
+        record_timing(stage, elapsed)
     return result
+
+
+def record_other(parent: str, parent_seconds: float) -> None:
+    """Record ``<parent>.other``: the part of a parent stage its children don't cover."""
+    children = sum(t["seconds"] for t in recorded_timings() if t.get("parent") == parent)
+    record_timing(f"{parent}.other", max(0.0, parent_seconds - children), parent=parent,
+                  note="untimed remainder of the parent stage")
+
+
+def stage_seconds(stage: str) -> float:
+    return sum(t["seconds"] for t in recorded_timings() if t["stage"] == stage)
 
 
 def run_rule_learner_on_csv(csv_path: Path) -> None:
@@ -609,6 +632,8 @@ def main(
     from merge import main as run_merge
 
     t_all = time.perf_counter()
+    record_timing("verity.startup", t_all - _T_START,
+                  note="main.py imports, argument parsing, data folder, store check")
 
     t_rules = time.perf_counter()
     if args.reuse_weights:
@@ -623,6 +648,7 @@ def main(
         print_phase_banner(
             "1. Learn rules from data (skipped)", time.perf_counter() - t_rules
         )
+        record_timing("verity.rule_learning", time.perf_counter() - t_rules, note="skipped")
     else:
         rule_learner_csv = (
             args.retrain_weights.expanduser().resolve()
@@ -632,9 +658,13 @@ def main(
         run_rule_learner_on_csv(rule_learner_csv)
         print_phase_banner("1. Learn rules from data", time.perf_counter() - t_rules)
     print_learned_rules_markdown()
+    if not args.reuse_weights:
+        record_timing("verity.rule_learning", time.perf_counter() - t_rules,
+                      note="rule_learner subprocess, including its Python start-up")
 
     if skip_build_graph:
         print("\n(Phase 2 build_graph skipped — data already in the record store.)\n")
+        record_timing("verity.build_graph", 0.0, note="skipped")
     else:
         run_phase(
             "2. build_graph",
@@ -642,6 +672,7 @@ def main(
                 input_path=pipeline_csv,
                 record_label_from_csv_path=source_csv,
             ),
+            stage="verity.build_graph",
         )
     new_record_ids = run_phase(
         "3. embed",
@@ -649,7 +680,9 @@ def main(
             input_path=pipeline_csv,
             record_label_from_csv_path=source_csv,
         ),
+        stage="verity.embed",
     )
+    record_other("verity.embed", stage_seconds("verity.embed"))
     new_record_ids = {str(rid) for rid in (new_record_ids or set())}
     incremental = bool(new_record_ids) and bool(args.reuse_weights)
     run_phase(
@@ -659,7 +692,9 @@ def main(
             record_label_from_csv_path=source_csv,
             new_record_ids=new_record_ids,
         ),
+        stage="verity.match",
     )
+    record_other("verity.match", stage_seconds("verity.match"))
 
     t_merge = time.perf_counter()
     merge_stats = run_merge(
@@ -669,6 +704,8 @@ def main(
         new_record_ids=new_record_ids,
     )
     print_phase_banner("5. merge", time.perf_counter() - t_merge)
+    record_timing("verity.merge", time.perf_counter() - t_merge)
+    t_explore = time.perf_counter()
 
     def _phase6_explore_matches() -> None:
         try:
@@ -690,11 +727,28 @@ def main(
         print(f"Match summary saved to: {DATA_DIR / 'match_summary.csv'}")
 
     run_phase("6b. match summary", lambda: _phase6b_match_summary())
+    record_timing("verity.explore", time.perf_counter() - t_explore,
+                  note="match_explorer.html and match_summary.csv")
 
     n_raw = count_raw_records(pipeline_csv)
     print_final_report(merge_stats, n_raw)
 
     print(f"Total wall time (all phases): {time.perf_counter() - t_all:.2f}s")
+
+    total_s = time.perf_counter() - _T_START
+    record_timing("verity.total", total_s,
+                  note="from main.py import to the end of the run (interpreter start-up excluded)")
+    load_s = stage_seconds("verity.embed.model_load")
+    update_run_info(
+        host=host_info(),
+        timings=recorded_timings(),
+        timing_summary={
+            "cold_total_s": round(total_s, 3),
+            "warm_total_s": round(total_s - load_s, 3),
+            "model_load_s": round(load_s, 3),
+            "definition": "cold = total; warm = total minus model load",
+        },
+    )
 
 
 if __name__ == "__main__":

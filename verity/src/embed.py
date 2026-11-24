@@ -16,6 +16,7 @@ import math
 import os
 import pickle
 import re
+import time
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Iterable
@@ -24,7 +25,17 @@ import numpy as np
 from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
 
-from config import data_dir
+from config import data_dir, record_timing, update_run_info
+
+
+def model_in_local_cache(model_name: str) -> bool | None:
+    """True if the model's files are in the local Hugging Face cache (None if unknown)."""
+    try:
+        from huggingface_hub import try_to_load_from_cache
+    except ImportError:
+        return None
+    repo = model_name if "/" in model_name else f"sentence-transformers/{model_name}"
+    return isinstance(try_to_load_from_cache(repo, "config.json"), str)
 
 MODEL_NAME = "all-MiniLM-L6-v2"
 WRITE_BATCH_SIZE = 50
@@ -436,8 +447,18 @@ def main(
     print(f"  … document frequency over {len(df)} distinct (attribute, value) pairs")
 
     print(f"Loading sentence-transformers model '{MODEL_NAME}'…")
+    cache_hit = model_in_local_cache(MODEL_NAME)
+    t_load = time.perf_counter()
     model = SentenceTransformer(MODEL_NAME)
     dim = int(model.get_sentence_embedding_dimension())
+    load_s = time.perf_counter() - t_load
+    record_timing(
+        "verity.embed.model_load", load_s, parent="verity.embed",
+        note=f"model {MODEL_NAME}; model_cache_hit={cache_hit}",
+    )
+    update_run_info(model_cache_hit=cache_hit)
+    encode_s = 0.0
+    n_segments = 0
 
     if schema_changed:
         to_compute: set[str] = set(neo_ids)
@@ -483,7 +504,10 @@ def main(
                         f"  … page {page_num}: encode {len(uniq_segments)} segment(s) "
                         f"for {len(page_compute_keys)} record(s)"
                     )
+                    t_enc = time.perf_counter()
                     segment_embeddings = encode_segments_in_batches(model, uniq_segments)
+                    encode_s += time.perf_counter() - t_enc
+                    n_segments += len(uniq_segments)
 
                 for sk in sorted(page_compute_keys):
                     attrs = page[sk]
@@ -517,6 +541,11 @@ def main(
             skip += STORE_FETCH_PAGE_SIZE
 
     save_global_embeddings_store(GLOBAL_EMBEDDINGS_PATH, vectors_store, embed_meta)
+    record_timing(
+        "verity.embed.encode", encode_s, parent="verity.embed",
+        items=n_segments, item="segment",
+        note=f"sentence-transformers encode only, {n_new} record(s) embedded",
+    )
 
     m1, m1_label = memory_usage_mb()
     if m1 >= 0:

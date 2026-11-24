@@ -35,7 +35,7 @@ except ImportError:
     _ANNOY_AVAILABLE = False
 
 from column_classification import apply_global_content_overlay
-from config import data_dir, nn_mode, update_run_info
+from config import data_dir, nn_mode, record_timing, update_run_info
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_INPUT_PATH = None
@@ -1460,16 +1460,19 @@ def neighbor_pairs(
             f"n={n} (mode approximate)"
         )
         dim = int(X.shape[1])
+        t0 = time.perf_counter()
         index = AnnoyIndex(dim, "angular")
         index.set_seed(0)
         x_f32 = np.ascontiguousarray(X, dtype=np.float32)
         for i in range(n):
             index.add_item(i, x_f32[i].tolist())
-        t0 = time.perf_counter()
         index.build(50)
         build_s = time.perf_counter() - t0
         print(f"Neighbor index build time: {build_s:.3f}s")
+        record_timing("verity.neighbors.build", build_s, parent="verity.match",
+                      items=n, item="record", note="Annoy add_item + build(50)")
 
+        t_q = time.perf_counter()
         for i in range(n):
             idx_list, dist_list = index.get_nns_by_item(
                 i, k_query, include_distances=True
@@ -1484,6 +1487,8 @@ def neighbor_pairs(
                 eid_j = node_ids[int(j)]
                 a, b = (eid_i, eid_j) if eid_i < eid_j else (eid_j, eid_i)
                 out.add((a, b))
+        record_timing("verity.neighbors.query", time.perf_counter() - t_q, parent="verity.match",
+                      items=n, item="record", note=f"Annoy top-{top_k}")
         return out
 
     if mode == "auto" and n >= APPROXIMATE_NN_THRESHOLD and not _ANNOY_AVAILABLE:
@@ -1507,6 +1512,9 @@ def neighbor_pairs(
     nn.fit(X)
     build_s = time.perf_counter() - t0
     print(f"Neighbor index build time: {build_s:.3f}s")
+    record_timing("verity.neighbors.build", build_s, parent="verity.match",
+                  items=n, item="record", note="sklearn NearestNeighbors fit (cosine, brute)")
+    t_q = time.perf_counter()
     dist, idx = nn.kneighbors(X, return_distance=True)
 
     for i in range(n):
@@ -1520,6 +1528,8 @@ def neighbor_pairs(
             eid_j = node_ids[int(j)]
             a, b = (eid_i, eid_j) if eid_i < eid_j else (eid_j, eid_i)
             out.add((a, b))
+    record_timing("verity.neighbors.query", time.perf_counter() - t_q, parent="verity.match",
+                  items=n, item="record", note=f"kneighbors top-{top_k} + pair set")
 
     return out
 
@@ -1954,7 +1964,12 @@ def main(
 
     evidence_debug_cross_remaining = 5
     shared_keys_sem_debug_remaining = 5
+    # Timing: verity.score covers this loop (features, score, evidence per pair) and the
+    # decision pass below; per-pair latency is measured for each pair that is scored.
+    t_score = time.perf_counter()
+    pair_seconds: list[float] = []
     for ea, eb in sorted(pairs):
+        t_pair = time.perf_counter()
         ca = context.get(ea)
         cb = context.get(eb)
         if ca is None or cb is None:
@@ -2099,6 +2114,7 @@ def main(
                 "field_weights": field_weights,
             }
         )
+        pair_seconds.append(time.perf_counter() - t_pair)
 
     threshold = mw.effective_threshold
     embedding_only_threshold = mw.learned_threshold
@@ -2161,6 +2177,11 @@ def main(
             }
         )
 
+    record_timing(
+        "verity.score", time.perf_counter() - t_score, parent="verity.match",
+        items=len(pair_seconds), item="pair", per_item_s=pair_seconds,
+        note="per pair: field similarity, score, shared keys, evidence; plus the decision pass",
+    )
     print_score_distribution_summary(all_pair_scores)
 
     id_disp = ", ".join(evidence_profile.identity_fields)
@@ -2250,6 +2271,7 @@ def main(
         1 for r in rows_to_write if r["match_type"] == "weak_signal"
     )
 
+    t_write = time.perf_counter()
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     write_header = (not OUTPUT_PATH.is_file()) or OUTPUT_PATH.stat().st_size == 0
 
@@ -2291,6 +2313,11 @@ def main(
     scored_pair_rows.sort(key=lambda r: (-r["score"], r["record_a"], r["record_b"]))
     write_scored_pairs(scored_pair_rows, threshold)
     write_scored_pairs_columns(sem_by_lower, mw)
+    record_timing(
+        "verity.write_outputs", time.perf_counter() - t_write, parent="verity.match",
+        items=len(rows_to_write) + len(scored_pair_rows), item="row",
+        note="match_candidates.csv, scored_pairs.csv, scored_pairs_columns.json",
+    )
     n_exact_only = sum(1 for r in scored_pair_rows if r["pair_source"] == "exact")
     if skipped_no_semantic_field or skipped_single_token_semantic_fields:
         print(

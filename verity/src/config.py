@@ -79,6 +79,110 @@ def annoy_installed() -> bool:
     return importlib.util.find_spec("annoy") is not None
 
 
+# ---------------------------------------------------------------- timings
+# One record per timed stage, shared with the experiment's option scripts:
+#   {"stage": "verity.score", "parent": "verity.match", "seconds": 61.3,
+#    "items": 216458, "item": "pair", "per_item_ms": {"p50": .., "p95": .., "max": ..},
+#    "threads": 1, "note": ""}
+# "parent" is null for top-level stages; children of a parent add up to it (a
+# "<parent>.other" record holds the untimed remainder).
+_TIMINGS: list[dict[str, Any]] = []
+
+
+def record_timing(
+    stage: str,
+    seconds: float,
+    *,
+    parent: str | None = None,
+    items: int | None = None,
+    item: str | None = None,
+    per_item_s: list[float] | None = None,
+    note: str = "",
+) -> None:
+    rec: dict[str, Any] = {
+        "stage": stage,
+        "parent": parent,
+        "seconds": round(float(seconds), 6),
+        "items": items,
+        "item": item,
+        "note": note,
+    }
+    if per_item_s:
+        xs = sorted(per_item_s)
+
+        def pct(q: float) -> float:
+            i = min(len(xs) - 1, max(0, int(round(q * (len(xs) - 1)))))
+            return xs[i] * 1000.0
+
+        rec["per_item_ms"] = {
+            "p50": round(pct(0.50), 4),
+            "p95": round(pct(0.95), 4),
+            "max": round(xs[-1] * 1000.0, 4),
+        }
+    _TIMINGS.append(rec)
+
+
+def recorded_timings() -> list[dict[str, Any]]:
+    return list(_TIMINGS)
+
+
+def _cpu_model() -> str | None:
+    import platform
+    import subprocess
+
+    system = platform.system()
+    try:
+        if system == "Windows":
+            import winreg
+
+            key = winreg.OpenKey(
+                winreg.HKEY_LOCAL_MACHINE, r"HARDWARE\DESCRIPTION\System\CentralProcessor\0"
+            )
+            return str(winreg.QueryValueEx(key, "ProcessorNameString")[0]).strip()
+        if system == "Linux":
+            for line in Path("/proc/cpuinfo").read_text(encoding="utf-8").splitlines():
+                if line.lower().startswith("model name"):
+                    return line.split(":", 1)[1].strip()
+        if system == "Darwin":
+            out = subprocess.run(
+                ["sysctl", "-n", "machdep.cpu.brand_string"],
+                capture_output=True, text=True, timeout=10, check=True,
+            )
+            return out.stdout.strip()
+    except Exception:
+        pass
+    return platform.processor() or None
+
+
+def host_info() -> dict[str, Any]:
+    """Hardware and runtime facts that timings depend on."""
+    import platform
+
+    ram_gb = None
+    try:
+        import psutil
+
+        ram_gb = round(psutil.virtual_memory().total / 1024**3, 1)
+    except Exception:
+        pass
+    torch_threads = None
+    try:
+        import torch
+
+        torch_threads = int(torch.get_num_threads())
+    except Exception:
+        pass
+    return {
+        "cpu_model": _cpu_model(),
+        "logical_cores": os.cpu_count(),
+        "ram_gb": ram_gb,
+        "os": platform.platform(),
+        "python": platform.python_version(),
+        "torch_threads": torch_threads,
+        "omp_num_threads": os.environ.get("OMP_NUM_THREADS"),
+    }
+
+
 def update_run_info(**fields: Any) -> None:
     """
     Merge ``fields`` into the latest entry of ``run_info.json`` in the data folder
