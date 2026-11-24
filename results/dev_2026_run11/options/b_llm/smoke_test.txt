@@ -1,0 +1,69 @@
+Option B smoke test, OpenAI gpt-5.4-2026-03-05 (first live API use)
+====================================================================
+Date 2026-11-24 (UTC 20:56 to 20:57). Hard cap for the whole step $0.10. Spent $0.0241 (5 calls).
+Run: results/dev_2026_run11, provider openai, request settings reasoning_effort=none, max_output_tokens=64,
+structured output (strict JSON schema), no temperature, no tools, store=false, prompt_cache_key over 32 buckets.
+Pairs: 5 TRAIN band pairs from the sampler pool (--eval-train 5: 1 same, 1 decoy, 3 other; no few-shot record,
+no test pair). The key was never printed or logged.
+
+0. Preconditions (checked before any call)
+  git status clean; prices.json approved: gpt-5.4-2026-03-05 true, claude-sonnet-5-5 false;
+  OPENAI_API_KEY "set"; ledger total $0.0000 (no ledger file yet; no cache folder).
+
+1. Guard check (no spend): --eval-train 5 --max-usd 0.0005
+  STOPPED EARLY: run cap: run 'dev_2026_run11/b_llm/openai/guard5' total $0.0000 + $0.0073 would exceed --max-usd $0.00
+  calls 0, spent $0.0000, pending 5. Refused before any API call (0 calls). Ledger total $0.0000 afterwards;
+  the ledger file was not even created.
+
+2. Smoke test: --eval-train 5 --max-usd 0.10 --concurrency 1 --call-spacing-s 2 --stop-on-error
+  call  input tokens  cached  output  reasoning  cost $     latency s  response model          parsed
+  1     1823          0       18      0          0.004828   3.13       gpt-5.4-2026-03-05      yes
+  2     1823          0       18      0          0.004828   1.25       gpt-5.4-2026-03-05      yes
+  3     1824          0       18      0          0.004830   1.13       gpt-5.4-2026-03-05      yes
+  4     1822          0       18      0          0.004825   1.21       gpt-5.4-2026-03-05      yes
+  5     1818          0       18      0          0.004815   1.35       gpt-5.4-2026-03-05      yes
+  total cost $0.024126; every response completed (stop reason "completed"), 0 refusals, 0 errors.
+  Pause between calls about 2 s (the ledger timestamps show 2.0 to 2.1 s between a settle and the next reserve).
+  Answers: 5 of 5 as the truth file says (1 same, 4 different; confidences 0.97, 0.01, 0.99, 0.99, 0.08 for the
+  stated decision as the model reports them). 5 pairs are far too few to say anything about quality.
+
+  Ledger lines (results/llm_ledger.jsonl), one reserve and one settle per call:
+  reserve 0.00729 / settle 0.004828 (in 1823, out 18)
+  reserve 0.00727 / settle 0.004828 (in 1823, out 18)
+  reserve 0.007267 / settle 0.00483 (in 1824, out 18)
+  reserve 0.007282 / settle 0.004825 (in 1822, out 18)
+  reserve 0.007282 / settle 0.004815 (in 1818, out 18)
+  Ledger total $0.0241 (settled $0.0241, open reservations $0.0000), remaining $44.9759.
+  The full lines are in the file.
+
+3. Same command again (same --label)
+  calls 0, cache hits 5, spent $0.0000. calls.jsonl still has 5 lines (none added); the ledger gained one line,
+  {"type":"cache_hits","n":5,...,"usd":0.0}; ledger total still $0.0241. All 5 answers came from
+  results/llm_cache; no API call was made.
+
+4. Findings
+  - Request parameters accepted: yes. No call was rejected. reasoning_effort none was accepted (0 reasoning
+    tokens in every response), the strict JSON schema output parsed 5 of 5, and no temperature was sent.
+  - Cached tokens above 0 from the second call on: NO. cached_tokens was 0 on all 5 calls, so no prompt
+    caching happened in this test, although the static prompt (about 1,670 tokens) is first in the request and
+    the calls were 2 s apart.
+  - Cost per call: $0.00483 on average, against the estimate of about $0.0011. The $0.0011 figure assumed the
+    system prompt is read from the cache. Without cache hits the dry-run's "live, no caching" case is the right
+    comparison: $219.25 / 44,882 pairs = $0.00489 per pair, which this matches within 1.2%. Token counts agree
+    with the dry-run: actual input 1,818 to 1,824 per call against an estimate of about 1,805; actual output 18
+    against an estimate of 25.
+  - Response model string: gpt-5.4-2026-03-05 on all 5 responses, the same as the snapshot requested.
+  - Latency: 3.13 s for the first call, then 1.13 to 1.35 s.
+
+5. What this means (not tested yet, no further spend was made)
+  - If caching does not work, the full test band costs about $219 live and about $110 as a batch (no-hit case),
+    both over the $45 cap; the 5,000-pair sample costs about $24 live and $12 as a batch, which fits.
+  - Possible reasons for the missing cache hits, none of them checked: (a) prompt_cache_key is derived from the
+    pair content over 32 buckets, so 5 consecutive calls most likely carried 5 different keys and may have been
+    routed to different machines; (b) the minimum cacheable prompt length for this model is not documented;
+    (c) the cache may need more time or more requests to warm. A follow-up test with one fixed key and the same
+    prefix would separate (a) from the others.
+  - Code change made for this test and not committed (the instruction was to commit only the ledger and this
+    report): options/b_llm_baseline.py gained --call-spacing-s (calls one after another with a pause) and
+    --stop-on-error (stop at the first call that errors or returns an unusable answer). The OpenAI client keeps
+    max_retries=5 (SDK retries on connection errors, 429 and 5xx; none happened in this test).
