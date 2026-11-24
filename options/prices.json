@@ -49,7 +49,7 @@
       },
       "transport_settings": {
         "store": false,
-        "prompt_cache_key_buckets": 32
+        "prompt_cache_keys": 8
       },
       "batch_limits": {
         "max_requests": 50000,
@@ -64,7 +64,7 @@
         "Cache-write fee: none listed for gpt-5.4. The pricing page's write-price columns are '-' for this model and the prompt-caching page says earlier models have 'No additional cache-write charge' (the 1.25x / 2.5x write rates it lists apply to GPT-5.6 and later). The page does not state outright that caching is free.",
         "Cached input in batch: the batch table lists $0.13 for cached input (about half of $0.25). Whether prompt caching actually produces cache hits inside batch jobs is NOT documented on the batch or caching pages; estimates show a no-hit case beside the hit case.",
         "Prompt caching is automatic. The 1,024-token minimum is stated for GPT-5.6 and later; for earlier models the page says the minimum 'varies by request settings' and gives no number. Our prompt is about 1,670 tokens (estimated). For earlier models cached_tokens is reported rounded down to a multiple of 128. Cached tokens are read from usage.input_tokens_details.cached_tokens and recorded for every call.",
-        "prompt_cache_key exists: it 'influences routing' and 'helps optimize cache routing on models before GPT-5.6'; it does not guarantee a hit, and the guidance is about 15 requests per minute per key. prompt_cache_key_buckets spreads requests over that many keys derived from the prompt hash; whether it helps is measured in the pilot (cached tokens over input tokens), not assumed.",
+        "prompt_cache_key exists: it 'influences routing' and 'helps optimize cache routing on models before GPT-5.6'; it does not guarantee a hit, and the guidance is about 15 requests per minute per key. prompt_cache_keys: requests use keys verity-b-<prompt hash>-0 .. -(n-1), assigned round-robin in sorted pair order, each limited to --key-rpm requests per minute (default 12). Measured 2026-11-24: one fixed key cached 1,792 tokens once the shared prefix was about 1,870 tokens or longer (cache_diagnostic.txt).",
         "prompt_cache_retention is not set (default). gpt-5.4 supports 'in_memory' and '24h'; no price difference was found, so 24h is not used without a reason.",
         "store is false: responses are not stored.",
         "output tokens include reasoning tokens (none expected at effort none); max_output_tokens is 64 (the API minimum is 16)."

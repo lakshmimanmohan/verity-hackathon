@@ -48,8 +48,8 @@ class FakeProvider(Provider):
         self.batches = []
         self.fail = set(fail_keys)
 
-    def request(self, system, user, mode):
-        return {"user": user, "mode": mode}
+    def request(self, system, user, mode, slot=None):
+        return {"user": user, "mode": mode, "slot": slot}
 
     def _answer(self, params) -> CallResult:
         user = params["user"]

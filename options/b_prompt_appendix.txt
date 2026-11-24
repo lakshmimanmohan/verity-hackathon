@@ -1,0 +1,23 @@
+REFERENCE APPENDIX (general background; it does not change the task above)
+
+Legal-suffix equivalences (the same suffix written differently):
+  Incorporated = Inc = Inc. = INC
+  Corporation = Corp = Corp. = CORP
+  Limited = Ltd = Ltd. = LTD
+  Limited Liability Company = LLC = L.L.C. = llc
+  Limited Liability Partnership = LLP = L.L.P.
+  Company = Co = Co. = CO
+  Public Limited Company = PLC = plc = P.L.C.
+  Gesellschaft mit beschraenkter Haftung = GmbH = G.m.b.H.
+  Aktiengesellschaft = AG = A.G.
+  Societe Anonyme = SA = S.A.
+  Proprietary Limited = Pty Ltd = Pty. Ltd.
+  Besloten Vennootschap = BV = B.V.
+  Naamloze Vennootschap = NV = N.V.
+  Sociedad Anonima = SA = S.A.
+  Sociedad de Responsabilidad Limitada = SRL = S.R.L.
+  Societa a responsabilita limitata = Srl = S.r.l.
+  Aktiebolag = AB = A.B.
+  Osakeyhtio = Oy
+  Anonim Sirketi = AS = A.S.
+  Kabushiki Kaisha = KK = K.K.

@@ -69,6 +69,7 @@ class OpenAITests(unittest.TestCase):
         self.assertEqual(cfg["request_settings"]["reasoning_effort"], "none")
         self.assertIs(cfg["approved"], False)
         self.assertEqual(cfg["batch_limits"]["max_requests"], 50000)
+        self.assertEqual(cfg["transport_settings"]["prompt_cache_keys"], 8)
         self.assertLessEqual(cfg["batch_limits"]["max_bytes"], 200_000_000)
         self.assertIn("reasoning_effort=none", self.provider().settings_label())
         self.assertEqual(make_provider("openai", None, live=False).model, MODEL)
@@ -98,16 +99,15 @@ class OpenAITests(unittest.TestCase):
         for absent in ("temperature", "top_p", "tools", "tool_choice", "instructions", "previous_response_id"):
             self.assertNotIn(absent, r)
 
-    def test_prompt_cache_key_is_stable_per_content_and_bounded(self):
+    def test_prompt_cache_key_is_per_slot_and_names_the_prompt(self):
         p = self.provider()
-        k1 = p.request(SYSTEM, USER, "live")["prompt_cache_key"]
-        self.assertEqual(k1, p.request(SYSTEM, USER, "batch")["prompt_cache_key"])
-        keys = {p.request(SYSTEM, f"{USER} {i}", "live")["prompt_cache_key"] for i in range(2000)}
-        self.assertLessEqual(len(keys), 32)
-        self.assertGreater(len(keys), 16)
-        self.assertEqual(len({k.rsplit("-", 1)[0] for k in keys}), 1)       # same prompt hash prefix
-        q = self.provider(transport_settings={"store": False, "prompt_cache_key_buckets": 0})
-        self.assertNotIn("prompt_cache_key", q.request(SYSTEM, USER, "live"))
+        self.assertEqual(p.n_cache_keys(), 8)
+        h = b_llm_baseline.sha256_text(SYSTEM)[:12]
+        self.assertEqual(p.request(SYSTEM, USER, "live", slot=3)["prompt_cache_key"], f"verity-b-{h}-3")
+        self.assertEqual(p.request(SYSTEM, USER + " other pair", "batch", slot=3)["prompt_cache_key"], f"verity-b-{h}-3")
+        self.assertNotIn("prompt_cache_key", p.request(SYSTEM, USER, "live"))            # no slot: no key
+        q = self.provider(transport_settings={"store": False, "prompt_cache_keys": 0})
+        self.assertNotIn("prompt_cache_key", q.request(SYSTEM, USER, "live", slot=1))
 
     # ---- responses
     def test_parses_an_answer_and_cached_tokens(self):
@@ -205,11 +205,12 @@ class OpenAITests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             self.provider(client=c).batch_done("b")
 
-    def test_cacheable_prefix_rounds_down_to_128_and_needs_1024(self):
+    def test_cacheable_prefix_follows_the_measured_breakpoint(self):
         p = self.provider()
-        self.assertEqual(p.cacheable_prefix_tokens(1671), 1664)
-        self.assertEqual(p.cacheable_prefix_tokens(1024), 1024)
-        self.assertEqual(p.cacheable_prefix_tokens(1000), 0)
+        self.assertEqual(p.cacheable_prefix_tokens(1671), 0)        # measured: about 1,670 cached 0
+        self.assertEqual(p.cacheable_prefix_tokens(1872), 1792)     # measured: about 1,870 cached 1,792
+        self.assertEqual(p.cacheable_prefix_tokens(2734), 1792)     # measured: about 2,730 cached 1,792
+        self.assertEqual(p.cacheable_prefix_tokens(3840), 3840)     # hypothesis only (next breakpoint)
 
 
 if __name__ == "__main__":

@@ -61,6 +61,7 @@ from llm_ledger import DEFAULT_LEDGER, LIFETIME_CAP_USD, Ledger, LedgerRefused, 
 
 PRICES_PATH = HERE / "prices.json"
 PROMPT_PATH = HERE / "b_system_prompt.txt"
+APPENDIX_PATH = HERE / "b_prompt_appendix.txt"    # fixed generic padding, appended last (part of the prompt hash)
 CACHE_DIR = REPO / "results" / "llm_cache"
 SCHEMA = {
     "type": "object",
@@ -77,6 +78,15 @@ OUTPUT_TOKENS_ESTIMATE = 25         # {"decision": "different", "confidence": 0.
 BATCH_MAX_REQUESTS = 100_000
 BATCH_MAX_BYTES = 200_000_000       # Anthropic's limit is 256 MB per batch; stay clear of it
 FEWSHOT_CONFIDENCE = {"same": 0.95, "different": 0.05}
+# Shared-prefix length window (OpenAI gpt-5.4 caching, measured 2026-11-24 in cache_diagnostic.txt): a visible
+# prefix of about 1,670 tokens cached 0; about 1,870 and about 2,730 both cached 1,792. Tokens are estimated at
+# 3.5 characters each (round 3: 6,579 characters predicted 1,880, observed about 1,872).
+PREFIX_TARGET = (1900, 1950)
+PREFIX_BLOCK_BELOW = 1870
+PREFIX_WARN_ABOVE = 2000
+HIT_RATIO_WARN = 0.80
+HIT_RATIO_STOP = 0.50
+HIT_RATIO_STOP_AFTER = 100          # calls past warm-up (each key's first call) before the stop rule applies
 
 
 # ------------------------------------------------------------------ data
@@ -204,7 +214,41 @@ def render_examples(fewshot: list[dict], cols: list[str]) -> str:
 
 
 def build_system_prompt(fewshot: list[dict], cols: list[str]) -> str:
-    return PROMPT_PATH.read_text(encoding="utf-8").replace("{EXAMPLES}", render_examples(fewshot, cols)).rstrip() + "\n"
+    """The system prompt file with the few-shot examples, then the fixed appendix (if present) after a
+    blank line. Everything here is part of the system prompt hash."""
+    base = PROMPT_PATH.read_text(encoding="utf-8").replace("{EXAMPLES}", render_examples(fewshot, cols)).rstrip() + "\n"
+    if APPENDIX_PATH.exists():
+        base = base.rstrip("\n") + "\n\n" + APPENDIX_PATH.read_text(encoding="utf-8").rstrip("\n") + "\n"
+    return base
+
+
+def predicted_prefix_tokens(system: str) -> int:
+    return round(len(system) / CHARS_PER_TOKEN_ESTIMATE)
+
+
+def observed_prefix_tokens(input_tokens: int, user: str) -> int:
+    """input_tokens of a call minus the estimated tokens of that call's pair (user turn)."""
+    return int(input_tokens) - round(len(user) / CHARS_PER_TOKEN_ESTIMATE)
+
+
+def prefix_verdict(tokens: int) -> tuple[str, str]:
+    """(status, message) for a shared-prefix length: block / warn / outside-target / ok."""
+    lo, hi = PREFIX_TARGET
+    if tokens < PREFIX_BLOCK_BELOW:
+        return "block", f"{tokens} tokens is below {PREFIX_BLOCK_BELOW}, the shortest length shown to cache: BLOCKED"
+    if tokens > PREFIX_WARN_ABOVE:
+        return "warn", f"{tokens} tokens is above {PREFIX_WARN_ABOVE}: WARNING (tokens past the cached 1,792 are billed in full)"
+    if lo <= tokens <= hi:
+        return "ok", f"{tokens} tokens, inside the target {lo} to {hi}"
+    return "outside", f"{tokens} tokens, outside the target {lo} to {hi} (not blocked)"
+
+
+def prefix_check_text(system: str) -> tuple[str, str]:
+    t = predicted_prefix_tokens(system)
+    status, msg = prefix_verdict(t)
+    app = APPENDIX_PATH.read_text(encoding="utf-8") if APPENDIX_PATH.exists() else ""
+    return status, (f"prefix-length check: system prompt {len(system):,} characters (appendix {len(app):,} characters, "
+                    f"sha256 {sha256_text(system)[:12]}); predicted shared prefix {msg}")
 
 
 def parse_answer(text: str) -> tuple[str, float]:
@@ -290,7 +334,13 @@ class Provider:
         return all(self.cfg.get(k) is not None for k in ("input", "output"))
 
     # to be provided by subclasses
-    def request(self, system: str, user: str, mode: str) -> dict: raise NotImplementedError
+    def request(self, system: str, user: str, mode: str, slot: int | None = None) -> dict: raise NotImplementedError
+
+    def n_cache_keys(self) -> int:
+        return 0
+
+    def cache_key_for(self, system: str, slot: int | None) -> str | None:
+        return None
     def call(self, params: dict) -> CallResult: raise NotImplementedError
     def cost_of(self, usage: dict, mode: str) -> float: raise NotImplementedError
     def submit_batch(self, items: list[tuple[str, dict]]) -> str: raise NotImplementedError
@@ -440,9 +490,14 @@ class OpenAIProvider(Provider):
     cache_write_fee = False      # no write fee listed for gpt-5.4
 
     def cacheable_prefix_tokens(self, sys_tokens: int) -> int:
-        # automatic caching; for models before GPT-5.6 cached_tokens is reported rounded down to a
-        # multiple of 128, and the minimum length is not documented (1,024 is stated for GPT-5.6+)
-        return (sys_tokens // 128) * 128 if sys_tokens >= 1024 else 0
+        # Measured on gpt-5.4 (cache_diagnostic.txt): visible prefixes of about 1,870 and 2,730 tokens both cached
+        # 1,792; about 1,670 cached 0. Working hypothesis (untested past the first): breakpoints every 2,048 tokens
+        # counted from a hidden system message of about 256, i.e. cached = 2048 k - 256 for the largest k that fits.
+        k = (sys_tokens + 256) // 2048
+        return 2048 * k - 256 if k >= 1 else 0
+
+    def n_cache_keys(self) -> int:
+        return int(self.transport.get("prompt_cache_keys", 0) or 0)
 
     def __init__(self, model: str, cfg: dict, client=None):
         super().__init__(model, cfg)
@@ -466,13 +521,13 @@ class OpenAIProvider(Provider):
         if not self.settings.get("reasoning_effort"):
             raise SystemExit(f"{self.model}: request_settings.reasoning_effort is not set in options/prices.json.")
 
-    def _cache_key(self, system: str, user: str) -> str | None:
-        k = int(self.transport.get("prompt_cache_key_buckets", 0) or 0)
-        if k <= 0:
+    def cache_key_for(self, system: str, slot: int | None) -> str | None:
+        """verity-b-<prompt hash>-<slot>; slots are assigned round-robin in sorted pair order (make_items)."""
+        if slot is None or self.n_cache_keys() <= 0:
             return None
-        return f"{sha256_text(system)[:16]}-{int(sha256_text(user)[:8], 16) % k}"
+        return f"verity-b-{sha256_text(system)[:12]}-{slot}"
 
-    def request(self, system: str, user: str, mode: str) -> dict:
+    def request(self, system: str, user: str, mode: str, slot: int | None = None) -> dict:
         s = self.settings
         body = {"model": self.model,
                 # reusable instructions go in a developer message at the start of input so they are
@@ -482,7 +537,7 @@ class OpenAIProvider(Provider):
                 "reasoning": {"effort": s["reasoning_effort"]},
                 "max_output_tokens": int(s["max_output_tokens"]),
                 "store": bool(self.transport.get("store", False))}
-        key = self._cache_key(system, user)
+        key = self.cache_key_for(system, slot)
         if key is not None:
             body["prompt_cache_key"] = key
         return body
@@ -597,6 +652,81 @@ class Item:
     a: str
     b: str
     user: str
+    slot: int | None = None      # prompt-cache key slot (round-robin in sorted pair order), None = no key
+
+
+class KeyRateLimiter:
+    """At most per_minute requests per key: a key's request starts at least 60 / per_minute seconds after
+    that key's previous request started. Thread-safe; clock and sleep are injectable for tests."""
+
+    def __init__(self, per_minute: float, clock=time.monotonic, sleep=time.sleep):
+        self.interval = 60.0 / float(per_minute)
+        self.clock, self.sleep = clock, sleep
+        self._next: dict = {}
+        self._lock = threading.Lock()
+
+    def acquire(self, key) -> float:
+        """Wait until key may be used; returns the seconds waited."""
+        with self._lock:
+            now = self.clock()
+            start = max(now, self._next.get(key, now))
+            self._next[key] = start + self.interval
+        wait = start - now
+        if wait > 0:
+            self.sleep(wait)
+        return wait
+
+
+class HitStats:
+    """Prompt-cache hit ratio = cached input tokens / input tokens, overall and excluding each key's first
+    call in the run (the warm-up)."""
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self.seen_slots: set = set()
+        self.n = self.n_ex = 0
+        self.inp = self.cached = self.inp_ex = self.cached_ex = 0
+        self.per_slot: dict = {}
+
+    def record(self, slot, usage: dict) -> dict:
+        i = int(usage.get("input_tokens", 0) or 0)
+        c = int(usage.get("cached_tokens", 0) or 0)
+        with self._lock:
+            first = slot not in self.seen_slots
+            self.seen_slots.add(slot)
+            self.n += 1
+            self.inp += i
+            self.cached += c
+            ps = self.per_slot.setdefault(str(slot), {"calls": 0, "input_tokens": 0, "cached_tokens": 0})
+            ps["calls"] += 1
+            ps["input_tokens"] += i
+            ps["cached_tokens"] += c
+            if not first:
+                self.n_ex += 1
+                self.inp_ex += i
+                self.cached_ex += c
+            return self.snapshot_locked()
+
+    def snapshot_locked(self) -> dict:
+        return {"calls": self.n, "input_tokens": self.inp, "cached_tokens": self.cached,
+                "hit_ratio": self.cached / self.inp if self.inp else None,
+                "calls_excl_first_per_key": self.n_ex, "input_tokens_excl_first": self.inp_ex,
+                "cached_tokens_excl_first": self.cached_ex,
+                "hit_ratio_excl_first": self.cached_ex / self.inp_ex if self.inp_ex else None,
+                "keys_used": len(self.seen_slots)}
+
+    def snapshot(self) -> dict:
+        with self._lock:
+            d = self.snapshot_locked()
+            d["per_key"] = {k: dict(v) for k, v in sorted(self.per_slot.items())}
+            return d
+
+
+def hit_line(h: dict) -> str:
+    f = (lambda x: "n/a" if x is None else f"{x:.3f}")
+    return (f"hit ratio after {h['calls']} calls: overall {f(h['hit_ratio'])} ({h['cached_tokens']:,} / "
+            f"{h['input_tokens']:,} input tokens); excluding each key's first call {f(h['hit_ratio_excl_first'])} "
+            f"({h['calls_excl_first_per_key']} calls)")
 
 
 @dataclass
@@ -609,6 +739,11 @@ class Outcome:
     latencies: list = field(default_factory=list)
     batch_walls: list = field(default_factory=list)
     n_calls: int = 0
+    hits: dict = field(default_factory=dict)            # HitStats snapshot (live mode)
+    hit_log: list = field(default_factory=list)         # the every-100-calls lines
+    first_prefix: dict = field(default_factory=dict)    # observed prefix from the first live call
+    errors: int = 0                                     # API errors (exceptions or failed responses)
+    unusable: int = 0                                   # answers that could not be used (parse, incomplete)
 
 
 def est_request_bytes(system: str, user: str) -> int:
@@ -619,11 +754,18 @@ def run_items(provider: Provider, items: list[Item], system: str, *, ledger: Led
               run_id: str, run_cap_usd: float, mode: str, concurrency: int, out_dir: Path,
               batch_max_requests: int | None = None, batch_max_bytes: int | None = None,
               poll_s: float = 30.0, sleep=time.sleep, log=print,
-              call_spacing_s: float = 0.0, stop_on_error: bool = False) -> Outcome:
+              call_spacing_s: float = 0.0, stop_on_error: bool = False,
+              rate_limiter: KeyRateLimiter | None = None, hit_report_every: int = 100,
+              check_prefix: bool = False) -> Outcome:
     """Answer every distinct item: from the cache when possible, otherwise by live calls or batches,
     each reserved in the ledger first. Stops early (outcome.stopped) if the ledger refuses. Live calls with
     call_spacing_s > 0 run one after another with that pause between them; stop_on_error stops the run at
-    the first call that errors or returns an unusable answer (nothing further is sent or spent)."""
+    the first API error (an exception after the SDK's retries, such as a 429, or a failed response); an
+    unparseable or incomplete answer is counted and left pending, not a stop. With rate_limiter, every live
+    call waits for its key slot. The first live call runs alone; with check_prefix its observed prefix is
+    checked against the window and the run stops if it is below PREFIX_BLOCK_BELOW. The prompt-cache hit
+    ratio is logged every hit_report_every calls; below HIT_RATIO_WARN (excluding each key's first call) a
+    warning, and below HIT_RATIO_STOP once HIT_RATIO_STOP_AFTER calls past warm-up are in, the run stops."""
     out_dir.mkdir(parents=True, exist_ok=True)
     lim_req, lim_bytes = provider.batch_limits()
     batch_max_requests = batch_max_requests or lim_req
@@ -633,7 +775,7 @@ def run_items(provider: Provider, items: list[Item], system: str, *, ledger: Led
     log_lock = threading.Lock()
 
     def log_call(item: Item, res: CallResult, usd: float, m: str) -> None:
-        rec = {"key": item.key[:16], "a": item.a, "b": item.b, "mode": m, "usd": round(usd, 6),
+        rec = {"key": item.key[:16], "a": item.a, "b": item.b, "mode": m, "slot": item.slot, "usd": round(usd, 6),
                "latency_s": res.latency_s, "usage": res.usage, "stop_reason": res.stop_reason,
                "model": res.model, "request_id": res.request_id, "refused": res.refused, "error": res.error}
         with log_lock, open(calls_log, "a", encoding="utf-8") as f:
@@ -655,10 +797,20 @@ def run_items(provider: Provider, items: list[Item], system: str, *, ledger: Led
     if mode == "live":
         stop = threading.Event()
         lock = threading.Lock()
+        hits = HitStats()
+
+        def halt(reason: str) -> None:
+            with lock:
+                oc.stopped = oc.stopped or reason
+            stop.set()
 
         def one(it: Item) -> None:
             if stop.is_set():
                 return
+            if rate_limiter is not None:
+                rate_limiter.acquire(it.slot)
+                if stop.is_set():
+                    return
             ub = provider.upper_bound_usd(system, it.user, "live")
             try:
                 rid = ledger.reserve(ub, run=run_id, provider=provider.name, model=provider.model,
@@ -669,7 +821,7 @@ def run_items(provider: Provider, items: list[Item], system: str, *, ledger: Led
                 stop.set()
                 return
             try:
-                res = provider.call(provider.request(system, it.user, "live"))
+                res = provider.call(provider.request(system, it.user, "live", slot=it.slot))
             except (Exception, SystemExit) as e:  # noqa: BLE001 - provider errors are logged without payloads
                 ledger.release(rid, note=f"error {type(e).__name__}")
                 if isinstance(e, SystemExit):         # e.g. a missing API key: stop the whole run
@@ -678,11 +830,10 @@ def run_items(provider: Provider, items: list[Item], system: str, *, ledger: Led
                                                                               os.environ.get("OPENAI_API_KEY", "")]))
                 with lock:
                     oc.n_calls += 1
-                    if stop_on_error:
-                        oc.stopped = oc.stopped or f"call error, stopped at once: {res.error}"
-                if stop_on_error:
-                    stop.set()
+                    oc.errors += 1
                 log_call(it, res, 0.0, "live")
+                if stop_on_error:
+                    halt(f"API error, stopped at once: {res.error}")
                 return
             usd = provider.cost_of(res.usage, "live")
             ledger.settle(rid, usd, input_tokens=res.usage.get("input_tokens", res.usage.get("prompt_tokens")),
@@ -697,10 +848,39 @@ def run_items(provider: Provider, items: list[Item], system: str, *, ledger: Led
                 if res.answered:
                     oc.results[it.key] = res
             log_call(it, res, usd, "live")
-            if stop_on_error and not res.answered:
-                with lock:
-                    oc.stopped = oc.stopped or f"unusable answer, stopped at once: {res.error}"
-                stop.set()
+            failed = bool(res.error) and res.error.startswith("response failed")
+            with lock:
+                if failed:
+                    oc.errors += 1
+                elif not res.answered:
+                    oc.unusable += 1
+            if stop_on_error and failed:
+                halt(f"API error (failed response), stopped at once: {res.error}")
+            if res.usage:
+                h = hits.record(it.slot, res.usage)
+                if check_prefix and not oc.first_prefix:
+                    obs = observed_prefix_tokens(res.usage.get("input_tokens", 0), it.user)
+                    status, msg = prefix_verdict(obs)
+                    with lock:
+                        oc.first_prefix = {"input_tokens": res.usage.get("input_tokens"),
+                                           "cached_tokens": res.usage.get("cached_tokens"),
+                                           "pair_tokens_estimate": round(len(it.user) / CHARS_PER_TOKEN_ESTIMATE),
+                                           "observed_prefix_tokens": obs, "status": status}
+                    log(f"first live call: input_tokens {res.usage.get('input_tokens')}, cached "
+                        f"{res.usage.get('cached_tokens')}; observed shared prefix {msg}")
+                    if status == "block":
+                        halt(f"observed prefix {obs} tokens below {PREFIX_BLOCK_BELOW}")
+                if hit_report_every and h["calls"] % hit_report_every == 0:
+                    line = hit_line(h)
+                    if h["hit_ratio_excl_first"] is not None and h["hit_ratio_excl_first"] < HIT_RATIO_WARN:
+                        line += f"  WARNING: below {HIT_RATIO_WARN:.2f}"
+                    with lock:
+                        oc.hit_log.append(line)
+                    log(line)
+                if (h["calls_excl_first_per_key"] >= HIT_RATIO_STOP_AFTER and h["hit_ratio_excl_first"] is not None
+                        and h["hit_ratio_excl_first"] < HIT_RATIO_STOP):
+                    halt(f"hit ratio excluding each key's first call {h['hit_ratio_excl_first']:.3f} < "
+                         f"{HIT_RATIO_STOP} after {h['calls_excl_first_per_key']} calls past warm-up")
 
         if call_spacing_s > 0:
             for n_done, it in enumerate(todo):
@@ -709,9 +889,12 @@ def run_items(provider: Provider, items: list[Item], system: str, *, ledger: Led
                 if n_done:
                     sleep(call_spacing_s)
                 one(it)
-        else:
-            with ThreadPoolExecutor(max_workers=max(1, concurrency)) as ex:
-                list(ex.map(one, todo))
+        elif todo:
+            one(todo[0])                                 # the first call alone: prefix check, cache warm-up
+            if not stop.is_set() and len(todo) > 1:
+                with ThreadPoolExecutor(max_workers=max(1, concurrency)) as ex:
+                    list(ex.map(one, todo[1:]))
+        oc.hits = hits.snapshot()
     else:
         i = 0
         ub_cache: dict[str, float] = {}
@@ -741,7 +924,7 @@ def run_items(provider: Provider, items: list[Item], system: str, *, ledger: Led
             t0 = time.perf_counter()
             cid_to_item = {it.key[:32]: it for it in chunk}
             try:
-                bid = provider.submit_batch([(cid, provider.request(system, it.user, "batch"))
+                bid = provider.submit_batch([(cid, provider.request(system, it.user, "batch", slot=it.slot))
                                              for cid, it in cid_to_item.items()])
             except Exception as e:  # noqa: BLE001
                 ledger.release(rid, note=f"submit failed {type(e).__name__}")
@@ -796,17 +979,21 @@ def write_timings(out_dir: Path, provider: Provider, oc: Outcome, n_pairs: int, 
     doc = {"option": "B", "provider": provider.name, "model": provider.model, "host": vcfg.host_info(),
            "timings": vcfg.recorded_timings(),
            "timing_summary": {"mode": mode, "pairs": n_pairs, "calls": oc.n_calls, "cache_hits": oc.cache_hits,
-                              "spent_usd": round(oc.spent_usd, 6), "settings": provider.settings_label()}}
+                              "spent_usd": round(oc.spent_usd, 6), "settings": provider.settings_label(),
+                              "prompt_cache": {k: v for k, v in oc.hits.items() if k != "per_key"}}}
     (out_dir / "timings.json").write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
 
 
 # ------------------------------------------------------------------ estimates and modes
 
 def make_items(rd: RunData, pairs, provider: Provider, system: str, settings_sha: str, system_sha: str) -> list[Item]:
+    """One item per pair, in sorted pair order; prompt-cache key slots round-robin over that order."""
     items = []
-    for a, b, *_ in pairs:
+    k = provider.n_cache_keys()
+    for i, (a, b, *_) in enumerate(sorted(pairs, key=lambda p: (p[0], p[1]))):
         user = user_turn(rd.records[a], rd.records[b], rd.cols)
-        items.append(Item(pair_key(provider.name, provider.model, settings_sha, system_sha, user), a, b, user))
+        items.append(Item(pair_key(provider.name, provider.model, settings_sha, system_sha, user), a, b, user,
+                          slot=(i % k) if k > 0 else None))
     return items
 
 
@@ -834,7 +1021,7 @@ def estimate(provider: Provider, system: str, items: list[Item], label: str, ext
         L.append(f"  cost: NOT COMPUTED, no confirmed prices for {provider.model} in options/prices.json")
         return "\n".join(L)
     c = provider.cfg
-    keys = max(1, int(provider.transport.get("prompt_cache_key_buckets", 0) or 1))
+    keys = max(1, provider.n_cache_keys())
     ttl_l, ttl_b = provider.ttl("live"), provider.ttl("batch")
 
     def total(*, batch: bool, hits: bool) -> float:
@@ -877,10 +1064,10 @@ def sampler_pool(train_band, exclude_pairs: set, exclude_records: set) -> list:
 
 
 def stratified_train_sample(rd: RunData, truth: TrainTruth, train_band, exclude: set, n: int,
-                            exclude_records: frozenset | set = frozenset()) -> list:
-    """About 25% same, 25% decoy different (as many as exist), the rest other different; seed 0.
-    Excludes the few-shot pairs and every pair touching a record used in a few-shot example."""
-    rng = random.Random(0)
+                            exclude_records: frozenset | set = frozenset(), seed: int = 0) -> list:
+    """About 25% same, 25% decoy different (as many as exist), the rest other different.
+    Excludes the pairs in exclude and every pair touching a record in exclude_records."""
+    rng = random.Random(seed)
     pool = sampler_pool(train_band, exclude, set(exclude_records))
     true = [p for p in pool if truth.same(p[0], p[1])]
     decoy = [p for p in pool if truth.is_decoy_pair(p[0], p[1])]
@@ -889,6 +1076,18 @@ def stratified_train_sample(rd: RunData, truth: TrainTruth, train_band, exclude:
     pick = (rng.sample(true, min(n_true, len(true))) + rng.sample(decoy, min(n_dec, len(decoy))))
     pick += rng.sample(other, min(n - len(pick), len(other)))
     return sorted(pick)
+
+
+def earlier_live_pairs(rd: RunData, truth: TrainTruth, train_band, fs_ids: set, fs_records: set, bdir: Path) -> set:
+    """Every train pair an earlier live test may have sent: the smoke-test pairs (openai/smoke5/decisions.csv)
+    and the whole 60-pair seed-0 pool the caching diagnostic drew from (a superset of what it used)."""
+    used = set()
+    smoke = bdir / "openai" / "smoke5" / "decisions.csv"
+    if smoke.exists():
+        used |= {(r["record_a"], r["record_b"]) for r in read_csv(smoke)}
+    used |= {(p[0], p[1]) for p in stratified_train_sample(rd, truth, train_band, fs_ids, 60, fs_records, seed=0)}
+    used |= {(p[0], p[1]) for p in stratified_train_sample(rd, truth, train_band, fs_ids, 5, fs_records, seed=0)}
+    return used
 
 
 def example_turns(rd: RunData, truth: TrainTruth, train_band, exclude: set,
@@ -931,7 +1130,13 @@ def main() -> int:
     ap.add_argument("--concurrency", type=int, default=8)
     ap.add_argument("--call-spacing-s", type=float, default=0.0,
                     help="live calls one after another with this pause between them (default: concurrent)")
-    ap.add_argument("--stop-on-error", action="store_true", help="stop at the first call that errors or is unusable")
+    ap.add_argument("--stop-on-error", action="store_true", help="stop at the first API error (after the SDK's retries)")
+    ap.add_argument("--key-rpm", type=float, default=12.0, help="live: requests per minute per prompt-cache key")
+    ap.add_argument("--seed", type=int, default=0, help="--eval-train: sampler seed")
+    ap.add_argument("--exclude-earlier", action="store_true",
+                    help="--eval-train: also exclude every pair of the smoke test and the caching diagnostic")
+    ap.add_argument("--estimate-only", action="store_true",
+                    help="--eval-train: print the prefix-length check and the cost estimate, then stop (no call)")
     ap.add_argument("--label", default=None)
     ap.add_argument("--ledger", type=Path, default=DEFAULT_LEDGER)
     args = ap.parse_args()
@@ -1007,10 +1212,17 @@ def main() -> int:
 
     if args.eval_train:
         truth = TrainTruth(run, rd.side)
-        pairs = stratified_train_sample(rd, truth, rd.band("train"), fs_ids, args.eval_train, fs_records)
+        tb = rd.band("train")
+        excl = set(fs_ids)
+        if args.exclude_earlier:
+            earlier = earlier_live_pairs(rd, truth, tb, fs_ids, fs_records, bdir)
+            excl |= earlier
+            print(f"excluding {len(earlier)} pairs of earlier live tests (smoke test, caching diagnostic pool)")
+        pairs = stratified_train_sample(rd, truth, tb, excl, args.eval_train, fs_records, seed=args.seed)
+        assert not any((p[0], p[1]) in excl or p[0] in fs_records or p[1] in fs_records for p in pairs)
         label = args.label or f"train{args.eval_train}-{stamp}"
         mode = "live"
-        split_note = f"{len(pairs)} stratified TRAIN band pairs"
+        split_note = f"{len(pairs)} stratified TRAIN band pairs (seed {args.seed})"
     else:
         if not freeze_path.exists():
             raise SystemExit("--final needs --freeze-prompt first.")
@@ -1024,14 +1236,24 @@ def main() -> int:
         mode = args.mode or "batch"
         truth = None
         split_note = f"{len(pairs)} TEST band pairs"
+    items = make_items(rd, pairs, provider, system, settings_sha, system_sha)
+    pstatus, ptext = prefix_check_text(system)
+    print(ptext)
+    if args.eval_train:
+        print(estimate(provider, system, items, f"{len(items)} TRAIN band pairs (live)"))
+        if pstatus == "block":
+            raise SystemExit("prefix below the shortest length shown to cache: refusing to send.")
+        if args.estimate_only:
+            return 0
     out_dir = pdir / label
     out_dir.mkdir(parents=True, exist_ok=True)
-    items = make_items(rd, pairs, provider, system, settings_sha, system_sha)
     run_id = f"{run.name}/b_llm/{provider.name}/{label}"
     print(f"{provider.name} / {provider.model}: {split_note}, mode {mode}, run cap ${args.max_usd:.2f}")
     oc = run_items(provider, items, system, ledger=ledger, cache=cache, run_id=run_id, run_cap_usd=args.max_usd,
                    mode=mode, concurrency=args.concurrency, out_dir=out_dir,
-                   call_spacing_s=args.call_spacing_s, stop_on_error=args.stop_on_error)
+                   call_spacing_s=args.call_spacing_s, stop_on_error=args.stop_on_error,
+                   rate_limiter=KeyRateLimiter(args.key_rpm) if mode == "live" and provider.n_cache_keys() else None,
+                   check_prefix=(mode == "live"))
     write_timings(out_dir, provider, oc, len(items), mode)
     models_seen = Counter(r.model for r in oc.results.values())
     meta = {"provider": provider.name, "requested_model": provider.model, "models_reported": dict(models_seen),
@@ -1039,11 +1261,26 @@ def main() -> int:
             "system_prompt_sha256": system_sha, "answer_settings": provider.answer_settings(), "mode": mode,
             "pairs": len(items), "distinct_prompts": len({i.key for i in items}), "cache_hits": oc.cache_hits,
             "calls": oc.n_calls, "spent_usd": round(oc.spent_usd, 6), "pending": len(oc.pending),
-            "stopped": oc.stopped, "refusals": sum(r.refused for r in oc.results.values())}
+            "stopped": oc.stopped, "refusals": sum(r.refused for r in oc.results.values()),
+            "api_errors": oc.errors, "unusable_answers": oc.unusable,
+            "prefix_check": {"predicted_tokens": predicted_prefix_tokens(system), "predicted_status": pstatus,
+                             "first_call": oc.first_prefix},
+            "prompt_cache_keys": provider.n_cache_keys(), "key_rpm": args.key_rpm, "concurrency": args.concurrency,
+            "prompt_cache": oc.hits, "hit_log": oc.hit_log}
     (out_dir / "run_meta.json").write_text(json.dumps(meta, indent=1) + "\n", encoding="utf-8")
     lines = [f"Option B {provider.name} / {provider.model} ({provider.settings_label()}): {split_note}",
              f"calls {oc.n_calls}, cache hits {oc.cache_hits}, spent ${oc.spent_usd:.4f}, pending {len(oc.pending)}, "
              f"refusals {meta['refusals']}, models reported {dict(models_seen)}"]
+    lines.append(ptext)
+    if oc.first_prefix:
+        fp = oc.first_prefix
+        lines.append(f"first live call: input_tokens {fp['input_tokens']}, cached {fp['cached_tokens']}, pair about "
+                     f"{fp['pair_tokens_estimate']} tokens: observed shared prefix {fp['observed_prefix_tokens']} ({fp['status']})")
+    if oc.hits:
+        lines += oc.hit_log
+        lines.append("final " + hit_line(oc.hits))
+        lines.append(f"api errors {oc.errors}, unusable answers {oc.unusable}; prompt-cache keys {provider.n_cache_keys()}, "
+                     f"{args.key_rpm:g} requests per minute per key, {args.concurrency} workers")
     if oc.stopped:
         lines.append(f"STOPPED EARLY: {oc.stopped}")
     if oc.latencies:
