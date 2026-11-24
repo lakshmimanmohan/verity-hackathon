@@ -90,6 +90,8 @@ class SQLiteStore:
             if props.get("source_system") is None:
                 props.pop("source_system", None)
             props.update(row.get("customer_props") or {})
+            if row.get("input_file") and not props.get("_input_file"):
+                props["_input_file"] = str(row["input_file"])
             cur.execute(
                 "INSERT OR REPLACE INTO records (label, id, props) VALUES (?, ?, ?)",
                 (record_label, rid, json.dumps(props, ensure_ascii=False)),
@@ -181,6 +183,7 @@ class SQLiteStore:
                     "cid": str(rid),
                     "record_id": props.get("id", rid),
                     "source_system": props.get("source_system"),
+                    "input_file": props.get("_input_file"),
                     "fps": sorted(fps.get(rid, set())),
                 })
         return out

@@ -243,9 +243,11 @@ def main(
                 for k, v in r.items()
                 if _col_ci(k) not in metadata_columns_ci
             }
-            all_rows.append(
-                row_to_payload(filtered_row, classification, source_row=r)
-            )
+            payload = row_to_payload(filtered_row, classification, source_row=r)
+            # Provenance: the input file name (not the path). The store keeps the first
+            # file a record id was loaded from.
+            payload["input_file"] = path.name
+            all_rows.append(payload)
         except ValueError as e:
             raise SystemExit(f"Invalid row (missing id?): {e}") from e
 

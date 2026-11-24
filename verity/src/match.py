@@ -271,9 +271,13 @@ def evaluate_schema_agnostic_evidence(
     effective_threshold: float,
     attrs_a: dict[str, str] | None = None,
     attrs_b: dict[str, str] | None = None,
+    cross_file: bool = False,
 ) -> EvidenceDecision:
     """
     Decide whether a candidate has enough evidence to become a merge edge.
+
+    ``cross_file``: the two records come from different input files (both known).
+    A pair with no shared field values passes (embedding_only) only across files.
 
     Uses only:
       - semantic type
@@ -285,6 +289,17 @@ def evaluate_schema_agnostic_evidence(
     No column-name logic.
     """
     if not shared_keys:
+        if (
+            cosine_similarity_score >= max(EMBEDDING_ONLY_COSINE_MIN, effective_threshold)
+            and not cross_file
+        ):
+            return EvidenceDecision(
+                passes=False,
+                match_type=None,
+                evidence_mass=0.0,
+                conflict_mass=0.0,
+                detail="embedding-only blocked: both records from the same input file",
+            )
         if cosine_similarity_score >= max(EMBEDDING_ONLY_COSINE_MIN, effective_threshold):
             return EvidenceDecision(
                 passes=True,
@@ -1412,6 +1427,7 @@ def fetch_record_context(store, record_labels: list[str]):
         meta[ck] = {
             "record_id": str(rid) if rid is not None else ck,
             "source_system": str(r["source_system"] or "").strip(),
+            "input_file": str(r.get("input_file") or "").strip(),
             "fingerprints": fp_set,
             "attrs_by_col": fingerprints_to_attr_map(fp_set),
         }
@@ -1925,9 +1941,17 @@ def main(
     skipped_missing_embeddings = 0
     skipped_no_semantic_field = 0
     skipped_single_token_semantic_fields = 0
+    # Pairs that would have been embedding_only (no shared keys, high cosine, score above
+    # the embedding-only threshold) but were blocked because both records share an input file.
+    embedding_only_blocked_same_file = 0
 
     record_labels = store.record_labels()
     context = fetch_record_context(store, record_labels)
+    if origin_map is None:
+        # No registry: use each record's input file from the store for lineage counts.
+        origin_map = {
+            str(v["record_id"]): v["input_file"] for v in context.values() if v["input_file"]
+        } or None
     neo_ids = frozenset(context.keys())
     missing_in_pickle = sorted(neo_ids - frozenset(global_emb.keys()))
     if missing_in_pickle:
@@ -2005,6 +2029,8 @@ def main(
 
         rid_a = str(ca["record_id"])
         rid_b = str(cb["record_id"])
+        file_a, file_b = ca["input_file"], cb["input_file"]
+        cross_file = bool(file_a) and bool(file_b) and file_a != file_b
 
         _overlap_labels, shared_keys, candidate_join = graph_overlap_labels_for_pair(
             store,
@@ -2039,7 +2065,12 @@ def main(
             effective_threshold=mw.effective_threshold,
             attrs_a=aa,
             attrs_b=ab,
+            cross_file=cross_file,
         )
+        if decision.detail.startswith("embedding-only blocked") and (
+            score > mw.learned_threshold
+        ):
+            embedding_only_blocked_same_file += 1
 
         resolved_type = decision.match_type
 
@@ -2293,6 +2324,7 @@ def main(
         skipped_missing_embeddings=skipped_missing_embeddings,
         skipped_no_semantic_field=skipped_no_semantic_field,
         skipped_single_token_semantic_fields=skipped_single_token_semantic_fields,
+        embedding_only_blocked_same_file=embedding_only_blocked_same_file,
         scored_neighbor_pairs=len(rows_out),
         exact_duplicate_pairs=len(exact_pairs),
         exact_only_pairs=n_exact_only,
