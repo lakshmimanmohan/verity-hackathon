@@ -2,7 +2,7 @@
 Score one option on a run's test group (protocol.md, Amendments, Nov 24, 2026).
 
   python eval/score_option.py results/<run> --decisions <decisions.csv>
-      [--weighted-sample] [--truth <truth.csv>] [--split <split_records.csv>] [--name <option>]
+      [--weighted-sample | --sample <test_sample.csv>] [--truth <truth.csv>] [--split <split_records.csv>] [--name <option>]
 
 The decisions file has one row per test band pair: record_a, record_b, decision
 (same / different), an optional confidence (0 to 1) and an optional weight. A test band pair
@@ -15,6 +15,13 @@ if present, is ignored (every pair counts once).
 > 0 (its inverse inclusion probability). Band and overall figures become weighted estimates:
 each sampled band pair counts with its weight, unsampled band pairs are left out, and every
 pair outside the band counts once.
+--sample <file>: the decisions file covers the full test band (or more than the sample); the
+file is a sample from eval/make_sample.py (record_a, record_b, weight). Only the pairs in the
+sample are scored, with the sample's weights (any weight column in the decisions file is
+ignored), exactly as --weighted-sample would score a decisions file cut down to those pairs.
+Every sample pair must have a decision; decisions for other test band pairs are ignored and
+counted. Option decisions are never changed by sampling, so this scores an option that ran on
+the full band as if it had run on the sample only.
 Either way the script fails (exit 1) on a pair that is not a test band pair, a repeated pair,
 a decision other than same / different, a bad confidence or weight, or (full mode) a missing
 test band pair.
@@ -89,6 +96,8 @@ def main() -> int:
     p.add_argument("--decisions", type=Path, required=True)
     p.add_argument("--weighted-sample", action="store_true",
                    help="Decisions cover a weighted sample of the test band pairs")
+    p.add_argument("--sample", type=Path, default=None,
+                   help="Score only the pairs of this sample file (eval/make_sample.py), with its weights")
     p.add_argument("--truth", type=Path, default=None)
     p.add_argument("--split", type=Path, default=None)
     p.add_argument("--name", default=None, help="Option name for the report header")
@@ -98,7 +107,9 @@ def main() -> int:
                    help="JSON reliability table from training (out-of-fold) to draw on the same plot")
     args = p.parse_args()
     csv.field_size_limit(10**8)
-    run, weighted = args.run, args.weighted_sample
+    if args.sample and args.weighted_sample:
+        p.error("--sample and --weighted-sample are alternatives")
+    run, weighted = args.run, bool(args.weighted_sample or args.sample)
     truth_path = args.truth or run / "orgs_raw_truth.csv"
     split_path = args.split or run / "split_records.csv"
 
@@ -131,6 +142,17 @@ def main() -> int:
             status[k] = r["decision_status"]
     band_keys = {k for k, s in status.items() if s == "review"}
 
+    sample_w: dict[tuple[str, str], float] = {}
+    if args.sample:
+        for r in read_csv(args.sample):
+            k = tuple(sorted((r["record_a"].strip(), r["record_b"].strip())))
+            if k in sample_w:
+                raise SystemExit(f"sample file repeats pair {k}")
+            sample_w[k] = float(r["weight"])
+        if not all(v > 0 for v in sample_w.values()):
+            raise SystemExit("sample file has a weight that is not > 0")
+    n_ignored = 0
+
     # Validate the decisions file.
     decisions: dict[tuple[str, str], bool] = {}
     weights: dict[tuple[str, str], float] = {}
@@ -139,6 +161,9 @@ def main() -> int:
     n_conf = 0
     for i, r in enumerate(read_csv(args.decisions), start=2):
         k = tuple(sorted((r["record_a"].strip(), r["record_b"].strip())))
+        if args.sample and k not in sample_w:
+            n_ignored += 1
+            continue
         d = (r.get("decision") or "").strip().lower()
         if d not in DECISIONS:
             problems.append(f"line {i}: decision {r.get('decision')!r} is not same / different")
@@ -157,7 +182,9 @@ def main() -> int:
             except ValueError:
                 problems.append(f"line {i}: confidence {c!r} is not a number from 0 to 1")
         wv = 1.0
-        if weighted:
+        if args.sample:
+            wv = sample_w[k]
+        elif weighted:
             ws = (r.get("weight") or "").strip()
             try:
                 wv = float(ws)
@@ -172,6 +199,15 @@ def main() -> int:
     missing = sorted(band_keys - set(decisions))
     if extra:
         problems.append(f"{len(extra)} pair(s) that are not test band pairs, e.g. {extra[:3]}")
+    if args.sample:
+        no_decision = sorted(set(sample_w) - set(decisions))
+        if no_decision:
+            problems.append(f"{len(no_decision)} sample pair(s) have no decision, e.g. {no_decision[:3]}")
+        outside = sorted(set(sample_w) - band_keys)
+        if outside:
+            problems.append(f"{len(outside)} sample pair(s) are not test band pairs, e.g. {outside[:3]}")
+        if abs(sum(sample_w.values()) - len(band_keys)) > 1e-6 * len(band_keys):
+            problems.append(f"sample weights sum to {sum(sample_w.values()):.4f}, the test band has {len(band_keys)} pairs")
     if missing and not weighted:
         problems.append(f"{len(missing)} test band pair(s) missing, e.g. {missing[:3]}")
     if problems:
@@ -220,7 +256,8 @@ def main() -> int:
     print(f"Option: {name}")
     print(f"Run: {run.resolve()}")
     print(f"Decisions: {args.decisions}  ({len(decisions)} test band pairs"
-          f"{f' sampled of {len(band_keys)}, weights sum {w.sum():.1f}' if weighted else ''}; "
+          f"{f' sampled of {len(band_keys)}, weights sum {w.sum():.1f}' if weighted else ''}"
+          f"{f' [--sample {args.sample.name}; {n_ignored} other decisions ignored]' if args.sample else ''}; "
           f"confidence given for {n_conf})")
     print(f"Test group: {sum(1 for v in side.values() if v == 'test')} records, "
           f"{len(status)} scored pairs, {len(true_test)} true pairs\n")
