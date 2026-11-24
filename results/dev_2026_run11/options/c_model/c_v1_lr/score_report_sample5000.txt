@@ -1,0 +1,35 @@
+Option: C v1 logistic regression
+Run: C:\verity-hackathon\results\dev_2026_run11
+Decisions: results\dev_2026_run11\options\c_model\c_v1_lr\decisions.csv  (5000 test band pairs sampled of 44882, weights sum 44882.0 [--sample test_sample5000.csv; 39882 other decisions ignored]; confidence given for 5000)
+Test group: 4500 records, 51309 scored pairs, 5541 true pairs
+
+Band (test band pairs, same-entity = positive) (weighted estimate)
+  pairs 44882.0  (true 340.0, 0.76%)
+  F1 0.9416  95% CI [0.9073, 0.9678]  (bootstrap, 1000 resamples, seed 0)
+  accuracy 0.9991  precision 0.9702  recall 0.9147
+  TP 311.0  FP 9.6  FN 29.0  TN 44532.4
+
+Overall (test group; outside the band Verity's decision_status) (weighted estimate)
+  precision 0.9970  recall 0.5752  F1 0.7295
+  TP 3187.0  FP 9.6  FN 2354.0
+
+Recall by hard-case slice (test group; pairs where either record carries the tag) (weighted estimate)
+  acronym         493.0 / 811.0    recall 0.6079
+  truncation      607.0 / 1043.0   recall 0.5820
+  po_box          355.0 / 765.0    recall 0.4641
+  easy           1844.0 / 3101.0   recall 0.5946
+
+Decoy pairs in the test group: 117.2, wrongly matched 0.0 (0.00%) (weighted estimate)
+
+Band average precision (cutoff-free, ranked by confidence) (weighted estimate): 0.9540
+
+Calibration (test band, 10 equal-width bins) (weighted estimate)
+  ECE 0.0005   (bar: <= 0.05)
+  ECE among pairs with confidence >= 0.05: 0.0497  (429.6 pairs)
+  bin           pairs     mean conf   frac true
+  [0.0, 0.1)    44452.4   0.0002      0.0001
+  [0.1, 0.2)       53.8   0.1757      0.1115
+  [0.4, 0.5)       55.2   0.4320      0.3078
+  [0.6, 0.7)        4.0   0.6780      1.0000
+  [0.8, 0.9)        1.0   0.8070      1.0000
+  [0.9, 1.0]      315.6   1.0000      0.9697
