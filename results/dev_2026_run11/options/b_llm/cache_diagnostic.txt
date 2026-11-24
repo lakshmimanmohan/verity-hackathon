@@ -1,0 +1,49 @@
+Caching diagnostic, gpt-5.4-2026-03-05 (max_output_tokens=64;reasoning_effort=none), 2026-11-24 21:03:09Z
+cap $0.20; TRAIN band pairs only; 6 different pairs per variant, 4 s apart; system prompt 5,847 characters
+
+V1: fixed prompt_cache_key, developer message
+  call cache key sent  input  cached  output     cost $  latency s
+  1    verity-b-v1      1828       0      18   0.004840       3.00
+  raw usage object of call 1 (token fields only): {"input_tokens": 1828, "input_tokens_details": {"cache_write_tokens": 0, "cached_tokens": 0, "cache_write_tokens_details": {"ttl_12h_tokens": 0, "ttl_30m_tokens": 0}}, "output_tokens": 18, "output_tokens_details": {"reasoning_tokens": 0}, "total_tokens": 1846}
+  2    verity-b-v1      1821       0      18   0.004823       1.17
+  3    verity-b-v1      1833       0      18   0.004853       1.49
+  4    verity-b-v1      1824       0      18   0.004830       1.06
+  5    verity-b-v1      1815       0      18   0.004808       1.00
+  6    verity-b-v1      1823       0      18   0.004828       0.99
+
+V2: no prompt_cache_key, developer message
+  call cache key sent  input  cached  output     cost $  latency s
+  1    none             1815       0      18   0.004808       0.86
+  raw usage object of call 1 (token fields only): {"input_tokens": 1815, "input_tokens_details": {"cache_write_tokens": 0, "cached_tokens": 0, "cache_write_tokens_details": {"ttl_12h_tokens": 0, "ttl_30m_tokens": 0}}, "output_tokens": 18, "output_tokens_details": {"reasoning_tokens": 0}, "total_tokens": 1833}
+  2    none             1813       0      18   0.004803       0.97
+  3    none             1817       0      18   0.004812       0.90
+  4    none             1824       0      18   0.004830       1.05
+  5    none             1822       0      18   0.004825       0.99
+  6    none             1824       0      18   0.004830       1.03
+
+V3: fixed prompt_cache_key, top-level instructions
+  call cache key sent  input  cached  output     cost $  latency s
+  1    verity-b-v1      1822       0      18   0.004825       1.03
+  raw usage object of call 1 (token fields only): {"input_tokens": 1822, "input_tokens_details": {"cache_write_tokens": 0, "cached_tokens": 0, "cache_write_tokens_details": {"ttl_12h_tokens": 0, "ttl_30m_tokens": 0}}, "output_tokens": 18, "output_tokens_details": {"reasoning_tokens": 0}, "total_tokens": 1840}
+  2    verity-b-v1      1818       0      18   0.004815       0.98
+  3    verity-b-v1      1815       0      18   0.004808       1.02
+  4    verity-b-v1      1819       0      18   0.004817       0.87
+  5    verity-b-v1      1828       0      18   0.004840       1.11
+  6    verity-b-v1      1825       0      18   0.004832       0.97
+
+No variant showed cached tokens above 0. Stopped; nothing further spent.
+
+18 calls. Ledger total $0.1110 (this diagnostic $0.0868), remaining $44.8890
+
+Notes (added by hand)
+  - Parsing: the raw usage object and our parser agree on cached_tokens (0 everywhere); the script checks every
+    call and printed no parsing-bug line. No parser fix was needed.
+  - The raw usage object has fields this path does not read: input_tokens_details.cache_write_tokens (0) and
+    cache_write_tokens_details {ttl_12h_tokens, ttl_30m_tokens} (both 0). They suggest the API has a cache-write
+    concept with retention classes (12 h and 30 min), and that nothing was written to a cache on any of the 18
+    calls. Whether caching for this model needs an explicit request setting (for example a retention option) is
+    not known; it was not tested and not found in the documentation read on 2026-11-24.
+  - Results: 18 calls, 0 cached tokens, 0 cache-write tokens, in all three variants. Cost per call about $0.0048,
+    the uncached price. Total of this diagnostic $0.0868, step cap $0.20, nothing further spent.
+  - Not changed: no setting of the real request path. The diagnostic script is options/b_cache_diagnostic.py
+    (not committed).
