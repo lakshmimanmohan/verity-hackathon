@@ -48,6 +48,8 @@ EMBEDDINGS_STORE_META_KEY = "__embeddings_store_meta__"
 
 PAIR_SAMPLE = 1000
 RANDOM_SEED = 42
+# Learned threshold = lower KMeans cluster mean + this many standard deviations.
+THRESHOLD_SD_MULTIPLIER = 2.0
 HYBRID_EMBED_WEIGHT = 0.65
 HYBRID_CHAR_WEIGHT = 0.35
 
@@ -690,13 +692,29 @@ def learn_reliability(
     return reliability
 
 
-def kmeans_gap_threshold(sim_array: np.ndarray) -> tuple[float, dict[str, float]]:
-    meta: dict[str, float] = {}
+def kmeans_gap_threshold(sim_array: np.ndarray) -> tuple[float, dict[str, Any]]:
+    """
+    KMeans (k=2) on the 1D similarity scores of random row pairs. The threshold is the
+    mean of the lower cluster plus THRESHOLD_SD_MULTIPLIER x its standard deviation
+    (population sd). The centroid midpoint (the earlier rule) is kept in the metadata.
+    """
+    meta: dict[str, Any] = {}
     X = sim_array.reshape(-1, 1)
     km = KMeans(n_clusters=2, n_init=10, random_state=RANDOM_SEED).fit(X)
-    centers = sorted(float(c) for c in km.cluster_centers_.flatten())
+    raw_centers = km.cluster_centers_.flatten()
+    low_label = int(np.argmin(raw_centers))
+    centers = sorted(float(c) for c in raw_centers)
     c0, c1 = centers[0], centers[1]
-    threshold = (c0 + c1) / 2.0
+    low = sim_array[km.labels_ == low_label]
+    low_mean = float(low.mean())
+    low_std = float(low.std(ddof=0))
+    threshold = low_mean + THRESHOLD_SD_MULTIPLIER * low_std
+    meta["threshold_method"] = "low_cluster_mean_plus_k_sd"
+    meta["sd_multiplier"] = THRESHOLD_SD_MULTIPLIER
+    meta["low_cluster_n"] = int(low.size)
+    meta["low_cluster_mean"] = low_mean
+    meta["low_cluster_std"] = low_std
+    meta["kmeans_midpoint"] = (c0 + c1) / 2.0
     meta["cluster_center_low"] = c0
     meta["cluster_center_high"] = c1
     meta["inertia"] = float(km.inertia_)
@@ -796,9 +814,15 @@ def write_markdown(
         "## Learned match threshold\n",
         f"Pooled weighted similarity was clustered with **`KMeans(n_clusters=2)`** ",
         "(separating a low cluster from a high cluster).\n\n",
+        f"- Lower cluster: **`{th_meta.get('low_cluster_n', '—')}`** pairs, mean "
+        f"**`{_fmt_opt_float(th_meta.get('low_cluster_mean'))}`**, sd "
+        f"**`{_fmt_opt_float(th_meta.get('low_cluster_std'))}`**  \n",
         f"- Lower cluster center: **`{_fmt_opt_float(th_meta.get('cluster_center_low'))}`**  \n",
         f"- Upper cluster center: **`{_fmt_opt_float(th_meta.get('cluster_center_high'))}`**  \n",
-        f"- **`threshold = midpoint = {threshold:.4f}`** — pairs above this are treated as plausible matches.\n\n",
+        f"- **`threshold = low mean + {th_meta.get('sd_multiplier', THRESHOLD_SD_MULTIPLIER):g} x sd "
+        f"= {threshold:.4f}`** — pairs above this are treated as plausible matches.  \n",
+        f"- Centroid midpoint (earlier rule, for reference): "
+        f"**`{_fmt_opt_float(th_meta.get('kmeans_midpoint'))}`**\n\n",
         "See **`data/threshold_similarity_distribution.png`** for the histogram with the cutoff.\n\n",
         "## Field reliability\n",
         "When pairs already agree on strongly weighted columns but disagree elsewhere, ",
@@ -922,12 +946,12 @@ def main(input_path: str | Path = DEFAULT_INPUT_PATH) -> None:
 
     try:
         threshold, th_meta = kmeans_gap_threshold(sim_arr)
-        plt.axvline(threshold, color="crimson", linewidth=2, label=f"Learned threshold = {threshold:.3f}")
+        plt.axvline(threshold, color="crimson", linewidth=2, label=f"Learned threshold (low mean + {THRESHOLD_SD_MULTIPLIER:g} sd) = {threshold:.3f}")
         plt.legend()
         explanation = (
-            "KMeans with k=2 was fit on 1D similarity scores from random row pairs. "
-            "The two cluster centroids approximate 'clearly different' vs 'possibly same' groups; "
-            "their midpoint is used as a data-driven match cutoff."
+            "KMeans (k=2) on 1D similarity scores of random row pairs; threshold = mean of "
+            f"the lower cluster + {THRESHOLD_SD_MULTIPLIER:g} x its standard deviation "
+            "(population sd). The centroid midpoint is kept as kmeans_midpoint for reference."
         )
         th_extra = {**th_meta, "method": explanation}
     except Exception as exc:  # noqa: BLE001
