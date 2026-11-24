@@ -67,7 +67,6 @@ SCORED_PAIRS_FIELDNAMES = [
     "score",
     "score_uncapped",
     "cosine",
-    "diversity_bonus",
     "match_type",
     "pair_source",
     "applied_threshold",
@@ -491,8 +490,7 @@ def load_match_weights(weights_path: Path, threshold_path: Path) -> MatchWeights
     print(f"  learned_threshold: {threshold_path}")
     print(
         f"  Learned threshold: {learned_threshold:.3f} "
-        f"(effective = max(learned, {LEARNED_THRESHOLD_MIN_FLOOR:.2f})); "
-        f"diversity_bonus uses learned threshold only"
+        f"(effective = max(learned, {LEARNED_THRESHOLD_MIN_FLOOR:.2f}))"
     )
     print(
         "  applied cosine vs field blend "
@@ -1396,12 +1394,6 @@ def fingerprint_to_label(fp: str) -> str:
     return fp
 
 
-def diversity_bonus(src_a: str, src_b: str, threshold: float) -> float:
-    """Scale bonus from learned threshold only (no fixed literal weight)."""
-    if not src_a or not src_b or src_a == src_b:
-        return 0.0
-    return float(threshold * (1.0 - threshold))
-
 
 def fetch_record_context(store, record_labels: list[str]):
     labels = [str(lb).strip() for lb in record_labels if str(lb).strip()]
@@ -1632,7 +1624,6 @@ def write_scored_pairs(
                     "score": _fmt6(r["score"]),
                     "score_uncapped": _fmt6(nb["score_uncapped"]) if nb else "",
                     "cosine": _fmt6(nb["cosine"]) if nb else "",
-                    "diversity_bonus": _fmt6(nb["diversity_bonus"]) if nb else "",
                     "match_type": r["match_type"],
                     "pair_source": r["pair_source"],
                     "applied_threshold": _fmt6(nb["applied_threshold"]) if nb else "",
@@ -1668,8 +1659,8 @@ def write_scored_pairs_columns(
             "hybrid_semantic_types": list(HYBRID_SEMANTIC_TYPES),
             "score_cap": 1.0,
             "rule": (
-                "score_uncapped = w_e*cosine + w_f*sum_k(field_weights[k]*s_k) + "
-                "diversity_bonus, where s_k = hybrid_embed_weight*cosine + "
+                "score_uncapped = w_e*cosine + w_f*sum_k(field_weights[k]*s_k), "
+                "where s_k = hybrid_embed_weight*cosine + "
                 "hybrid_char_weight*field_similarities[k] if field_semantic_types[k] is "
                 "in hybrid_semantic_types, else field_similarities[k]; (w_e, w_f) = "
                 "(w_embed_blend, w_field_blend), or (1, 0) when field_weights is empty; "
@@ -2009,9 +2000,7 @@ def main(
 
         src_a = ca["source_system"]
         src_b = cb["source_system"]
-        div = diversity_bonus(src_a, src_b, mw.learned_threshold)
-
-        score_uncapped = w_e * cos_part + w_f * field_sim + div
+        score_uncapped = w_e * cos_part + w_f * field_sim
         score = min(score_uncapped, 1.0)
 
         rid_a = str(ca["record_id"])
@@ -2089,7 +2078,6 @@ def main(
                 "field_contributions": field_contributions,
                 "field_similarities": field_similarities,
                 "score_uncapped": score_uncapped,
-                "diversity_bonus": div,
                 "field_jaccard": field_jaccard,
                 "field_weights": field_weights,
             }
@@ -2155,7 +2143,6 @@ def main(
                 # Extra fields for scored_pairs.csv only; match_candidates.csv ignores them.
                 "cosine": cos_part,
                 "score_uncapped": item["score_uncapped"],
-                "diversity_bonus": item["diversity_bonus"],
                 "applied_threshold": effective_score_threshold,
                 "evidence_passes": evidence_passes,
                 "field_jaccard": item["field_jaccard"],
