@@ -8,8 +8,11 @@ C v1 LightGBM
   band recall     0.9824  95% CI [0.9676, 0.9942]
 A (threshold only)
   band F1         0.1720  95% CI [0.1232, 0.2246]
-  band precision  1.0000  95% CI [1.0000, 1.0000]
+  band precision  1.0000  95% CI [1.0000, 1.0000]  (degenerate)
   band recall     0.0941  95% CI [0.0657, 0.1265]
+  zero-error bounds (exact one-sided 95% Clopper-Pearson; the bootstrap interval is degenerate when an error count is 0):
+    false matches: 0 of 4,660 false pairs; false-match rate <= 0.00064 (up to 29 false matches on 44,542 false pairs)
+    implied worst case on a band of 340 true and 44,542 false pairs: precision >= 0.5278, recall = 0.0941, F1 >= 0.1598
 
 Difference (first minus second) = C v1 LightGBM minus A (threshold only)
   band F1         +0.7786  95% CI [+0.7103, +0.8442]  (width 0.1339)
