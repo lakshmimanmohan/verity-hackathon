@@ -13,12 +13,15 @@ from __future__ import annotations
 import copy
 import json
 import sys
+import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 from types import SimpleNamespace
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+import b_llm_baseline  # noqa: E402
 from b_llm_baseline import OpenAIProvider, SCHEMA, load_prices, make_provider  # noqa: E402
 
 MODEL = "gpt-5.4-2026-03-05"
@@ -39,6 +42,20 @@ def body(text='{"decision": "same", "confidence": 0.9}', status="completed", cac
 
 
 class OpenAITests(unittest.TestCase):
+    def setUp(self):
+        """Read prices from a temporary copy of options/prices.json with every model not approved, so the
+        approval-gate tests do not depend on the real file's approved flags (which are the user's to set)."""
+        doc = json.loads(b_llm_baseline.PRICES_PATH.read_text(encoding="utf-8"))
+        for cfg in doc["models"].values():
+            cfg["approved"] = False
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        path = Path(tmp.name) / "prices.json"
+        path.write_text(json.dumps(doc), encoding="utf-8")
+        patcher = mock.patch.object(b_llm_baseline, "PRICES_PATH", path)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def provider(self, client=None, **cfg_changes) -> OpenAIProvider:
         cfg = copy.deepcopy(load_prices()[MODEL])
         cfg.update(cfg_changes)
