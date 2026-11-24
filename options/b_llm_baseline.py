@@ -54,6 +54,8 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(REPO / "verity" / "src"))
+sys.path.insert(0, str(REPO / "eval"))
+import make_sample  # noqa: E402
 from llm_cache import PairCache, pair_key, sha256_text  # noqa: E402
 from llm_ledger import DEFAULT_LEDGER, LIFETIME_CAP_USD, Ledger, LedgerRefused, micro  # noqa: E402
 
@@ -882,23 +884,11 @@ def example_turns(rd: RunData, truth: TrainTruth, train_band, exclude: set,
 
 
 def weighted_test_sample(rd: RunData, run: Path, size: int, seed: int = 0):
-    """A weighted sample of the TEST band for a cheaper second-provider run: every true pair (weight 1)
-    plus random non-matches (weight = inverse sampling rate). The truth file is read for TEST records
-    only to tell true from false when drawing the sample; labels never enter a prompt. Used by
-    --dry-run now; sending these pairs to an LLM still needs --final."""
-    ent = {r["record_id"]: r["true_entity_id"] for r in read_csv(run / "orgs_raw_truth.csv")
-           if rd.side.get(r["record_id"]) == "test"}
-    band = sorted(rd.band("test"))
-    true = [p for p in band if ent[p[0]] == ent[p[1]]]
-    false = [p for p in band if ent[p[0]] != ent[p[1]]]
-    n_false = size - len(true)
-    if n_false < 0 or n_false > len(false):
-        raise SystemExit(f"cannot draw {size}: {len(true)} true pairs and {len(false)} non-matches in the test band")
-    picked = sorted(random.Random(seed).sample(false, n_false))
-    w_false = len(false) / n_false
-    weights = {(p[0], p[1]): 1.0 for p in true}
-    weights.update({(p[0], p[1]): w_false for p in picked})
-    return sorted(true + picked), weights, len(true), len(false), n_false, w_false
+    """The fixed weighted sample of the TEST band (eval/make_sample.py holds the one sampler): every true
+    pair (weight 1) plus random non-matches (weight = inverse sampling rate). Labels are read for TEST
+    records only, to draw the sample; they never enter a prompt. Used by --dry-run now; sending these
+    pairs to an LLM still needs --final."""
+    return make_sample.draw_sample(make_sample.test_band_pairs(run), make_sample.test_entities(run), size, seed)
 
 
 def main() -> int:
@@ -969,11 +959,7 @@ def main() -> int:
             extra = [f"  sample: all {n_true} true test band pairs (weight 1) + {n_false:,} random non-matches of {n_false_all:,} "
                      f"(seed 0, weight {w_false:.4f} = inverse sampling rate); labels used only to draw the sample",
                      f"  weights sum to {sum(weights.values()):,.1f} (the full test band has {n_true + n_false_all:,} pairs)"]
-            with (bdir / f"test_sample{args.sample_size}.csv").open("w", newline="", encoding="utf-8") as f:
-                w = csv.writer(f)
-                w.writerow(["record_a", "record_b", "weight"])
-                for a_, b_, *_ in pairs:
-                    w.writerow([a_, b_, f"{weights[(a_, b_)]:.6f}"])
+            make_sample.write_sample(bdir / f"test_sample{args.sample_size}.csv", pairs, weights)
         else:
             pairs = rd.band(args.split)
         items = make_items(rd, pairs, provider, system, settings_sha, system_sha)
