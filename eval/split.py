@@ -74,10 +74,13 @@ def main() -> int:
 
     sp_path, mc_path = data / "scored_pairs.csv", data / "match_candidates.csv"
     region: dict[tuple[str, str], str] = {}
+    hw = round(HALF_WIDTH * 1_000_000)
     for r in read_csv(sp_path):
-        s, t = float(r["score"]), float(r["effective_threshold"])
+        # Whole millionths of the written 6-decimal values, so band edges are exact.
+        s = round(float(r["score"]) * 1_000_000)
+        t = round(float(r["effective_threshold"]) * 1_000_000)
         region[(r["record_a"], r["record_b"])] = (
-            "below" if s < t - HALF_WIDTH else ("in" if s <= t + HALF_WIDTH else "above")
+            "below" if s < t - hw else ("in" if s <= t + hw else "above")
         )
     matched = [tuple(sorted((r["record_a"], r["record_b"]))) for r in read_csv(mc_path)]
     above = [k for k, g in region.items() if g == "above"]

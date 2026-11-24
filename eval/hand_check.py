@@ -94,9 +94,12 @@ def sample(run: Path, truth_path: Path, force: bool) -> int:
     region: dict[tuple[str, str], str] = {}
     for r in read_csv(data / "scored_pairs.csv"):
         k = (r["record_a"], r["record_b"])
-        s, t = float(r["score"]), float(r["effective_threshold"])
+        # Whole millionths of the written 6-decimal values, so band edges are exact.
+        s = round(float(r["score"]) * 1_000_000)
+        t = round(float(r["effective_threshold"]) * 1_000_000)
         scored[k] = r
-        region[k] = "below" if s < t - HALF_WIDTH else ("in" if s <= t + HALF_WIDTH else "above")
+        hw = round(HALF_WIDTH * 1_000_000)
+        region[k] = "below" if s < t - hw else ("in" if s <= t + hw else "above")
     true_set = set(true_pairs)
     keys_sorted = sorted(scored)
 
