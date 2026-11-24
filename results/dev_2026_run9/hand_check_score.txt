@@ -1,0 +1,34 @@
+Run: C:\verity-hackathon\results\dev_2026_run9
+
+  stratum                  pairs labelled  agree agreement unsure blank
+  ALL                        100      100     98     98.0%      0     0
+  band_true                   25       25     24     96.0%      0     0
+  band_false                  25       25     25    100.0%      0     0
+  decoy                       15       15     15    100.0%      0     0
+  above_true_acronym           5        5      5    100.0%      0     0
+  above_true_truncation        5        5      5    100.0%      0     0
+  above_true_po_box            5        5      5    100.0%      0     0
+  above_false                 10       10      9     90.0%      0     0
+  random_true                 10       10     10    100.0%      0     0
+
+Disagreements: 2
+
+pair 53  you: different  generator: same  stratum band_true  entities E02795 / E02795  tags po_box+typo_address / clean  score 0.840033  match_type insufficient_evidence
+    field            record A (R0f47e0a05e)                       record B (R6ef763bafd)
+    address_line     POB 692238                                   3656 Washington Boulevard
+    city             Albany                                       Albany
+    company_name     Evergreen Westfield Technologies             Evergreen Westfield Technologies
+    phone                                                         528.977.2138
+    postal_code      12274-8867                                   12274
+    state            NY                                           NY
+    website                                                       evergreenwestfield.com
+
+pair 58  you: same  generator: different  stratum above_false  entities E03754 / E00816  tags standard / clean  score 0.885313  match_type insufficient_evidence
+    field            record A (R74617b78ad)                       record B (R345b6dc526)
+    address_line     4485 Market Way.                             3135 Industrial Lane
+    city             Phoenix                                      Phoenix
+    company_name     Brightpath Harbor Data Systems Corporation   Brightpath Summit Health Partners Corp
+    phone            (752) 468-0518                               (386) 746-8184
+    postal_code      85068                                        85058
+    state            AZ                                           AZ
+    website          brightpathharbor.com                         brightpathsummit.com

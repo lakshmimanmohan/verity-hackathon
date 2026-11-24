@@ -1,0 +1,101 @@
+pair_no,address_line_A,address_line_B,city_A,city_B,company_name_A,company_name_B,phone_A,phone_B,postal_code_A,postal_code_B,state_A,state_B,website_A,website_B,your_label
+1,3854 Airport Pkwy.,3854 Airport Pkwy.,Sacramento,Sacramento,COASTAL BLUEWATER FREIGHT LINES,Coastal Bluewater Freight Lines,(635) 701-8004,635.701.8004,95843,95843-9147,CA,CA,coastalbluewater.com,coastalbluewater.com,same
+2,8453 Airport Ln.,8453 Airport Lane,Albany,Albany,G.L.L.,Granite Lakeshore Logistics,+1 876 399 5445,(876) 399-5445,12207,12207,NY,NY,granitelakeshore.com,granitelakeshore.com,same
+3,8081 Center Parkway,1257 Cedar Way,Sacramento,Nashville,Coastal Brightpath Pharmacy Corp,Brightpath Coastal Technologies Co,250.503.4474,380-553-4227,95850,37281,CA,TN,coastalbrightpath.com,brightpathcoastal.com,different
+4,2750 Oak Street,2799 Washington Avenue,Pittsburgh,Atlanta,Anderson & Ward Environmental Services Co,Anderson & Brooks Energy Solutions Ltd,4089440273,606.517.0277,15277,30399,PA,GA,andersonward.com,andersonbrooks.com,different
+5,3096 Elm Boulevard,9648 Elm Road,Phoenix,Phoenix,"EVERGREEN FOODS, INC",H.A.S. Ltd.,943-896-2869,264-554-0063,85030,85005,AZ,AZ,,,different
+6,6378 Elm Court,878 Elm Road,Minneapolis,Austin,Stonebridge Silverline Construction Inc,Stonebridge Granite Health Partners Inc,893-696-5036,830.263.0580,55425,78741,MN,TX,stonebridgesilverline.com,stonebridgegranite.com,different
+7,8636 Washington Road,4524 Washington Lane,HOUSTON,Richmond,Silverline Cedar Technologies Incorporated,Silverline Valley Construction Ltd,+1 228 313 9261,+1 919 551 2826,77046,23219,TX,VA,www.silverlinecedar.com,silverlinevalley.com,different
+8,6716 Market Drive,Post Office Box 58265,Portland,Portland,P.H.P. L.L.C.,Pioneer Health Partners L.L.C.,+1 654 889 8349,654-889-8349,97265,97265,OR,OR,www.pioneerhealth.com,,same
+9,1978 Lake Court,239 7Corporate Ct.,Omaha,Dallas,Patel & Moreau Environmental Services Corp,Patel Environmental Services Ltd,272-567-7579,6143235831,68131,75260,NE,TX,patelmoreau.com,patelenvironmental.com,different
+10,7453 Center Boulevard,1385 Ridge Lane,Pittsburgh,Charlotte,Coastal Health Partners Co,"Coastal Health Partners, Company",278-223-5825,629-340-9683,15215,28245-9201,PA,NC,coastalhealth.com,,different
+11,368 Elm Avenue,9924 Elm Way.,Denver,Nashville,Moreau Capital Management,Moreau & Bennett Freight Lines Co.,(310) 718-3926,759.491.8822,80280,37269,CO,TN,moreaucapital.com,www.moreaubennett.com,different
+12,2350 Lincoln Street,4857 Ridge St,Dallas,Minneapolis,Summit Atlantic Medical Supply Ltd,Summit Copper Consulting Group,423-690-1992,(856) 464-2729,75286,55429,TX,MN,summitatlantic.com,www.summitcopper.com,different
+13,5017 Airport Avenue,5017 Airport Avenue,Chicago,Chicago,Ward Capital Management Inc,WCM,5096028776,,60618,60618-9413,IL,IL,wardcapital.com,,same
+14,7879 Pine Parkway,5798 Center Lane,Albany,Tampa,Willow Pacific Software,Willow Pacific Software,698.625.1571,(661) 601-7063,12218,33634,NY,FL,willowpacific.com,willowpacific.com,different
+15,2856 Lake Boulevard,9567 Sunset Parkway,Omaha,Dallas,Carter Logistics Co,Carter & Thompson Construction LLC,9579103709,2228520615,68110,75213,NE,TX,carterlogistics.com,carterthompson.com,different
+16,5752 Jefferson Ln,5752 Jefferson Lane,San Diego,SAN DIEGO,HUGHES DENTAL GRO,"Hughes Dental Group, In",(333) 719-5703,3337195703,92163,92163-7694,CA,CA,www.hughesdental.com,hughesdental.com,same
+17,7137 Airport Road,5751 Mill Road,Omaha,Omaha,"Westfield Redstone Dental Group, INC",Westfield Harbor Medical Supply Corp,+1 596 848 7896,+1 627 234 0703,68182,68185,NE,NE,westfieldredstone.com,westfieldharbor.com,different
+18,9593 Sunset Ave.,9593 Sunset Avenue,Albany,Albany,"Summit Cedar Realty, Company",Summmit Cedar Rea,+1 751 479 1873,751.479.1873,12299,12299,NY,NY,summitcedar.com,www.summitcedar.com,same
+19,5163 Main Rd.,5163 Main Road,Milwaukee,Milwaukee,GRANITE EQUIPMENT RENT,"Granite Equipment Rental, Company",(280) 499-6140,,53209-6910,53209,WI,WI,,graniteequipment.com,same
+20,3385 Market Lane,2670 Highland Pkwy,Charlotte,Columbus,Willow Stonebridge Energy Solutions Ltd,Willow Stonebridge Energy Solutions Ltd,+1 408 671 4738,5329555221,28201,43227,NC,OH,,willowstonebridge.com,different
+21,6589 Mill Boulevard,POB 10536,Charlotte,RICHMOND,Okafor Insurance Agency Ltd,"Clearview Insurance Agency, Corp.",5359079311,612.722.2791,28208,23272,NC,VA,,,different
+22,2841 Washington Drive,P.O. Box 24321,Seattle,Seattle,"Lakeshore Willow Equipment Rental, Ltd.",Lakeshore Willow Equipment Rental Limiteed,+1 913 454 8559,,98185,98185,WA,WA,lakeshorewillow.com,lakeshorewillow.com,same
+23,4984 Pine Avenue,5957 Highland Parkway,Phoenix,Boston,Pioneer Heritage Software,Pioneer Heritage Software,4112440295,620.890.7167,85098,02169,AZ,MA,pioneerheritage.com,pioneerheritage.com,different
+24,9195 Airport Ln.,9195 Airport Lane,Austin,Austin,OSC Llc,Oakmont Sterling Construction LLC,727-846-1720,727.846.1720,78769,78769,TX,TX,oakmontsterling.com,oakmontsterling.com,same
+25,1210 Market Way,1564 Airport Way,Detroit,Dallas,Foster & Rivera Packaging,Foster & Rivera Packaging,359-250-4158,425.273.1889,48298,75222,MI,TX,,www.fosterrivera.com,different
+26,4380 Ridge Road,Post Office Box 84326,Richmond,Richmond,Kim & Bennett Pharmacy LLC,"Kim & Bennett Pharmacy, Llc",,,23263,23263,VA,VA,kimbennett.com,,same
+27,6997 Park Blvd. Ste 210,6228 Washington Lane,Dallas,Kansas City,"Frontier Crescent Data Systems, LLC",Frontier Crescent Software,406-440-6189,914.486.9241,75228-1448,64139,TX,MO,frontiercrescent.com,frontiercrescent.com,different
+28,480 Market St,480 Market Street,Denver,Denver,CRER,Clearview Redstone Equipment Rental,829.735.8608,8297358608,80258,80258,CO,CO,clearviewredstone.com,clearviewredstone.com,same
+29,8711 Industrial Dr,8711 Industrial Dr.,Tampa,Tampa,A.C.D.S. LLC,Atlantic Cedar Data Systems L.L.C.,+1 887 796 7285,887.796.7285,33610,33610,FL,FL,,atlanticcedar.com,same
+30,2017 Market Boulevard,7091 Market Avenue,Houston,Boston,"Oakmont Summit Freight Lines, INC",Oakmont Cedar Health Partners,(976) 840-4138,(313) 845-9410,77001,02154,TX,MA,oakmontsummit.com,oakmontcedar.com,different
+31,43 River Parkway,6474 River Lane,Detroit,PORTLAND,Granite Freight Lines,Granite Evergreen Realty Inc.,581.934.6588,3906081960,48209-1612,97204-2997,MI,OR,,,different
+32,629 Washington Blvd.,629 Washington Boulevard,Salt Lake City,Salt Lake City,Frontier Willow,Frontier Willow Insurance Agency Co,5506922293,550.692.2293,84174-6082,84174,UT,UT,frontierwillow.com,frontierwillow.com,same
+33,780 Sunset Boulevard,6194 Pine Lane,Austin,Portland,Collins & Thompson Environmental Services Inc,"Collins & Thompson Environmental Services, INC",531-807-0941,+1 935 397 2171,78757,97240-2596,TX,OR,,www.collinsthompson.com,different
+34,1653 Main Way,POB 42973,Boston,Boston,Hughes Freight Lines INC,Hughes Freight Lines Inc,+1 484 935 0377,,02160,02160,MA,MA,,www.hughesfreight.com,same
+35,7476 Lincoln Lane,8589 River Parkway,Sacramento,Houston,Redstone Northgate Staffing Solutions Corp,Redstone Pioneer Environmental Services Corp,574-433-0132,274.880.8154,95822,77061,CA,TX,redstonenorthgate.com,redstonepioneer.com,different
+36,7066 Commerce St.,7066 Commerce St.,Minneapolis,Minneapolis,"Clearview Pharmacy, L.L.C.","Clearview Pharmacy, L.L.C.",228-594-7318,(228) 594-7318,55476,55476,MN,MN,,clearviewpharmacy.com,same
+37,4600 Airport Way,900 River Way,Austin,Nashville,Eastwood Bluewater Packaging,Eastwood Coastal Dental Group LLC,+1 730 266 3596,+1 636 789 7533,78794,37261,TX,TN,eastwoodbluewater.com,eastwoodcoastal.com,different
+38,PO Box 55805,4942 Lake Boulevard,Columbus,Columbus,"KEYSTONE SILVERLINE CONSULTING GROUP, INCORPORATED",KSCG,(291) 473-1316,291.473.1316,43275,43275,OH,OH,,,same
+39,4674 Mill Way,2799 Washington Avenue,Richmond,Atlanta,Anderson & Brooks Energy Solutions Ltd,Anderson & Brooks Energy Solutions Ltd,410-526-2021,606.517.0277,23297,30399,VA,GA,,andersonbrooks.com,different
+40,1222 Airport Way,1819 Commecre Lane,Pittsburgh,Chicago,Heritage Packaging LLC,"Heritage Packaging, Llc",962.753.9405,(895) 303-1891,15277,60623,PA,IL,heritagepackaging.com,heritagepackaging.com,different
+41,P.O. Box 51420,P.O. Box 52978,Houston,Boston,"Oakmont Summit Freight Lines, Inc.","Oakmont Summit Capital Management, Corp.",,,77001,02158-7924,TX,MA,www.oakmontsummit.com,oakmontsummit.com,different
+42,5338 Airport Avenue,2865 Market Lane,Sacramento,Albany,Shah & Thompson Energy Solutions,Shah & Tanaka Technologies Inc,7945603069,555.600.8895,95864,12292,CA,NY,shahthompson.com,shahtanaka.com,different
+43,6805 Market Ct.,2744 Maple Lane,Omaha,Chicago,Barnes and Bennett Logistics Llc,Barnes & Okafor Pharmacy Corp,207.958.4870,(894) 909-0991,68186-0445,60659,NE,IL,barnesbennett.com,barnesokafor.com,different
+44,3158 Ridge Ln,3158 Ridge Lane,Atlanta,Atlanta,Maple Staffing Solutions,Maple Staffing Solutions,+1 344 418 1841,3444181841,30373,30373,GA,GA,maplestaffing.com,maplestaffing.com,same
+45,4126 Center Road,4143 Center Street,Milwaukee,Milwaukee,Pacific Medical Supply L.L.C.,Pacific Falcon Technologies Inc,618.807.2683,(587) 450-4976,53240,53214,WI,WI,,pacificfalcon.com,different
+46,489 Lincoln Ct,489 Lincoln Court,Austin,Austin,NLP,Northgate Lakeshore Packaging Co,(787) 461-8774,787.461.8774,78738,78738,TX,TX,northgatelakeshore.com,northgatelakeshore.com,same
+47,4048 Commerce Street,2948 Jefferson Parkway,Milwaukee,Omaha,Price & Collins Logistics Co,Price & Collins Logistics Co,+1 867 896 1246,+1 919 252 0711,53235,68113,WI,NE,pricecollins.com,pricecollins.com,different
+48,5319 Jefferson Parkway,4529 Mapple Ln,Seattle,Sacramento,Riverside Summit Engineering Group Co,Riverside Granite Pakkaging L.L.C.,955-452-3614,+1 745 231 6398,98169,95847-3633,WA,CA,riversidesummit.com,riversidegranite.com,different
+49,5832 Main Street,POB 86550,Atlanta,Atlanta,Copper Keystone Freight Lines Ltd,Copper Keystone Freight Lines Ltd,(781) 407-5900,,30393,30393-0532,GA,GA,copperkeystone.com,,same
+50,45 Market Boulevard,PO Box 41760,Austin,Austin,Nguyen Foods Co.,Nguyen Foods Company,(694) 875-6137,,78719,78719,TX,TX,,nguyenfoods.com,same
+51,4083 Jefferson Parkway,4083 Jefferson Pkwy.,ATLANTA,Atlanta,MACG Inc,"MOREAU & ANDERSON CONSULTING GROUP, INC",443-598-0386,,30316,30316,GA,GA,moreauanderson.com,,same
+52,4336 Cedar Avenue,4336 Cedar Avenue,Denver,Denver,Maple Copper Pharma,M.C.P. Co.,(946) 365-3129,946-365-3129,80249-9932,80249,CO,CO,,,same
+53,POB 692238,3656 Washington Boulevard,Albany,Albany,Evergreen Westfield Technologies,Evergreen Westfield Technologies,,528.977.2138,12274-8867,12274,NY,NY,,evergreenwestfield.com,different
+54,4374 Cedar Way,4374 Cedar Way,Raleigh,Raleigh,Maple Harbor Foods LLC,MHF,314.693.5734,314-693-5734,27677,27677-8034,NC,NC,mapleharbor.com,mapleharbor.com,same
+55,P.O. Box 2828,P.O. Box 74113,Richmond,Richmond,Bluewater Equipment Rental L.L.C.,Bluewater Equipment Rental Llc,9597528363,,23217,23217,VA,VA,,bluewaterequipment.com,same
+56,886 Ridge Boulevard,886 Ridge Boulevard,Phoenix,Phoenix,"Tanaka & Morgan Consulting Group, Corp",Tanaka & Morgan Consulting Group Corp,+1 591 910 1283,+1 591 910 1283,85032-9431,85032,AZ,AZ,tanakamorgan.com,tanakamorgan.com,same
+57,Postt Office Box 30792,3462 Airport Parkway,Detroit,Detroit,Evergreen Engineering Group,Evergreen Engineering Group,4692688985,469.268.8985,48258-7077,48258-9790,MI,MI,,evergreenengineering.com,same
+58,4485 Market Way.,3135 Industrial Lane,Phoenix,Phoenix,Brightpath Harbor Data Systems Corporation,Brightpath Summit Health Partners Corp,(752) 468-0518,(386) 746-8184,85068,85058,AZ,AZ,brightpathharbor.com,brightpathsummit.com,same
+59,Post Office Box 65899,6420 Corporate Avenue,Nashville,Nashville,Valley Meridian Engineering Group Co,Valley Meridian Engineering Group Co,(843) 770-6373,+1 843 770 6373,37240,37240,TN,TN,,valleymeridian.com,same
+60,P.O. Box 86574,6697 Cedar Avenue,SACRAMENTO,Sacramento,Willow Riverside Engineering Group L.L.C.,Willow Riverside Engineering Group LLC,,+1 355 425 0855,95869,95869,CA,CA,,willowriverside.com,same
+61,981 Industrial Road,3010 Elm Court,Milwaukee,Minneapolis,Thompson & Kim Engineering Group,Thompson & Tanaka Consulting Group LLC,635-563-0884,223-754-3390,53204,55496,WI,MN,thompsonkim.com,thompsontanaka.com,different
+62,9387 Ridge Boulevard,9387 Ridge Blvd,Columbus,Columbus,"Pacific Consulting Group, Ltd.",PCG Ltd.,,(344) 523-4162,43276,43276,OH,OH,,,same
+63,P.O. Box 30790,7724 Main Street,OMAHA,Omaha,Crescent Medical Supply,Crescent Medical Supply,(297) 561-9601,+1 297 561 9601,68107,68107,NE,NE,,crescentmedical.com,same
+64,8753 Lincoln Rd Ste 210,8753 Lincoln Road,Minneapolis,Minneapolis,"Westfield Technologies, Co.",Westfield Technologies Co,8963066523,8963066523,55474-7196,55474,MN,MN,,westfieldtechnologies.com,same
+65,356 Center Parkway,5074 Industrial Lane,Denver,Denver,Pioneer Crescent Logistics Limited,Crescent Manufacturing Corp,300.485.2553,545.686.5038,80296-1609,80241,CO,CO,pioneercrescent.com,crescentmanufacturing.com,different
+66,1978 Lake Ct,1781 Industrial Way,OMAHA,Pittsburgh,Patel & Moreau Environmental Serlices Corp,Patel & Moreau Environmental Services Corp,+1 272 567 7579,538.545.7278,68131-4293,15221,NE,PA,www.patelmoreau.com,,different
+67,P.O. Box 64455,8497 Corporate Way,Atlanta,Atlanta,Nortthgate Pinecrest Construction Co,Northgate Pinecrest Construction Co,(644) 276-8332,+1 644 276 8332,30367,30367,GA,GA,,northgatepinecrest.com,same
+68,2262 Elm Drive,9593 Sunset Avenue,Albany,Albany,Summit Realty Corp,Summit Cedar Realty Co,(685) 890-5376,(751) 479-1873,12283,12299,NY,NY,summitrealty.com,summitcedar.com,different
+69,9121 Park St,4380 Highland Lane,Kansas City,Kansas City,"Shah & Foster Insurance Agency, L.L.C.",Shah & Foster Manufacturing Corp,467-901-7785,695.756.7204,64159,64140,MO,MO,shahfoster.com,shahfoster.com,different
+70,637 Pine Ave.,4529 Maple Ln,Raleigh,Sacramento,Riverside Summit Construction Company,Riverside Granite Packaging Llc,6875479990,7452316398,27690,95847,NC,CA,riversidesummit.com,www.riversidegranite.com,different
+71,2391 Oak Court,1153 River Drive,Chicago,Columbus,Foster & Kim Engineering Group Corp,Foster & Kim Engineering Group Corp,(761) 462-1363,(611) 678-2853,60698,43246,IL,OH,fosterkim.com,fosterkim.com,different
+72,3281 Oak Ln.,2115 Airport Court,Boston,Omaha,ATLANTIC CLEARVIEW INSURANCE AGENCY L.L.C.,Atlantic Clearview Insurance Agency LLC,432-710-4807,367-664-5894,02159,68116,MA,NE,,,different
+73,2397 Corporate Ct,Post Office Box 93672,Dallas,Dallas,Patel Environmental Services Ltd,Patel Environmental Services Ltd,614-323-5831,614-323-5831,75260,75260,TX,TX,patelenvironmental.com,patelenvironmental.com,same
+74,3346 Center Court,2735 Cedar Way,Raleigh,Charlotte,Sterling Realty Inc,Sterling Realty Inc,+1 607 575 4780,+1 777 577 3552,27640,28215,NC,NC,,sterlingrealty.com,different
+75,294 Pine Ct,878 Elm Road,Minneapolis,Austin,Stonebridge Realty,Stonebridge Granite Health Partners Inc,3369335718,830.263.0580,55474,78741,MN,TX,stonebridgerealty.com,stonebridgegranite.com,different
+76,6625 Cedar Way,6625 Cedar Way.,Atlanta,Atlanta,Pioneer Valley Environmental Services Incorporated,Pioneer Valley Environmental Services Inc,762-386-1455,7623861455,30366-6458,30366,GA,GA,,,same
+77,9189 Maple Avenue,9189 Maple Ave.,Albany,Albany,Bennett and Nguyen Realty,B.N.R.,890-432-7768,890.432.7768,12205-6867,12205,NY,NY,www.bennettnguyen.com,bennettnguyen.com,same
+78,3200 Elm St,4571 Ridge Ct.,SACRAMENTO,Portland,Ridge Atlantic Dental Group Llc,Summit Stonebridge Data Systems Limited,,,95879-9337,97266-6062,CA,OR,,,different
+79,7328 Pine Drive,7328 Pine Drive,Raleigh,Raleigh,Beacon Brightpath Engineering Group,B.B.E.G.,+1 234 277 4451,234-277-4451,27679,27679,NC,NC,beaconbrightpath.com,beaconbrightpath.com,same
+80,4654 Elm Parkway,8590 Main Avenue,Atlanta,Milwaukee,Stonebridge Logistics Corp,Stonebridge Logistics Corp,7603240445,(892) 438-5542,30317,53244,GA,WI,stonebridgelogistics.com,stonebridgelogistics.com,different
+81,2182 Ridge St.,2182 Ridge Street,Omaha,Omaha,C.S.S. Company,CSS,403-384-8026,4033848026,68153-3316,68153,NE,NE,collinsstaffing.com,collinsstaffing.com,same
+82,8298 Market Way. Ste 210,8298 Market Way,PITTSBURGH,Pittsburgh,H.C.E.R.,HERITAGE COASTAL EQUIPMENT RENTAL,676-595-6521,+1 676 595 6521,15254,15254-8176,PA,PA,heritagecoastal.com,,same
+83,620 Oak Dr.,620 Oak Drive,Charlotte,Charlotte,CARTER & COLLINS FREIGHT LINES COMPANY,Carter & Collins Freight Lines Company,+1 245 386 8044,+1 245 386 8044,28245,28245,NC,NC,cartercollins.com,cartercollins.com,same
+84,694 Market Way,694 Market Way,Austin,Austin,AKP,Atlantic Keystone Packaging,7209774684,7209774684,78742,78742,TX,TX,,atlantickeystone.com,same
+85,P.O. Box 71379,2618 Park Street,Chicago,Chicago,Evergreen Keystone Medical Supply L.L.C.,Evergreen Keystone Medical Supply LLC,+1 824 998 8399,(824) 998-8399,60698,60698,IL,IL,,,same
+86,7099 Highland Boulevard,7099 Highland Blvd,Columbus,Columbus,Carter & Garcia Pharmacy Ltd,CGP,336.389.1992,(336) 389-1992,43207,43207,OH,OH,cartergarcia.com,,same
+87,Post Office Box 34359,7003 Lincoln Street,Milwaukee,Milwaukee,VALLEY WESTFIELD MEDICAL SUPPLY LTD,Valley Westfield Medical Supply Ltd,(401) 606-6556,401-606-6556,53265,53265,WI,WI,,valleywestfield.com,same
+88,259 Mill Court,26 Elm Way,San Diego,Denver,Granite Sterling Packaging,Granite Sterling Packaging,5368115619,641.585.4594,92152,80251,CA,CO,granitesterling.com,granitesterling.com,different
+89,8480 Center Pkwy.,7459 Commerce Lae,Houston,Portland,Liberty Sunrise,Liberty Pioneer Medical Supply L.L.C.,,,77080,97220,TX,OR,libertysunrise.com,libertypioneer.com,different
+90,3648 Main Rd,26 Corporate Road,SALT LAKE CITY,Omaha,Westfield Construction LLC,Westfield Equipment Rental,2534679631,523.762.4195,84131,68165,UT,NE,westfieldconstruction.com,westfieldequipment.com,different
+91,1829 Commerce Boulevard,PO Box 65177,Milwaukee,Milwaukee,Lindqvist & Garcia Energy Solutions Inc,Lindqvist & Garcia Energy Solutions Inc,267.526.2367,,53217,53217,WI,WI,lindqvistgarcia.com,lindqvistgarcia.com,same
+92,8015 Washington Drive,POB 90065,Phoenix,Phoenix,Tanaka Technolog,Tanaka Technoogies Corp,+1 258 530 8056,,85059,85059-6407,AZ,AZ,www.tanakatechnologies.com,,same
+93,1702 Commerce Pkwy. Fl 2,1702 Commerce Parkway,Omaha,Omaha,RST Co,Riverside Silverline Technologies Co,(566) 607-1967,566.607.1967,68188,68188,NE,NE,riversidesilverline.com,riversidesilverline.com,same
+94,43 Ridge Drive,483 Ridge Dr,Pittsburgh,Pittsburgh,Ward & Kim Environmental Services Inc.,WKES,415.639.8323,,15230,15230-1488,PA,PA,wardkim.com,wardkim.com,same
+95,3944 Main Lane,Post Office Box 69103,HOUSTON,Houston,Lindqvist Packaging L,Lindqvist Packaging Llc,+1 221 378 6572,,77055,77055,TX,TX,,lindqvistpackaging.com,same
+96,1078 Mill SSt,1234 Airport Rd,Tampa,TAMPA,"Atlantic Packaging, LL",Atlantic Realty Incorporated,880-652-7148,827-552-6757,33685,33697-9182,FL,FL,atlanticpackaging.com,atlanticrealty.com,different
+97,8458 Licnoln Way,5684 River Way,Kansas City,Kansas City,"Meridian Health Partners, Co.",Meridian Financial Services Ltd,,876-531-7176,64155,64139,MO,MO,meridianhealth.com,meridianfinancial.com,different
+98,3269 Enterprise Boulevard,3269 Enterprise Boulevard,Nashville,Nashville,Collins Technologies LLC,Collins Technologies,+1 509 383 5042,509-383-5042,37277,37277,TN,TN,collinstechnologies.com,,same
+99,3101 Oak Lane,7958 Park Boulevard,Portland,Atlanta,"Sunrise Insurance Agency, Ltd",Coastal Insurance Agency Corp,8012269909,229-209-8284,97215,30314,OR,GA,www.sunriseinsurance.com,coastalinsurance.com,different
+100,5369 Enterprise Court,8034 Riidge Court,Kansas City,Seattle,Clearview Northgate Manufacturing,Clearview Data Systems Corp,+1 662 943 7035,,64115-1862,98137,MO,WA,clearviewnorthgate.com,clearviewdata.com,different

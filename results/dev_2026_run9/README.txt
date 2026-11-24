@@ -177,5 +177,8 @@ Files
   verity_data/                       Verity's data folder, including run_info.json and
                                      scored_pairs_columns.json
   verity_run.log, evaluator_output.txt
+  Hand check of generator labels (98/100 blind agreement): hand_check_score.txt (the
+  eval/hand_check.py --score output) and hand_check_review.md (result and reviewer notes);
+  inputs hand_check_pairs.csv (blind labels) and hand_check_key.csv (answers)
   Not in git: band_pairs.csv, verity_data/scored_pairs.csv, verity_data/verity_store.sqlite,
   verity_data/embeddings_global.pkl, verity_data/orgs_raw/embeddings.pkl
