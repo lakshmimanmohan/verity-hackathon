@@ -92,6 +92,10 @@ def main() -> int:
     p.add_argument("--truth", type=Path, default=None)
     p.add_argument("--split", type=Path, default=None)
     p.add_argument("--name", default=None, help="Option name for the report header")
+    p.add_argument("--calibration-plot", type=Path, default=None,
+                   help="Write a reliability diagram (test band) to this PNG when confidences are given")
+    p.add_argument("--oof-reliability", type=Path, default=None,
+                   help="JSON reliability table from training (out-of-fold) to draw on the same plot")
     args = p.parse_args()
     csv.field_size_limit(10**8)
     run, weighted = args.run, args.weighted_sample
@@ -130,6 +134,7 @@ def main() -> int:
     # Validate the decisions file.
     decisions: dict[tuple[str, str], bool] = {}
     weights: dict[tuple[str, str], float] = {}
+    confidence: dict[tuple[str, str], float] = {}
     problems: list[str] = []
     n_conf = 0
     for i, r in enumerate(read_csv(args.decisions), start=2):
@@ -148,6 +153,7 @@ def main() -> int:
                 if not 0.0 <= cv <= 1.0:
                     raise ValueError
                 n_conf += 1
+                confidence[k] = cv
             except ValueError:
                 problems.append(f"line {i}: confidence {c!r} is not a number from 0 to 1")
         wv = 1.0
@@ -242,6 +248,59 @@ def main() -> int:
     wrong, dden = wsum(dk & matched), wsum(dk)
     print(f"\nDecoy pairs in the test group: {fmt(dden, weighted)}, wrongly matched "
           f"{fmt(wrong, weighted)} ({wrong / dden if dden else 0:.2%}){est}")
+
+    # Calibration, when every decision carries a confidence (probability of "same").
+    if sampled and len(confidence) == len(decisions):
+        pc = np.array([confidence[k] for k in sampled], dtype=float)
+        bins = np.minimum((pc * 10).astype(int), 9)
+        table = []
+        for i in range(10):
+            m = bins == i
+            W = float(w[m].sum())
+            table.append((i, int(m.sum()), W,
+                          float((w[m] * pc[m]).sum() / W) if W else None,
+                          float((w[m] * tru[m]).sum() / W) if W else None))
+        wt = float(w.sum())
+        ece = sum(W / wt * abs(ft - mp) for _, _, W, mp, ft in table if W)
+        hi_m = pc >= 0.05
+        whi = float(w[hi_m].sum())
+        ece_hi = sum(abs(float((w[hi_m & (bins == i)] * tru[hi_m & (bins == i)]).sum())
+                         - float((w[hi_m & (bins == i)] * pc[hi_m & (bins == i)]).sum()))
+                     for i in range(10)) / whi if whi else 0.0
+        print(f"\nCalibration (test band, 10 equal-width bins){est}")
+        print(f"  ECE {ece:.4f}   (bar: <= 0.05)")
+        print(f"  ECE among pairs with confidence >= 0.05: {ece_hi:.4f}  ({fmt(whi, weighted)} pairs)")
+        print("  bin           pairs     mean conf   frac true")
+        for i, n, W, mp, ft in table:
+            if n:
+                hi_edge = "]" if i == 9 else ")"
+                print(f"  [{i / 10:.1f}, {(i + 1) / 10:.1f}{hi_edge}  {fmt(W, weighted):>9}   {mp:.4f}      {ft:.4f}")
+        if args.calibration_plot:
+            import matplotlib
+            matplotlib.use("Agg")
+            import matplotlib.pyplot as plt
+            fig, ax = plt.subplots(figsize=(5.5, 5))
+            ax.plot([0, 1], [0, 1], color="#999999", linestyle="--", linewidth=1, label="perfect")
+            pts = [(mp, ft, n) for _, n, _, mp, ft in table if n]
+            ax.plot([q[0] for q in pts], [q[1] for q in pts], marker="o", label="test band")
+            for mp, ft, n in pts:
+                ax.annotate(str(n), (mp, ft), textcoords="offset points", xytext=(4, -10), fontsize=7)
+            if args.oof_reliability and args.oof_reliability.is_file():
+                import json
+                oof = [r for r in json.loads(args.oof_reliability.read_text(encoding="utf-8")) if r["n"]]
+                ax.plot([r["mean_p"] for r in oof], [r["frac_true"] for r in oof], marker="s",
+                        linestyle=":", label="train out-of-fold (calibration fit)")
+            ax.set_xlabel("mean predicted probability (confidence)")
+            ax.set_ylabel("fraction same-entity")
+            ax.set_title(f"{name}: reliability, ECE {ece:.4f}")
+            ax.set_xlim(0, 1)
+            ax.set_ylim(0, 1)
+            ax.legend(loc="upper left", fontsize=8)
+            fig.text(0.01, 0.005, "10 equal-width bins; numbers = test band pairs per bin", fontsize=7)
+            fig.tight_layout()
+            fig.savefig(args.calibration_plot, dpi=120)
+            plt.close(fig)
+            print(f"  calibration plot: {args.calibration_plot}")
     return 0
 
 

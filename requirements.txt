@@ -7,8 +7,8 @@
 
 -r verity/requirements.txt
 
-# Option C: decision model
-lightgbm
+# Option C: decision model (lightgbm pinned: 4.6.0, py3-none wheel, works on Python 3.13)
+lightgbm==4.6.0
 scikit-learn
 
 # Option E: SLM and cross-encoder (weights pinned by revision hash in options/e_slm.py)
