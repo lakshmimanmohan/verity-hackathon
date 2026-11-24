@@ -35,7 +35,7 @@
     },
     "gpt-5.4-2026-03-05": {
       "provider": "openai",
-      "approved": false,
+      "approved": true,
       "price_date": "2026-11-24",
       "source": "https://developers.openai.com/api/docs/models/gpt-5.4 and https://developers.openai.com/api/docs/pricing (platform.openai.com/docs/... redirects there), read 2026-11-24. Prices below are for prompts under 272K tokens (longer prompts are billed at 2x input and 1.5x output; ours are far shorter). Standard: input $2.50, cached input $0.25, output $15.00 per million tokens. Batch table row: input $1.25, output $7.50, cached input $0.13 (as listed). The pages were read through a web-fetch helper and quoted in part; re-check them before approving.",
       "input": 2.5,
