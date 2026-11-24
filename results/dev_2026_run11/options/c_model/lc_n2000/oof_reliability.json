@@ -1,0 +1,72 @@
+[
+ {
+  "bin": "[0.0, 0.1)",
+  "weight": 63249.55657492357,
+  "n": 441,
+  "mean_p": 4.042044026852516e-05,
+  "frac_true": 4.042044026852516e-05
+ },
+ {
+  "bin": "[0.1, 0.2)",
+  "weight": 0.0,
+  "n": 0,
+  "mean_p": null,
+  "frac_true": null
+ },
+ {
+  "bin": "[0.2, 0.3)",
+  "weight": 0.0,
+  "n": 0,
+  "mean_p": null,
+  "frac_true": null
+ },
+ {
+  "bin": "[0.3, 0.4)",
+  "weight": 0.0,
+  "n": 0,
+  "mean_p": null,
+  "frac_true": null
+ },
+ {
+  "bin": "[0.4, 0.5)",
+  "weight": 0.0,
+  "n": 0,
+  "mean_p": null,
+  "frac_true": null
+ },
+ {
+  "bin": "[0.5, 0.6)",
+  "weight": 0.0,
+  "n": 0,
+  "mean_p": null,
+  "frac_true": null
+ },
+ {
+  "bin": "[0.6, 0.7)",
+  "weight": 0.0,
+  "n": 0,
+  "mean_p": null,
+  "frac_true": null
+ },
+ {
+  "bin": "[0.7, 0.8)",
+  "weight": 0.0,
+  "n": 0,
+  "mean_p": null,
+  "frac_true": null
+ },
+ {
+  "bin": "[0.8, 0.9)",
+  "weight": 0.0,
+  "n": 0,
+  "mean_p": null,
+  "frac_true": null
+ },
+ {
+  "bin": "[0.9, 1.0]",
+  "weight": 415.44342507645274,
+  "n": 325,
+  "mean_p": 1.0,
+  "frac_true": 1.0
+ }
+]

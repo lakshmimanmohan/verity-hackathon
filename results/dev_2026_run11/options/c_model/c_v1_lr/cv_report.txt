@@ -1,0 +1,40 @@
+Option C cv_report: c_v1_lr
+Model: c_v1_lr (logistic regression, scikit-learn 1.9.1)
+Run: C:\verity-hackathon\results\dev_2026_run11
+
+Train band pairs: 63665 (418 true, 63247 false)
+Training set: 63665 pairs (418 true, 63247 false); all train band pairs
+Test band pairs scored: 44882 (no test labels read)
+
+Grouped CV: 5 folds over 1825 train-side split components (seed 0, balanced by records)
+  fold  eval pairs  eval true  train pairs  train true
+     0        4909         73        41099         317
+     1        3122         49        41649         339
+     2        3746         79        41488         311
+     3        2882         67        42347         307
+     4        3033         59        42104         307
+  OOF coverage: 17692 of 63665 pairs (27.8%); true 327 of 418, false 17365 of 63247
+  OOF weights per pair: true 1.2783, false 3.6422 (coverage x population)
+
+Model selection (weighted average precision on OOF)
+  (logistic regression, no grid)  AP 0.9878   <- chosen
+
+Calibration: isotonic regression on OOF predictions (weighted)
+  OOF ECE (10 equal-width bins, weighted): 0.0000
+  bin          weighted n      n   mean p   frac true
+  [0.0, 0.1)      63190.4  17354   0.0001   0.0001
+  [0.1, 0.2)         47.7     17   0.1607   0.1607
+  [0.4, 0.5)         38.5     19   0.4320   0.4320
+  [0.6, 0.7)         11.3      7   0.6780   0.6780
+  [0.9, 1.0]        377.1    295   1.0000   1.0000
+
+Cutoff rule
+  candidates t: the distinct calibrated OOF probabilities; predicted same when p >= t
+  band F1(t): weighted OOF band F1
+  P(t) = (TP_out + TPw(t)) / (M_out + PREDw(t)), train group: M_out = 3400 Verity matches outside the band, TP_out = 3400
+  t* = argmax band F1(t) subject to P(t) >= 0.98; ties to the larger t; none -> all different
+  result: t* = 0.678021 (max OOF band F1 with estimated overall precision >= 0.98)
+  at t*: OOF band F1 0.9543, precision 0.9906, recall 0.9205; estimated overall train precision 0.9990
+
+Test band: 322 of 44882 predicted same
+Wall time: 15.0s
