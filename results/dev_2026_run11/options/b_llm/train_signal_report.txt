@@ -1,0 +1,56 @@
+Train-pair signal report: shared website and phone (run dev_2026_run11)
+=====================================================================
+
+Population: the 63,665 TRAIN band pairs (decision_status review, both records in the train
+group of split_records.csv). Ground truth was read through a guard that refuses any record
+outside the train group; no test pair was read. Seed-2026 development data.
+
+Definitions
+  website domain  lowercase, with the scheme, a leading "www." and any path stripped
+  phone           digits only, a leading country code "1" dropped from 11-digit numbers
+  "decoy"         a false pair whose two records are in the same decoy group
+                  (same name and website domain, a different organization)
+
+Shared fields versus same organization
+                                        pairs   true   false    decoy  other false   P(same)
+  all train band pairs                  63665    418   63247       90        63157     0.66%
+  identical non-empty website domain     2083     94    1989       56         1933     4.51%
+  identical non-empty phone               185    185       0        0            0   100.00%
+    website AND phone identical            52     52       0        0            0   100.00%
+    website identical, phone not         2031     42    1989       56         1933     2.07%
+    phone identical, website not          133    133       0        0            0   100.00%
+  neither identical                     61449    191   61258       34        61224     0.31%
+
+The same pairs from the other side
+  website shared in  true pairs 94 of 418 (22.5%); decoy pairs 56 of 90 (62.2%); other false pairs 1933 of 63157 (3.1%)
+  phone shared in    true pairs 185 of 418 (44.3%); decoy pairs 0 of 90 (0.0%); other false pairs 0 of 63157 (0.0%)
+                     (a phone is present on both sides for 86 of the 90 decoy pairs; all of those differ)
+
+Is a shared website evidence of the same organization in this data?
+  Barely, and not by itself. It raises the odds about 7 times (4.51% against a 0.66% base rate),
+  but 95.5% of the pairs that share a website domain are different organizations. Decoys share
+  the domain more often than true pairs do (62.2% against 22.5%), because the generator builds a
+  decoy as the same name and domain at another address: among decoy-versus-true cases a shared
+  domain points to "different". A shared website adds nothing on top of a shared phone (100% either
+  way); without a phone match it is 2.07%.
+
+Is a shared phone evidence? Yes, conclusive in this data: 185 of 185 pairs are true, with no
+  exception, including the decoys. Caveat: the generator never gives two different organizations
+  the same phone number; real data has shared switchboards and main numbers.
+
+Phone formatting and Verity (a finding about Verity, not about the LLM)
+  Of the 185 train band pairs with an identical phone, 178 differ only in formatting, for example
+  "(401) 606-6556" against "4016066556"; only 7 have the identical raw string. Verity's match type
+  for the 185:
+      insufficient_evidence  166
+      full_signal             13
+      weak_signal              4
+      below_threshold          2
+  So 166 true pairs, a large part of the recall lost at the evidence gate, carry a phone that Verity
+  does not recognise as identical: it compares the formatted strings (character similarity), not the
+  digits. Comparing digits only would recover them at 100% precision on this data. Verity was not
+  changed for this; the digits-only phone feature is part of the planned C v2. An LLM reads these
+  matches directly, which matters when comparing option B with the others.
+
+Source: scripts run from the scratchpad on 2026-11-24 (not in the repository); numbers copied from
+their output.

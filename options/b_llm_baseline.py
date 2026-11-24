@@ -247,14 +247,25 @@ class CallResult:
 
 class Provider:
     name = "base"
+    cache_write_fee = True      # does the provider charge extra for writing a prompt cache entry?
 
     def __init__(self, model: str, cfg: dict):
         self.model, self.cfg = model, cfg
         self.settings = cfg["request_settings"]
+        self.transport = cfg.get("transport_settings", {})   # settings that cannot change an answer
 
     # settings that can change an answer (cache TTL cannot)
     def answer_settings(self) -> dict:
         return {k: v for k, v in self.settings.items() if not k.startswith("cache_ttl") and k != "temperature"}
+
+    def settings_label(self) -> str:
+        """Compact, human-readable answer settings, written to every result file."""
+        return ";".join(f"{k}={json.dumps(v, separators=(',', ':')) if isinstance(v, (dict, list)) else v}"
+                        for k, v in sorted(self.answer_settings().items()))
+
+    def batch_limits(self) -> tuple[int, int]:
+        lim = self.cfg.get("batch_limits") or {}
+        return int(lim.get("max_requests", BATCH_MAX_REQUESTS)), int(lim.get("max_bytes", BATCH_MAX_BYTES))
 
     def settings_sha(self) -> str:
         return sha256_text(json.dumps(self.answer_settings(), sort_keys=True))
@@ -292,12 +303,15 @@ class Provider:
         c = self.cfg
         read = c.get("cache_read") if c.get("cache_read") is not None else c["input"]
         write = c.get("cache_write_" + ttl) if c.get("cache_write_" + ttl) is not None else c["input"]
-        v = (uncached_in * c["input"] + cache_read_in * read + cache_write_in * write + out * c["output"]) / 1e6
-        if batch:
-            if c.get("batch_multiplier") is None:
-                return None
-            v *= c["batch_multiplier"]
-        return v
+        if not batch:
+            return (uncached_in * c["input"] + cache_read_in * read + cache_write_in * write + out * c["output"]) / 1e6
+        mult = c.get("batch_multiplier")
+        if mult is None:
+            return None
+        # Batch: everything at the batch multiplier, except cached input when the provider lists its own price.
+        read_b = c["batch_cache_read"] if c.get("batch_cache_read") is not None else read * mult
+        return ((uncached_in * c["input"] + cache_write_in * write + out * c["output"]) * mult
+                + cache_read_in * read_b) / 1e6
 
     def upper_bound_usd(self, system: str, user: str, mode: str) -> float:
         """Pessimistic cost of one request: the system prompt billed as a cache write, tokens at
@@ -315,7 +329,11 @@ class Provider:
         return self.settings.get("cache_ttl_batch" if mode == "batch" else "cache_ttl_live", "5m")
 
     def max_output_tokens(self) -> int:
-        return int(self.settings.get("max_tokens", self.settings.get("max_completion_tokens", 64)))
+        return int(self.settings.get("max_tokens", self.settings.get("max_output_tokens", 64)))
+
+    def cacheable_prefix_tokens(self, sys_tokens: int) -> int:
+        """How many tokens of the system prompt can be served from the prompt cache (estimate)."""
+        return sys_tokens if sys_tokens >= 512 else 0       # Anthropic: 512-token minimum on this model
 
 
 def _scrub(msg: str, secrets: list[str]) -> str:
@@ -410,8 +428,19 @@ class AnthropicProvider(Provider):
 
 
 class OpenAIProvider(Provider):
-    """UNVERIFIED against the OpenAI API: written from memory; see prices.json."""
+    """OpenAI Responses API with a strict JSON-schema structured output, no tools.
+
+    Written from the documentation read on 2026-11-24 (see options/prices.json notes) and
+    exercised only through fake responses in options/test_b_openai.py; it has not run against
+    the live API. Temperature is not set (the docs do not say it is accepted at reasoning
+    effort none)."""
     name = "openai"
+    cache_write_fee = False      # no write fee listed for gpt-5.4
+
+    def cacheable_prefix_tokens(self, sys_tokens: int) -> int:
+        # automatic caching; for models before GPT-5.6 cached_tokens is reported rounded down to a
+        # multiple of 128, and the minimum length is not documented (1,024 is stated for GPT-5.6+)
+        return (sys_tokens // 128) * 128 if sys_tokens >= 1024 else 0
 
     def __init__(self, model: str, cfg: dict, client=None):
         super().__init__(model, cfg)
@@ -429,84 +458,113 @@ class OpenAIProvider(Provider):
 
     def require_approved(self) -> None:
         super().require_approved()
-        if self.settings.get("reasoning_effort") is None:
+        for k in ("cache_read", "batch_multiplier"):
+            if self.cfg.get(k) is None:
+                raise SystemExit(f"{self.model}: options/prices.json has no {k} price.")
+        if not self.settings.get("reasoning_effort"):
             raise SystemExit(f"{self.model}: request_settings.reasoning_effort is not set in options/prices.json.")
+
+    def _cache_key(self, system: str, user: str) -> str | None:
+        k = int(self.transport.get("prompt_cache_key_buckets", 0) or 0)
+        if k <= 0:
+            return None
+        return f"{sha256_text(system)[:16]}-{int(sha256_text(user)[:8], 16) % k}"
 
     def request(self, system: str, user: str, mode: str) -> dict:
         s = self.settings
-        return {"model": self.model,
-                "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
-                "response_format": {"type": "json_schema",
-                                    "json_schema": {"name": "decision", "strict": True, "schema": SCHEMA}},
-                "max_completion_tokens": int(s["max_completion_tokens"]),
-                "reasoning_effort": s["reasoning_effort"]}
+        body = {"model": self.model,
+                # reusable instructions go in a developer message at the start of input so they are
+                # part of the cacheable prefix; the pair comes last
+                "input": [{"role": "developer", "content": system}, {"role": "user", "content": user}],
+                "text": {"format": {"type": "json_schema", "name": "decision", "strict": True, "schema": SCHEMA}},
+                "reasoning": {"effort": s["reasoning_effort"]},
+                "max_output_tokens": int(s["max_output_tokens"]),
+                "store": bool(self.transport.get("store", False))}
+        key = self._cache_key(system, user)
+        if key is not None:
+            body["prompt_cache_key"] = key
+        return body
 
-    def _to_result(self, resp, latency: float | None) -> CallResult:
-        ch = resp.choices[0]
-        d = getattr(getattr(resp.usage, "prompt_tokens_details", None), "cached_tokens", 0) or 0
-        usage = {"prompt_tokens": resp.usage.prompt_tokens, "cached_tokens": d,
-                 "completion_tokens": resp.usage.completion_tokens}
-        res = CallResult(stop_reason=ch.finish_reason, usage=usage, model=resp.model,
-                         request_id=getattr(resp, "_request_id", None) or getattr(resp, "id", None), latency_s=latency)
-        if getattr(ch.message, "refusal", None):
+    @staticmethod
+    def from_body(body: dict, latency: float | None = None, request_id: str | None = None) -> CallResult:
+        """Turn a Responses API response object (as a dict) into a CallResult."""
+        u = body.get("usage") or {}
+        cached = ((u.get("input_tokens_details") or {}).get("cached_tokens")) or 0
+        reasoning = ((u.get("output_tokens_details") or {}).get("reasoning_tokens")) or 0
+        usage = {"input_tokens": u.get("input_tokens", 0) or 0, "cached_tokens": cached,
+                 "output_tokens": u.get("output_tokens", 0) or 0, "reasoning_tokens": reasoning}
+        status = body.get("status")
+        reason = (body.get("incomplete_details") or {}).get("reason")
+        res = CallResult(stop_reason=f"{status}:{reason}" if reason else status, usage=usage,
+                         model=body.get("model"), request_id=request_id or body.get("id"), latency_s=latency)
+        text, refusal = "", False
+        for item in body.get("output") or []:
+            if item.get("type") != "message":
+                continue
+            for part in item.get("content") or []:
+                if part.get("type") == "refusal":
+                    refusal = True
+                elif part.get("type") == "output_text":
+                    text += part.get("text", "")
+        if refusal:
             res.refused = True
             return res
+        if status == "failed":
+            res.error = f"response failed: {(body.get('error') or {}).get('code')}"
+            return res
+        if status == "incomplete":
+            res.error = f"incomplete response ({reason})"
+            return res
         try:
-            res.decision, res.confidence = parse_answer(ch.message.content or "")
+            res.decision, res.confidence = parse_answer(text)
         except (ValueError, KeyError, TypeError) as e:
-            res.error = f"unparseable answer ({type(e).__name__}); finish_reason {ch.finish_reason}"
+            res.error = f"unparseable answer ({type(e).__name__}); status {status}"
         return res
 
     def call(self, params: dict) -> CallResult:
         t0 = time.perf_counter()
-        resp = self.client.chat.completions.create(**params)
-        return self._to_result(resp, time.perf_counter() - t0)
+        resp = self.client.responses.create(**params)
+        return self.from_body(resp.model_dump(), time.perf_counter() - t0, getattr(resp, "_request_id", None))
 
     def cost_of(self, usage: dict, mode: str) -> float:
         cached = usage.get("cached_tokens", 0) or 0
-        read = self.cfg.get("cache_read")
-        read = self.price("input") if read is None else read
-        v = (((usage.get("prompt_tokens", 0) or 0) - cached) * self.price("input") + cached * read
-             + (usage.get("completion_tokens", 0) or 0) * self.price("output")) / 1e6
-        return v * (self.price("batch_multiplier") if mode == "batch" else 1.0)
+        fresh = (usage.get("input_tokens", 0) or 0) - cached
+        out = usage.get("output_tokens", 0) or 0      # reasoning tokens are billed as output
+        if mode == "batch":
+            mult = self.price("batch_multiplier")
+            read = self.cfg.get("batch_cache_read")
+            read = self.price("cache_read") * mult if read is None else read
+            return ((fresh * self.price("input") + out * self.price("output")) * mult + cached * read) / 1e6
+        return (fresh * self.price("input") + cached * self.price("cache_read") + out * self.price("output")) / 1e6
 
     def submit_batch(self, items: list[tuple[str, dict]]) -> str:
         import io
-        lines = "\n".join(json.dumps({"custom_id": cid, "method": "POST", "url": "/v1/chat/completions", "body": p})
-                          for cid, p in items)
+        lines = "\n".join(json.dumps({"custom_id": cid, "method": "POST", "url": "/v1/responses", "body": p},
+                                     ensure_ascii=False) for cid, p in items)
         f = self.client.files.create(file=("batch.jsonl", io.BytesIO(lines.encode("utf-8"))), purpose="batch")
-        return self.client.batches.create(input_file_id=f.id, endpoint="/v1/chat/completions",
+        return self.client.batches.create(input_file_id=f.id, endpoint="/v1/responses",
                                           completion_window="24h").id
 
     def batch_done(self, batch_id: str) -> bool:
         st = self.client.batches.retrieve(batch_id).status
-        if st in ("failed", "expired", "cancelled"):
-            raise RuntimeError(f"batch {batch_id} ended with status {st}")
-        return st == "completed"
+        if st == "failed":
+            raise RuntimeError(f"batch {batch_id} failed validation")
+        return st in ("completed", "expired", "cancelled")   # expired / cancelled may hold partial results
 
     def batch_results(self, batch_id: str) -> dict[str, CallResult]:
         b = self.client.batches.retrieve(batch_id)
         out: dict[str, CallResult] = {}
+        if not getattr(b, "output_file_id", None):
+            return out
         for line in self.client.files.content(b.output_file_id).text.splitlines():
+            if not line.strip():
+                continue
             r = json.loads(line)
-            if r.get("error") or r["response"]["status_code"] != 200:
+            resp = r.get("response")
+            if r.get("error") or not resp or resp.get("status_code") != 200:
                 out[r["custom_id"]] = CallResult(error="batch request failed")
                 continue
-            body = r["response"]["body"]
-            ch = body["choices"][0]
-            u = body["usage"]
-            usage = {"prompt_tokens": u["prompt_tokens"], "completion_tokens": u["completion_tokens"],
-                     "cached_tokens": (u.get("prompt_tokens_details") or {}).get("cached_tokens", 0)}
-            res = CallResult(stop_reason=ch["finish_reason"], usage=usage, model=body.get("model"),
-                             request_id=r.get("id"))
-            if ch["message"].get("refusal"):
-                res.refused = True
-            else:
-                try:
-                    res.decision, res.confidence = parse_answer(ch["message"]["content"] or "")
-                except (ValueError, KeyError, TypeError) as e:
-                    res.error = f"unparseable answer ({type(e).__name__})"
-            out[r["custom_id"]] = res
+            out[r["custom_id"]] = self.from_body(resp["body"], None, resp.get("request_id"))
         return out
 
 
@@ -557,11 +615,14 @@ def est_request_bytes(system: str, user: str) -> int:
 
 def run_items(provider: Provider, items: list[Item], system: str, *, ledger: Ledger, cache: PairCache,
               run_id: str, run_cap_usd: float, mode: str, concurrency: int, out_dir: Path,
-              batch_max_requests: int = BATCH_MAX_REQUESTS, batch_max_bytes: int = BATCH_MAX_BYTES,
+              batch_max_requests: int | None = None, batch_max_bytes: int | None = None,
               poll_s: float = 30.0, sleep=time.sleep, log=print) -> Outcome:
     """Answer every distinct item: from the cache when possible, otherwise by live calls or batches,
     each reserved in the ledger first. Stops early (outcome.stopped) if the ledger refuses."""
     out_dir.mkdir(parents=True, exist_ok=True)
+    lim_req, lim_bytes = provider.batch_limits()
+    batch_max_requests = batch_max_requests or lim_req
+    batch_max_bytes = batch_max_bytes or lim_bytes
     oc = Outcome()
     calls_log = out_dir / "calls.jsonl"
     log_lock = threading.Lock()
@@ -689,16 +750,17 @@ def run_items(provider: Provider, items: list[Item], system: str, *, ledger: Led
     return oc
 
 
-def write_decisions(path: Path, items: list[Item], oc: Outcome, requested_model: str) -> None:
+def write_decisions(path: Path, items: list[Item], oc: Outcome, requested_model: str, settings: str = "") -> None:
+    """model = the model string the response reported; settings = the answer settings of the request."""
     with path.open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
-        w.writerow(["record_a", "record_b", "decision", "confidence", "model"])
+        w.writerow(["record_a", "record_b", "decision", "confidence", "model", "settings"])
         for it in items:
             r = oc.results[it.key]
             if r.refused:
-                w.writerow([it.a, it.b, "different", "", r.model or requested_model])
+                w.writerow([it.a, it.b, "different", "", r.model or requested_model, settings])
             else:
-                w.writerow([it.a, it.b, r.decision, f"{r.confidence:.4f}", r.model or requested_model])
+                w.writerow([it.a, it.b, r.decision, f"{r.confidence:.4f}", r.model or requested_model, settings])
 
 
 def write_timings(out_dir: Path, provider: Provider, oc: Outcome, n_pairs: int, mode: str) -> None:
@@ -713,7 +775,7 @@ def write_timings(out_dir: Path, provider: Provider, oc: Outcome, n_pairs: int, 
     doc = {"option": "B", "provider": provider.name, "model": provider.model, "host": vcfg.host_info(),
            "timings": vcfg.recorded_timings(),
            "timing_summary": {"mode": mode, "pairs": n_pairs, "calls": oc.n_calls, "cache_hits": oc.cache_hits,
-                              "spent_usd": round(oc.spent_usd, 6)}}
+                              "spent_usd": round(oc.spent_usd, 6), "settings": provider.settings_label()}}
     (out_dir / "timings.json").write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
 
 
@@ -727,56 +789,78 @@ def make_items(rd: RunData, pairs, provider: Provider, system: str, settings_sha
     return items
 
 
-def estimate(provider: Provider, system: str, items: list[Item], label: str) -> str:
+def estimate(provider: Provider, system: str, items: list[Item], label: str, extra: list[str] | None = None) -> str:
     n = len(items)
     sys_t = math.ceil(len(system) / CHARS_PER_TOKEN_ESTIMATE)
     user_ts = [math.ceil(len(it.user) / CHARS_PER_TOKEN_ESTIMATE) for it in items]
     user_sum = sum(user_ts)
     out_t = OUTPUT_TOKENS_ESTIMATE
     payload = sum(est_request_bytes(system, it.user) for it in items)
-    chunks = max(1, math.ceil(payload / BATCH_MAX_BYTES), math.ceil(n / BATCH_MAX_REQUESTS))
-    cacheable = sys_t >= 512
-    L = [f"Dry run: {label}, {n:,} pairs, {provider.name} / {provider.model}",
-         f"  tokens are ESTIMATES at {CHARS_PER_TOKEN_ESTIMATE} characters per token (no tokenizer, no API call); the pilot measures them",
-         f"  system prompt: {len(system):,} characters, ~{sys_t:,} tokens" +
-         ("" if cacheable else "  (below the 512-token minimum: it would NOT cache)"),
-         f"  user turn: mean ~{user_sum / max(n, 1):.0f} tokens, max ~{max(user_ts, default=0)}",
-         f"  output: ~{out_t} tokens per answer (max_tokens {provider.max_output_tokens()})",
-         f"  tokens for the whole set: input ~{(sys_t + user_sum / max(n, 1)) * n / 1e6:.2f}M uncached-equivalent, "
-         f"output ~{out_t * n / 1e3:.0f}K",
-         f"  as one Message Batch the payload is ~{payload / 1e6:.0f} MB (the system prompt travels with every request): "
-         f"{chunks} batch(es) of at most {BATCH_MAX_REQUESTS:,} requests / {BATCH_MAX_BYTES / 1e6:.0f} MB"]
+    max_req, max_bytes = provider.batch_limits()
+    chunks = max(1, math.ceil(payload / max_bytes), math.ceil(n / max_req))
+    cached_prefix = provider.cacheable_prefix_tokens(sys_t)
+    L = [f"Dry run: {label}, {n:,} pairs, {provider.name} / {provider.model} ({provider.settings_label()})"]
+    L += list(extra or [])
+    L += [f"  tokens are ESTIMATES at {CHARS_PER_TOKEN_ESTIMATE} characters per token (no tokenizer, no API call); the pilot measures them",
+          f"  system prompt: {len(system):,} characters, ~{sys_t:,} tokens, of which ~{cached_prefix:,} cacheable"
+          + ("" if cached_prefix else "  (below the caching minimum: it would NOT cache)"),
+          f"  user turn: mean ~{user_sum / max(n, 1):.0f} tokens, max ~{max(user_ts, default=0)}",
+          f"  output: ~{out_t} tokens per answer (max {provider.max_output_tokens()})",
+          f"  tokens for the whole set: input ~{(sys_t + user_sum / max(n, 1)) * n / 1e6:.2f}M, output ~{out_t * n / 1e3:.0f}K",
+          f"  as batch files the payload is ~{payload / 1e6:.0f} MB (the prompt travels with every request): "
+          f"{chunks} batch(es) of at most {max_req:,} requests / {max_bytes / 1e6:.0f} MB"]
     if not provider.have_prices():
         L.append(f"  cost: NOT COMPUTED, no confirmed prices for {provider.model} in options/prices.json")
         return "\n".join(L)
-    ttl_b = provider.ttl("batch")
-    per = (user_sum * provider.cfg["input"] + out_t * n * provider.cfg["output"]) / 1e6
-    read = provider.cfg.get("cache_read") or provider.cfg["input"]
-    w5 = provider.cfg.get("cache_write_5m") or provider.cfg["input"]
-    w1 = provider.cfg.get("cache_write_" + ttl_b) or provider.cfg["input"]
-    std_cache = per + (sys_t * w5 + (n - 1) * sys_t * read) / 1e6
-    std_nocache = per + n * sys_t * provider.cfg["input"] / 1e6
-    mult = provider.cfg.get("batch_multiplier")
-    L.append(f"  prices: ${provider.cfg['input']}/M in, ${provider.cfg['output']}/M out, cache read "
-             f"${read}/M; price date {provider.cfg.get('price_date')}; approved: {provider.cfg.get('approved')}")
-    L.append(f"  STANDARD, system prompt cached:     ${std_cache:,.2f}   (${std_cache / n * 1000:.3f} per 1,000 pairs)")
-    L.append(f"  STANDARD, no caching:               ${std_nocache:,.2f}")
-    if mult is not None:
-        b_cache = mult * (per + (sys_t * w1 + (n - 1) * sys_t * read) / 1e6)
-        b_nocache = mult * std_nocache
-        L.append(f"  BATCH, cache hits on the prompt:    ${b_cache:,.2f}   (${b_cache / n * 1000:.3f} per 1,000 pairs)")
-        L.append(f"  BATCH, no cache hits at all:        ${b_nocache:,.2f}   (cache hits inside a batch are not guaranteed)")
-    ub = sum(provider.upper_bound_usd(system, it.user, "batch") for it in items) if n <= 100_000 else None
-    if ub is not None:
-        L.append(f"  ledger reservations if run as batches: ${ub:,.2f} in all (pessimistic upper bounds, "
-                 f"reserved batch by batch and settled to actual cost; lifetime cap ${LIFETIME_CAP_USD:.0f})")
+    c = provider.cfg
+    keys = max(1, int(provider.transport.get("prompt_cache_key_buckets", 0) or 1))
+    ttl_l, ttl_b = provider.ttl("live"), provider.ttl("batch")
+
+    def total(*, batch: bool, hits: bool) -> float:
+        out = n * out_t
+        if not hits or not cached_prefix:
+            return provider.usd(uncached_in=user_sum + n * sys_t, cache_read_in=0, cache_write_in=0, out=out, batch=batch)
+        misses = (chunks if batch else 1) * (1 if provider.cache_write_fee else keys)   # first request(s) fill the cache
+        fresh = user_sum + n * (sys_t - cached_prefix)
+        reads = max(n - misses, 0) * cached_prefix
+        if provider.cache_write_fee:
+            return provider.usd(uncached_in=fresh, cache_read_in=reads, cache_write_in=misses * cached_prefix,
+                                out=out, batch=batch, ttl=ttl_b if batch else ttl_l)
+        return provider.usd(uncached_in=fresh + misses * cached_prefix, cache_read_in=reads, cache_write_in=0,
+                            out=out, batch=batch)
+
+    L.append(f"  prices (USD per million tokens, {c.get('price_date')}): input {c['input']}, cached input {c.get('cache_read')}, "
+             f"output {c['output']}; batch multiplier {c.get('batch_multiplier')}, batch cached input {c.get('batch_cache_read')}; "
+             f"approved: {c.get('approved')}")
+    if not provider.cache_write_fee:
+        L.append("  cache-write fee: none listed for this model (assumed 0); batch cache hits are NOT documented, so the no-hit batch case is shown")
+    rows = [("STANDARD, live, prompt cached", total(batch=False, hits=True)),
+            ("STANDARD, live, no caching", total(batch=False, hits=False))]
+    if c.get("batch_multiplier") is not None:
+        rows += [("BATCH, with cache hits", total(batch=True, hits=True)),
+                 ("BATCH, no cache hits at all", total(batch=True, hits=False))]
+    for name, v in rows:
+        L.append(f"  {name + ':':<34} ${v:>9,.2f}   (${v / n * 1000:.3f} per 1,000 pairs)")
+    ub = sum(provider.upper_bound_usd(system, it.user, "batch") for it in items)
+    L.append(f"  ledger reservations if run as batches: ${ub:,.2f} in all (pessimistic upper bounds, reserved batch by batch "
+             f"and settled to the actual cost; lifetime cap ${LIFETIME_CAP_USD:.0f}). A live run needs --max-usd of at least "
+             f"${rows[0][1]:,.0f}.")
     return "\n".join(L)
 
 
-def stratified_train_sample(rd: RunData, truth: TrainTruth, train_band, exclude: set, n: int) -> list:
-    """About 25% same, 25% decoy different, 50% other different; seed 0; excludes few-shot pairs."""
+def sampler_pool(train_band, exclude_pairs: set, exclude_records: set) -> list:
+    """Train band pairs a tuning or pilot sample may draw from: not a few-shot pair and touching no
+    record that appears in a few-shot example."""
+    return [p for p in sorted(train_band)
+            if (p[0], p[1]) not in exclude_pairs and p[0] not in exclude_records and p[1] not in exclude_records]
+
+
+def stratified_train_sample(rd: RunData, truth: TrainTruth, train_band, exclude: set, n: int,
+                            exclude_records: frozenset | set = frozenset()) -> list:
+    """About 25% same, 25% decoy different (as many as exist), the rest other different; seed 0.
+    Excludes the few-shot pairs and every pair touching a record used in a few-shot example."""
     rng = random.Random(0)
-    pool = [p for p in sorted(train_band) if (p[0], p[1]) not in exclude]
+    pool = sampler_pool(train_band, exclude, set(exclude_records))
     true = [p for p in pool if truth.same(p[0], p[1])]
     decoy = [p for p in pool if truth.is_decoy_pair(p[0], p[1])]
     other = [p for p in pool if not truth.same(p[0], p[1]) and not truth.is_decoy_pair(p[0], p[1])]
@@ -786,14 +870,35 @@ def stratified_train_sample(rd: RunData, truth: TrainTruth, train_band, exclude:
     return sorted(pick)
 
 
-def example_turns(rd: RunData, truth: TrainTruth, train_band, exclude: set) -> list[tuple[str, str]]:
+def example_turns(rd: RunData, truth: TrainTruth, train_band, exclude: set,
+                  exclude_records: frozenset | set = frozenset()) -> list[tuple[str, str]]:
     rng = random.Random(0)
-    pool = [p for p in sorted(train_band) if (p[0], p[1]) not in exclude]
+    pool = sampler_pool(train_band, exclude, set(exclude_records))
     t = rng.choice([p for p in pool if truth.same(p[0], p[1])])
     f = rng.choice([p for p in pool if truth.is_decoy_pair(p[0], p[1])])
     return [("same (train pair, label from the truth file)", user_turn(rd.records[t[0]], rd.records[t[1]], rd.cols)),
             ("different (train pair, a decoy: same name, different organization)",
              user_turn(rd.records[f[0]], rd.records[f[1]], rd.cols))]
+
+
+def weighted_test_sample(rd: RunData, run: Path, size: int, seed: int = 0):
+    """A weighted sample of the TEST band for a cheaper second-provider run: every true pair (weight 1)
+    plus random non-matches (weight = inverse sampling rate). The truth file is read for TEST records
+    only to tell true from false when drawing the sample; labels never enter a prompt. Used by
+    --dry-run now; sending these pairs to an LLM still needs --final."""
+    ent = {r["record_id"]: r["true_entity_id"] for r in read_csv(run / "orgs_raw_truth.csv")
+           if rd.side.get(r["record_id"]) == "test"}
+    band = sorted(rd.band("test"))
+    true = [p for p in band if ent[p[0]] == ent[p[1]]]
+    false = [p for p in band if ent[p[0]] != ent[p[1]]]
+    n_false = size - len(true)
+    if n_false < 0 or n_false > len(false):
+        raise SystemExit(f"cannot draw {size}: {len(true)} true pairs and {len(false)} non-matches in the test band")
+    picked = sorted(random.Random(seed).sample(false, n_false))
+    w_false = len(false) / n_false
+    weights = {(p[0], p[1]): 1.0 for p in true}
+    weights.update({(p[0], p[1]): w_false for p in picked})
+    return sorted(true + picked), weights, len(true), len(false), n_false, w_false
 
 
 def main() -> int:
@@ -808,7 +913,9 @@ def main() -> int:
     g.add_argument("--freeze-prompt", action="store_true")
     g.add_argument("--eval-train", type=int, metavar="N")
     g.add_argument("--final", action="store_true")
-    ap.add_argument("--split", choices=("test", "train"), default="test", help="--dry-run: which band to price")
+    ap.add_argument("--split", choices=("test", "train", "test-sample"), default="test",
+                    help="--dry-run: which pairs to price (test-sample: all true test band pairs plus random non-matches)")
+    ap.add_argument("--sample-size", type=int, default=5000, help="--dry-run --split test-sample: sample size")
     ap.add_argument("--mode", choices=("live", "batch"), default=None, help="--final: default batch")
     ap.add_argument("--approve-final-run", action="store_true", help="--final: confirm the test band may be sent")
     ap.add_argument("--max-usd", type=float, default=10.0, help="Cap for this run (default 10)")
@@ -837,6 +944,7 @@ def main() -> int:
             return 0
     fewshot = json.loads(fewshot_path.read_text(encoding="utf-8"))
     fs_ids = {(e["ids"][0], e["ids"][1]) for e in fewshot}
+    fs_records = {r for pr in fs_ids for r in pr}
     system = build_system_prompt(fewshot, rd.cols)
     system_sha, settings_sha = sha256_text(system), provider.settings_sha()
     pdir = bdir / provider.name
@@ -846,7 +954,7 @@ def main() -> int:
         truth = TrainTruth(run, rd.side)
         print("=" * 30, "SYSTEM PROMPT", "=" * 30)
         print(system)
-        for title, turn in example_turns(rd, truth, rd.band("train"), fs_ids):
+        for title, turn in example_turns(rd, truth, rd.band("train"), fs_ids, fs_records):
             print("=" * 30, f"EXAMPLE USER TURN: {title}", "=" * 30)
             print(turn)
         print("=" * 72)
@@ -854,9 +962,22 @@ def main() -> int:
         return 0
 
     if args.dry_run:
-        pairs = rd.band(args.split)
+        extra, label = [], f"{args.split} band"
+        if args.split == "test-sample":
+            pairs, weights, n_true, n_false_all, n_false, w_false = weighted_test_sample(rd, run, args.sample_size)
+            label = f"test band sample of {args.sample_size:,}"
+            extra = [f"  sample: all {n_true} true test band pairs (weight 1) + {n_false:,} random non-matches of {n_false_all:,} "
+                     f"(seed 0, weight {w_false:.4f} = inverse sampling rate); labels used only to draw the sample",
+                     f"  weights sum to {sum(weights.values()):,.1f} (the full test band has {n_true + n_false_all:,} pairs)"]
+            with (bdir / f"test_sample{args.sample_size}.csv").open("w", newline="", encoding="utf-8") as f:
+                w = csv.writer(f)
+                w.writerow(["record_a", "record_b", "weight"])
+                for a_, b_, *_ in pairs:
+                    w.writerow([a_, b_, f"{weights[(a_, b_)]:.6f}"])
+        else:
+            pairs = rd.band(args.split)
         items = make_items(rd, pairs, provider, system, settings_sha, system_sha)
-        text = estimate(provider, system, items, f"{args.split} band")
+        text = estimate(provider, system, items, label, extra)
         print(text)
         (pdir / f"dry_run_{args.split}.txt").write_text(text + "\n", encoding="utf-8")
         return 0
@@ -878,7 +999,7 @@ def main() -> int:
 
     if args.eval_train:
         truth = TrainTruth(run, rd.side)
-        pairs = stratified_train_sample(rd, truth, rd.band("train"), fs_ids, args.eval_train)
+        pairs = stratified_train_sample(rd, truth, rd.band("train"), fs_ids, args.eval_train, fs_records)
         label = args.label or f"train{args.eval_train}-{stamp}"
         mode = "live"
         split_note = f"{len(pairs)} stratified TRAIN band pairs"
@@ -905,12 +1026,13 @@ def main() -> int:
     write_timings(out_dir, provider, oc, len(items), mode)
     models_seen = Counter(r.model for r in oc.results.values())
     meta = {"provider": provider.name, "requested_model": provider.model, "models_reported": dict(models_seen),
+            "settings": provider.settings_label(),
             "system_prompt_sha256": system_sha, "answer_settings": provider.answer_settings(), "mode": mode,
             "pairs": len(items), "distinct_prompts": len({i.key for i in items}), "cache_hits": oc.cache_hits,
             "calls": oc.n_calls, "spent_usd": round(oc.spent_usd, 6), "pending": len(oc.pending),
             "stopped": oc.stopped, "refusals": sum(r.refused for r in oc.results.values())}
     (out_dir / "run_meta.json").write_text(json.dumps(meta, indent=1) + "\n", encoding="utf-8")
-    lines = [f"Option B {provider.name} / {provider.model}: {split_note}",
+    lines = [f"Option B {provider.name} / {provider.model} ({provider.settings_label()}): {split_note}",
              f"calls {oc.n_calls}, cache hits {oc.cache_hits}, spent ${oc.spent_usd:.4f}, pending {len(oc.pending)}, "
              f"refusals {meta['refusals']}, models reported {dict(models_seen)}"]
     if oc.stopped:
@@ -919,7 +1041,7 @@ def main() -> int:
         xs = sorted(oc.latencies)
         lines.append(f"latency per call: p50 {xs[len(xs) // 2]:.2f}s, p95 {xs[int(0.95 * (len(xs) - 1))]:.2f}s, max {xs[-1]:.2f}s")
     if not oc.pending:
-        write_decisions(out_dir / "decisions.csv", items, oc, provider.model)
+        write_decisions(out_dir / "decisions.csv", items, oc, provider.model, provider.settings_label())
         lines.append(f"decisions: {out_dir / 'decisions.csv'}")
         if truth is not None:
             tp = fp = fn = tn = 0

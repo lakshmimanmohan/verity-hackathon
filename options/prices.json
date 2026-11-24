@@ -8,13 +8,15 @@
       "source": "claude-api skill model table (cached 2026-11-03) and its prompt-caching notes: $2 / $10 per MTok, cache reads $0.10 (0.05x), cache writes 1.25x input for the 5-minute TTL and 2x for the 1-hour TTL, Message Batches 50% of standard. Not checked against the live pricing page.",
       "input": 2.0,
       "output": 10.0,
-      "cache_read": 0.10,
-      "cache_write_5m": 2.50,
-      "cache_write_1h": 4.00,
+      "cache_read": 0.1,
+      "cache_write_5m": 2.5,
+      "cache_write_1h": 4.0,
       "batch_multiplier": 0.5,
       "request_settings": {
         "max_tokens": 64,
-        "thinking": {"type": "between_tools"},
+        "thinking": {
+          "type": "between_tools"
+        },
         "effort": "low",
         "cache_ttl_live": "5m",
         "cache_ttl_batch": "1h",
@@ -24,24 +26,48 @@
         "thinking: {type: disabled} returns a 400 on Claude Sonnet 5.5; {type: between_tools} is its way to turn thinking off, accepted only at effort high or below, with no other field.",
         "No fallbacks parameter: the model string recorded with every answer must be the model that answered.",
         "Structured output through output_config.format (json_schema); prefill is not allowed."
-      ]
+      ],
+      "batch_limits": {
+        "max_requests": 100000,
+        "max_bytes": 200000000,
+        "note": "documented limit is 100,000 requests or 256 MB per batch; the byte limit used here keeps a margin"
+      }
     },
-    "gpt-5.4": {
+    "gpt-5.4-2026-03-05": {
       "provider": "openai",
       "approved": false,
-      "price_date": null,
-      "source": "none. UNCONFIRMED: no prices, request parameters or batch details for this model were checked. Fill in from OpenAI's documentation before approving.",
-      "input": null,
-      "output": null,
-      "cache_read": null,
-      "batch_multiplier": null,
+      "price_date": "2026-11-24",
+      "source": "https://developers.openai.com/api/docs/models/gpt-5.4 and https://developers.openai.com/api/docs/pricing (platform.openai.com/docs/... redirects there), read 2026-11-24. Prices below are for prompts under 272K tokens (longer prompts are billed at 2x input and 1.5x output; ours are far shorter). Standard: input $2.50, cached input $0.25, output $15.00 per million tokens. Batch table row: input $1.25, output $7.50, cached input $0.13 (as listed). The pages were read through a web-fetch helper and quoted in part; re-check them before approving.",
+      "input": 2.5,
+      "output": 15.0,
+      "cache_read": 0.25,
+      "batch_multiplier": 0.5,
+      "batch_cache_read": 0.13,
       "request_settings": {
-        "max_completion_tokens": 64,
-        "reasoning_effort": null,
-        "reasoning_effort_note": "UNCONFIRMED: set to the lowest reasoning effort this model accepts."
+        "max_output_tokens": 64,
+        "reasoning_effort": "none"
+      },
+      "transport_settings": {
+        "store": false,
+        "prompt_cache_key_buckets": 32
+      },
+      "batch_limits": {
+        "max_requests": 50000,
+        "max_bytes": 190000000,
+        "note": "documented: up to 50,000 requests and a 200 MB input file per batch, one model per file, endpoint /v1/responses supported, completion window 24h only, up to 2,000 batches per hour; the byte limit used here keeps a 5% margin"
       },
       "notes": [
-        "The OpenAI request, usage and batch code in b_llm_baseline.py is written from memory of the API and has not been run against it."
+        "Model string: the dated snapshot gpt-5.4-2026-03-05, which the model page lists as the default snapshot of gpt-5.4 and the only one listed. It is sent in every request and recorded in every result file.",
+        "Reasoning effort: none (the model page: 'none (default), low, medium, high and xhigh'). It is sent explicitly and recorded in every result file.",
+        "Temperature: NOT set. Neither page says whether temperature is accepted at reasoning effort none; the Responses API reference lists it with a default of 1.",
+        "API: Responses API with text.format json_schema (strict: true; additionalProperties false; both fields required), no tools. The instructions go in a developer message at the start of input, because the prompt-caching page says to put reusable instructions there.",
+        "Cache-write fee: none listed for gpt-5.4. The pricing page's write-price columns are '-' for this model and the prompt-caching page says earlier models have 'No additional cache-write charge' (the 1.25x / 2.5x write rates it lists apply to GPT-5.6 and later). The page does not state outright that caching is free.",
+        "Cached input in batch: the batch table lists $0.13 for cached input (about half of $0.25). Whether prompt caching actually produces cache hits inside batch jobs is NOT documented on the batch or caching pages; estimates show a no-hit case beside the hit case.",
+        "Prompt caching is automatic. The 1,024-token minimum is stated for GPT-5.6 and later; for earlier models the page says the minimum 'varies by request settings' and gives no number. Our prompt is about 1,670 tokens (estimated). For earlier models cached_tokens is reported rounded down to a multiple of 128. Cached tokens are read from usage.input_tokens_details.cached_tokens and recorded for every call.",
+        "prompt_cache_key exists: it 'influences routing' and 'helps optimize cache routing on models before GPT-5.6'; it does not guarantee a hit, and the guidance is about 15 requests per minute per key. prompt_cache_key_buckets spreads requests over that many keys derived from the prompt hash; whether it helps is measured in the pilot (cached tokens over input tokens), not assumed.",
+        "prompt_cache_retention is not set (default). gpt-5.4 supports 'in_memory' and '24h'; no price difference was found, so 24h is not used without a reason.",
+        "store is false: responses are not stored.",
+        "output tokens include reasoning tokens (none expected at effort none); max_output_tokens is 64 (the API minimum is 16)."
       ]
     }
   }
