@@ -1,0 +1,134 @@
+Option B tuning round tune2: openai, 1000 TRAIN band pairs (labels from the truth file, train records only)
+models reported: {'gpt-5.4-2026-03-05': 1000}; settings: max_output_tokens=64;reasoning_effort=none
+sample: 145 same, 68 decoy different, 787 other different
+calls made 1000, cache hits 0 (answers served from the local pair cache). The pair-cache key includes the SHA-256 of the system prompt, so round tune1 answers (prompt hash 99232406609e) cannot be reused by this round (prompt hash 857de291325e).
+The 68 decoy pairs are REUSED from tune1; all other pairs are fresh. Why: tune1 had 0 decision errors, so no pair-specific edit was made, and the only change between the rounds is the output field's name and definition (confidence -> p_same). The fresh pool had no decoy pairs left (84 in the pool, tune1 used 68, the rest were in the earlier smoke and diagnostic pools), so reusing them keeps the decoy class in the gate and gives a before/after.
+
+Confusion matrix (unweighted; same-entity = positive)
+                    truth same   truth different
+  decided same             143                 0
+  decided different          2               855
+  precision 1.0000  recall 0.9862  F1 0.9931  accuracy 0.9980
+
+Zero-error bounds (exact one-sided 95% Clopper-Pearson; the bootstrap interval is degenerate when an error count is 0):
+    false matches: 0 of 855 false pairs; false-match rate <= 0.00350 (up to 156 false matches on 44,542 false pairs)
+    implied worst case on a band of 340 true and 44,542 false pairs: precision >= 0.6828, recall = 0.9862, F1 >= 0.8069
+
+Weighted to the train band mix: true weight 410 / 145 = 2.8276, false weight 62863 / 855 = 73.5240 (as specified)
+  precision 1.0000 (bootstrap interval degenerate; false-match rate <= 0.00350, worst-case precision >= 0.6828)   recall 0.9862 [0.9645, 1.0000]
+  F1 0.9931 [0.9819, 1.0000]   (bootstrap 95%, 1000 resamples, seed 0)
+  weighted TP 404.3  FP 0.0  FN 5.7
+
+Weighted to the train band mix: by sampling stratum from the train band minus few-shot pairs (63,267 pairs: 410 same, 84 decoy, 62,773 other): same 2.828, decoy 1.235, other 79.762
+  precision 1.0000 (bootstrap interval degenerate; false-match rate <= 0.00350, worst-case precision >= 0.6828)   recall 0.9862 [0.9645, 1.0000]
+  F1 0.9931 [0.9819, 1.0000]   (bootstrap 95%, 1000 resamples, seed 0)
+  weighted TP 404.3  FP 0.0  FN 5.7
+
+Errors by tag (a pair counts under every hard tag either record carries)
+  tag           pairs   same   diff    FN    FP   recall   FP rate
+  acronym         131     57     74     1     0    0.982     0.000
+  truncation      102     20     82     1     0    0.950     0.000
+  po_box          167     88     79     1     0    0.989     0.000
+  decoy            68      0     68     0     0      -       0.000
+  easy            132      3    129     0     0    1.000     0.000
+  no tag          447      0    447     0     0      -       0.000
+
+False negatives (same organization, decided different): 2 in all, up to 15 shown (most confident first)
+  R4d6bece00c | Rb222ff7dae   decision different, confidence 0.38, tags po_box+typo
+      company_name     Willow Atlantic kental Group                 | Willlow Atlantic Dental Group
+      address_line     1121 Washington Rd.                          | Post Office Box 99306
+      city             Chicago                                      | Chicago
+      postal_code      60607-3482                                   | 60607
+      state            IL                                           | IL
+      website          (missing)                                    | www.willowatlantic.com
+      phone            7968325166                                   | (missing)
+  R681a6f216a | R91b3a94664   decision different, confidence 0.18, tags acronym+missing_phone+truncation
+      company_name     VESS Corporation                             | Valley Evergreen
+      address_line     3795 Enterprise Court                        | 3795 Enterprise Ct
+      city             Richmond                                     | Richmond
+      postal_code      23213                                        | 23213
+      state            VA                                           | VA
+      website          (missing)                                    | (missing)
+      phone            (missing)                                    | 728.555.9971
+
+False positives (different organizations, decided same): 0 in all, up to 15 shown (most confident first)
+
+Confidence / p_same in 5 bins, read as P(same)
+  bin           pairs   same  frac same  mean P(same)  decided same
+  [0.0, 0.2)      856      1      0.001         0.018             0
+  [0.2, 0.4)        1      1      1.000         0.380             0
+  [0.4, 0.6)        0
+  [0.6, 0.8)        0
+  [0.8, 1.0]      143    143      1.000         0.960           143
+  inconsistent answers: 0 of 1000 (0.00%): 0 'same' with a value below 0.5, 0 of 857 'different' with a value of 0.5 or more (most common values {})
+
+Results in three groups
+  group            pairs   FN   FP  decided same  inconsistent  mean p_same
+  fresh same         145    2    0           143             0        0.950
+  reused decoys       68    0    0             0             0        0.067
+  fresh other        787    0    0             0             0        0.014
+
+  p_same in 5 bins, fresh same (145 pairs)
+    bin           pairs  truly same  decided same
+    [0.0, 0.2)        1           1             0
+    [0.2, 0.4)        1           1             0
+    [0.4, 0.6)        0           0             0
+    [0.6, 0.8)        0           0             0
+    [0.8, 1.0]      143         143           143
+
+  p_same in 5 bins, reused decoys (68 pairs)
+    bin           pairs  truly same  decided same
+    [0.0, 0.2)       68           0             0
+    [0.2, 0.4)        0           0             0
+    [0.4, 0.6)        0           0             0
+    [0.6, 0.8)        0           0             0
+    [0.8, 1.0]        0           0             0
+
+  p_same in 5 bins, fresh other (787 pairs)
+    bin           pairs  truly same  decided same
+    [0.0, 0.2)      787           0             0
+    [0.2, 0.4)        0           0             0
+    [0.4, 0.6)        0           0             0
+    [0.6, 0.8)        0           0             0
+    [0.8, 1.0]        0           0             0
+
+Reused decoys against tune1 (68 pairs; the same pairs, the same records, only the prompt's field name and definition differ)
+  decisions that changed: 0 of 68
+  mean value of the field: tune1 (confidence) 0.106, this round (p_same) 0.067
+  inconsistent answers: tune1 4 of 68, this round 0 of 68
+  value of the field, tune1 against this round (differences of 0.1 or more: 4 pairs)
+    Ra7832aedc4 | Rea5aff689b   tune1: different 0.98   this round: different 0.03
+    R794643223e | R7b2b7e6c46   tune1: different 0.97   this round: different 0.08
+    R38ae74a815 | R73c5ed362b   tune1: different 0.96   this round: different 0.08
+    R7c94286846 | R89523ad641   tune1: different 0.96   this round: different 0.17
+    R950f7d4460 | Rc0dd77a2a0   tune1: different 0.03   this round: different 0.09
+    R32d05d5c5c | R5c6cc6653e   tune1: different 0.09   this round: different 0.14
+    R05d94b2de8 | Re8ef3416ab   tune1: different 0.03   this round: different 0.08
+    R0ee4e1f8a7 | Reb570955c9   tune1: different 0.03   this round: different 0.08
+
+Calls (calls.jsonl)
+  live calls 1000; tokens: input 2,102,468, cached 1,775,872, output 19,000 (per call: input 2102, cached 1776, output 19.0)
+  hit ratio (cached / input tokens): overall 0.845; excluding each key's first call 0.847 (8 keys)
+  cost: total $1.5454, per call $0.001545 (min $0.001471, max $0.005560)
+  latency per call: p50 0.97 s, p95 1.26 s, max 4.19 s
+  refusals 0, parse failures 0, API errors 0
+
+Acceptance rule (written before the run, from acceptance_rule.txt)
+  ACCEPTANCE RULE for tuning round 2 (written 2026-11-24, before the round was run; the prompt is frozen
+  only if all four hold, otherwise report and stop, with one more edit round at most):
+    (a) decision errors are at most 3 of 1,000 (false matches plus false non-matches)
+    (b) at most 1% of answers are inconsistent (decision different with p_same at least 0.5, or decision same
+        with p_same below 0.5)
+    (c) the prompt-cache hit ratio excluding each key's first call is at least 0.80
+    (d) zero parse failures
+  The only edit being tested: the output field "confidence" is renamed "p_same" and defined as P(same) whichever
+  decision was given (system prompt, JSON schema, the 8 few-shot answers, the parser). Round 1 had 0 decision
+  errors and 280 of 750 'different' answers with a confidence of 0.5 or more.
+  Sample: 145 fresh same pairs, the 68 decoy pairs of tune1 (reused, see the report), 787 fresh other pairs.
+
+Verdicts
+  PASS  (a) decision errors at most 3 of 1,000: 2 errors (2 false non-matches, 0 false matches) of 1000
+  PASS  (b) at most 1% inconsistent answers: 0 of 1000 (0.00%)
+  PASS  (c) hit ratio excluding first calls at least 0.80: 0.847
+  PASS  (d) zero parse failures: 0 parse failures, 0 API errors
+  OVERALL: all four rules pass: freeze
