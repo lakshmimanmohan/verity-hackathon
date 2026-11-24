@@ -266,6 +266,10 @@ def main(input_path: Path | None = None) -> None:
     }
 
     content_columns: list[str] = list(class_data.get("content_columns") or [])
+    # Metadata columns (other than the record id) shown as badges on each card.
+    badge_columns: list[str] = [
+        c for c in (class_data.get("metadata_columns") or []) if norm(c) != norm(rid_col)
+    ]
 
     with customers_csv.open(encoding="utf-8-sig", newline="") as f:
         rdr = csv.DictReader(f)
@@ -321,7 +325,6 @@ def main(input_path: Path | None = None) -> None:
                 "score": sc,
                 "shared_attributes": row.get("shared_attributes") or "",
                 "match_type": (row.get("match_type") or "").strip() or "unknown",
-                "source_systems": row.get("source_systems") or "",
                 "field_contributions": row.get("field_contributions") or {},
                 "field_similarities": row.get("field_similarities") or {},
             }
@@ -494,8 +497,8 @@ def main(input_path: Path | None = None) -> None:
                 f"<td>{esc(va)}</td><td>{esc(vb)}</td></tr>"
             )
 
-        sys_a = esc(ra.get("source_system", "") or "—")
-        sys_b = esc(rb.get("source_system", "") or "—")
+        sys_a = esc(" / ".join(str(ra.get(c, "") or "") for c in badge_columns).strip(" /") or "—")
+        sys_b = esc(" / ".join(str(rb.get(c, "") or "") for c in badge_columns).strip(" /") or "—")
         bar_width_pct = f"{score * 100.0:.6f}".rstrip("0").rstrip(".")
         records_attr = esc(f"{a} {b}")
         score_attr = esc(f"{score}")

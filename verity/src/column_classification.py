@@ -111,13 +111,6 @@ _SYSTEM_NAME_BOUNDARY_TOKENS = frozenset(
     }
 )
 
-# Column names always metadata regardless of value patterns (belt-and-suspenders).
-ALWAYS_METADATA_NAMES = frozenset({"source_system"})
-_ALWAYS_METADATA_RE = re.compile(
-    r"^(source[_\s]?system|source)$",
-    re.IGNORECASE,
-)
-
 # Synthetic label value patterns (answer key).
 _WORD_NUMBER_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]*_\d+$")
 
@@ -282,15 +275,6 @@ def classify_columns(df: pd.DataFrame) -> dict[str, Any]:
                 (
                     "reserved_name",
                     "reserved column name (_prefix, _truth/_gold, label/target/y, …)",
-                )
-            )
-
-        col_lower = str(col).strip().lower()
-        if _ALWAYS_METADATA_RE.match(col_lower):
-            rule_hits.append(
-                (
-                    "always_metadata_name",
-                    f"column name {col_lower!r} is always metadata (system lineage / provenance)",
                 )
             )
 
@@ -519,10 +503,6 @@ def classification_or_infer(csv_path: Path) -> dict[str, Any]:
 
 def column_to_attr_type(col: str) -> str:
     """Stored attribute type name — uppercase snake."""
-    assert str(col).strip().lower() != "source_system", (
-        "source_system must not be passed to column_to_attr_type; "
-        "it is modeled on CustomerRecord and SourceSystem, not AttributeValue"
-    )
     s = re.sub(r"[^0-9a-zA-Z]+", "_", str(col).strip()).strip("_").upper()
     return s or "ATTRIBUTE"
 

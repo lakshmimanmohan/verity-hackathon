@@ -344,6 +344,16 @@ def fetch_all_customer_ids(store, record_label: str) -> list[str]:
     return store.all_record_ids(record_label)
 
 
+def input_files_by_id(store, ids: list[str], record_label: str) -> dict[str, str]:
+    """Record id -> input file name recorded at load time (``_input_file`` property)."""
+    if not ids:
+        return {}
+    return {
+        str(r["id"]): str((r["props"] or {}).get("_input_file") or "").strip()
+        for r in store.record_props_rows(list(ids), record_label)
+    }
+
+
 def fetch_customer_rows(
     store, ids: list[str], record_label: str
 ) -> dict[str, dict[str, Any]]:
@@ -801,14 +811,8 @@ def _execute_incremental_merge(
 
             store.write_golden(payload, record_label)
 
-            ss_neo = resolve_neo_property("source_system", sample_keys, record_id_lower)
-            ss_key = ss_neo if ss_neo is not None else "source_system"
             distinct_sources = sorted(
-                {
-                    (batch[mid].get(ss_key) or "").strip()
-                    for mid in member_ids
-                }
-                - {""}
+                set(input_files_by_id(store, member_ids, record_label).values()) - {""}
             )
             diversity_rows.append(
                 {
@@ -1150,14 +1154,8 @@ def main(
 
             store.write_golden(payload, record_label)
 
-            ss_neo = resolve_neo_property("source_system", sample_keys, record_id_lower)
-            ss_key = ss_neo if ss_neo is not None else "source_system"
             distinct_sources = sorted(
-                {
-                    (batch[mid].get(ss_key) or "").strip()
-                    for mid in member_ids
-                }
-                - {""}
+                set(input_files_by_id(store, member_ids, record_label).values()) - {""}
             )
             diversity_rows.append(
                 {

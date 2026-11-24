@@ -351,14 +351,14 @@ def print_final_report(merge_stats: dict, n_raw: int) -> None:
     print(f"  Average community size:    {avg_comm:.2f}")
 
     top = merge_stats.get("top_merged_by_sources") or []
-    print("  Top golden records by source-system diversity (most systems):")
+    print("  Top golden records by input-file diversity (most input files):")
     if not top:
         print("    (none)")
     else:
         for rank, row in enumerate(top, start=1):
             print(
                 f"    {rank}. golden_id={row.get('golden_id')}  "
-                f"systems={row.get('n_sources')}  "
+                f"files={row.get('n_sources')}  "
                 f"[{row.get('sources_display', '')}]  "
                 f"members={row.get('member_count')}"
             )

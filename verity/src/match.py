@@ -115,7 +115,6 @@ SEMANTIC_ONLY_COSINE_MIN = 0.88
 EMBEDDING_ONLY_COSINE_MIN = 0.92
 FIELD_BLEND_MIN = 1.0 - EMBED_BLEND_MAX
 CSV_FALLBACK_JACCARD_MIN = 0.8
-SOURCE_SYSTEM_ATTR = "source_system"
 
 # Internal delimiter for attribute fingerprint (av.type + sep + av.value)
 _ATTR_SEP = "\x1f"
@@ -203,21 +202,13 @@ def drop_metadata_csv_columns(
 
 
 def shared_content_attribute_keys_graph(labels: list[str]) -> frozenset[str]:
-    """Distinct attribute/column names in graph overlap labels, excluding ``source_system``."""
-    return frozenset(
-        graph_label_attribute_key(lb)
-        for lb in labels
-        if graph_label_attribute_key(lb) != SOURCE_SYSTEM_ATTR
-    )
+    """Distinct attribute/column names in graph overlap labels (metadata already dropped)."""
+    return frozenset(graph_label_attribute_key(lb) for lb in labels)
 
 
 def shared_content_attribute_keys_csv(columns: list[str]) -> frozenset[str]:
-    """Distinct CSV column names, excluding ``source_system`` (already lowercased keys)."""
-    return frozenset(
-        str(c).strip().lower()
-        for c in columns
-        if str(c).strip().lower() != SOURCE_SYSTEM_ATTR
-    )
+    """Distinct CSV column names, lowercased (metadata already dropped)."""
+    return frozenset(str(c).strip().lower() for c in columns)
 
 
 def load_column_semantic_types(
@@ -1080,7 +1071,7 @@ def parse_shared_attributes_field_names(shared_attributes: str) -> frozenset[str
     out: set[str] = set()
     for part in s.split("|"):
         key = graph_label_attribute_key(part)
-        if key and key != SOURCE_SYSTEM_ATTR:
+        if key:
             out.add(key)
     return frozenset(out)
 
@@ -1426,7 +1417,6 @@ def fetch_record_context(store, record_labels: list[str]):
         rid = r["record_id"]
         meta[ck] = {
             "record_id": str(rid) if rid is not None else ck,
-            "source_system": str(r["source_system"] or "").strip(),
             "input_file": str(r.get("input_file") or "").strip(),
             "fingerprints": fp_set,
             "attrs_by_col": fingerprints_to_attr_map(fp_set),
@@ -1811,7 +1801,7 @@ def main(
     content_cols_lower = frozenset(
         str(c).strip().lower()
         for c in content_raw
-        if str(c).strip() and str(c).strip().lower() != SOURCE_SYSTEM_ATTR
+        if str(c).strip()
     )
     meta_raw = classification.get("metadata_columns") or []
     metadata_cols_lower = frozenset(
@@ -2022,8 +2012,6 @@ def main(
         else:
             w_e, w_f = mw.w_embed_blend, mw.w_field_blend
 
-        src_a = ca["source_system"]
-        src_b = cb["source_system"]
         score_uncapped = w_e * cos_part + w_f * field_sim
         score = min(score_uncapped, 1.0)
 
@@ -2104,8 +2092,6 @@ def main(
                 "evidence_mass": decision.evidence_mass,
                 "conflict_mass": decision.conflict_mass,
                 "evidence_detail": decision.detail,
-                "src_a": src_a,
-                "src_b": src_b,
                 "field_contributions": field_contributions,
                 "field_similarities": field_similarities,
                 "score_uncapped": score_uncapped,
@@ -2137,8 +2123,6 @@ def main(
         resolved_type = item["resolved_type"]
         has_shared = item["has_shared_keys"]
         evidence_passes = item["evidence_passes"]
-        src_a = item["src_a"]
-        src_b = item["src_b"]
 
         effective_score_threshold = (
             embedding_only_threshold if not has_shared else threshold
@@ -2155,9 +2139,6 @@ def main(
         else:
             match_type = resolved_type
 
-        sys_set = sorted({x for x in (src_a, src_b) if x})
-        source_systems = ";".join(sys_set) if sys_set else ""
-
         rows_out.append(
             {
                 "record_a": rid_a,
@@ -2165,7 +2146,6 @@ def main(
                 "score": score,
                 "shared_attributes": shared_attributes,
                 "match_type": match_type,
-                "source_systems": source_systems,
                 "evidence_mass": item.get("evidence_mass", 0.0),
                 "conflict_mass": item.get("conflict_mass", 0.0),
                 "evidence_detail": item.get("evidence_detail", ""),

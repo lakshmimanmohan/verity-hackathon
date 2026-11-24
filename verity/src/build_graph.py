@@ -157,17 +157,6 @@ def row_to_payload(
     if not record_id:
         raise ValueError(f"Empty record id for column {rid_col!r}")
 
-    ss = row_get_ci(id_row, "source_system")
-    te_raw = row_get_ci(id_row, "true_entity_id")
-    true_entity_id: int | str | None
-    if te_raw == "":
-        true_entity_id = None
-    else:
-        try:
-            true_entity_id = int(te_raw)
-        except ValueError:
-            true_entity_id = te_raw
-
     meta_skip = {_col_ci(c) for c in (classification.get("metadata_columns") or [])}
     content_cols = list(classification.get("content_columns") or [])
     attrs: list[dict[str, str]] = []
@@ -193,8 +182,6 @@ def row_to_payload(
 
     return {
         "id": record_id,
-        "source_system": ss,
-        "true_entity_id": true_entity_id,
         "attrs": attrs,
         "customer_props": customer_props,
     }
@@ -228,6 +215,7 @@ def main(
     classification = load_classification_at_start(path)
     metadata_columns = list(classification.get("metadata_columns") or [])
     metadata_columns_ci = {_col_ci(c) for c in metadata_columns}
+    rid_col_ci = _col_ci(classification["record_id_column"])
     skipped_display = sorted(metadata_columns, key=str.lower)
     print(f"Skipping metadata columns: {skipped_display}")
 
@@ -244,6 +232,17 @@ def main(
                 if _col_ci(k) not in metadata_columns_ci
             }
             payload = row_to_payload(filtered_row, classification, source_row=r)
+            # Keep metadata column values (except the record id column) as record
+            # properties, so merge can copy them onto golden records. No column is
+            # named here; the classification decides what is metadata.
+            for k, v in r.items():
+                ck = _col_ci(k)
+                if ck not in metadata_columns_ci or ck == rid_col_ci:
+                    continue
+                nk = neo_property_key(str(k))
+                sc = neo_scalar(v)
+                if nk and nk != "id" and sc is not None:
+                    payload["customer_props"][nk] = sc
             # Provenance: the input file name (not the path). The store keeps the first
             # file a record id was loaded from.
             payload["input_file"] = path.name

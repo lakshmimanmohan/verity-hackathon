@@ -82,13 +82,6 @@ class SQLiteStore:
             ).fetchone()
             props: dict[str, Any] = json.loads(existing[0]) if existing else {}
             props["id"] = rid
-            props["source_system"] = row.get("source_system")
-            if row.get("true_entity_id") is None:
-                props.pop("true_entity_id", None)
-            else:
-                props["true_entity_id"] = row["true_entity_id"]
-            if props.get("source_system") is None:
-                props.pop("source_system", None)
             props.update(row.get("customer_props") or {})
             if row.get("input_file") and not props.get("_input_file"):
                 props["_input_file"] = str(row["input_file"])
@@ -167,7 +160,7 @@ class SQLiteStore:
         ]
 
     def record_context_rows(self, record_labels: list[str], sep: str) -> list[dict[str, Any]]:
-        """Per record: id, source system and its "type<sep>value" fingerprints."""
+        """Per record: id, input file and its "type<sep>value" fingerprints."""
         out: list[dict[str, Any]] = []
         for label in record_labels:
             fps: dict[str, set[str]] = {}
@@ -182,7 +175,6 @@ class SQLiteStore:
                 out.append({
                     "cid": str(rid),
                     "record_id": props.get("id", rid),
-                    "source_system": props.get("source_system"),
                     "input_file": props.get("_input_file"),
                     "fps": sorted(fps.get(rid, set())),
                 })
