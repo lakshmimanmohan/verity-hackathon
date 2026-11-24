@@ -1299,10 +1299,13 @@ def run_final_sample(*, provider: Provider, system: str, rd, sample_path: Path, 
     assert [(it.a, it.b) for it in items] == pairs
     pstatus, ptext = prefix_check_text(system)
     log(ptext)
-    to_call = len({it.key for it in items if cache.get(it.key) is None})
+    distinct = {it.key for it in items}
+    cached = {k for k in distinct if cache.get(k) is not None}
+    to_call = len(distinct) - len(cached)
     per_min = min(provider.n_cache_keys() * key_rpm, 95.3) if provider.n_cache_keys() else 95.3
-    log(f"pairs: {len(items):,} (sample file {sample_path.name}); already answered in the local cache: "
-        f"{len(items) - to_call:,}; to call: {to_call:,}")
+    log(f"pairs: {len(items):,} (sample file {sample_path.name}); distinct prompts {len(distinct):,} "
+        f"({len(items) - len(distinct):,} pairs repeat another pair's exact record content and share its answer); "
+        f"already answered in the local cache: {len(cached):,}; calls to make: {to_call:,}")
     log(f"projection: about ${to_call * pilot_cost:.2f} at the pilot's ${pilot_cost:.6f} per call; about "
         f"{to_call / per_min:.0f} minutes at {per_min:.1f} calls per minute ({provider.n_cache_keys()} keys x {key_rpm:g} per "
         f"minute, {concurrency} workers; the pilot measured 95.3); run cap --max-usd ${max_usd:.2f}")
