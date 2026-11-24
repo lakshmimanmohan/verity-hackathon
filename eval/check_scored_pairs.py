@@ -16,8 +16,8 @@ Checks (exit 1 if any fails):
   - with --reference: match_candidates.csv is byte-identical to the reference run's, and
     evaluator_output.txt is identical when both runs have one
 
-Also prints, for information: rows by pair_source and match_type, rows with a diversity
-bonus by match_type, and score_uncapped min / median / max for embedding_only rows.
+Also prints, for information: rows by pair_source and match_type, rows whose score is
+capped, and score_uncapped min / median / max for embedding_only rows (if any).
 """
 
 from __future__ import annotations
@@ -102,7 +102,6 @@ def main() -> int:
         if r["pair_source"] == "exact":
             continue
         cos = float(r["cosine"])
-        div = float(r["diversity_bonus"])
         fw = json.loads(r["field_weights"])
         fj = json.loads(r["field_similarities"])
         if fw:
@@ -117,7 +116,7 @@ def main() -> int:
             else:
                 s = fj[k]
             fsim += wn * s
-        rebuilt = we * cos + wf * fsim + div
+        rebuilt = we * cos + wf * fsim
         err_u = max(err_u, abs(rebuilt - float(r["score_uncapped"])))
         if r["pair_source"] == "neighbor":
             err_s = max(err_s, abs(min(rebuilt, cap) - float(r["score"])))
@@ -139,14 +138,7 @@ def main() -> int:
     print("\nInformation")
     print("  rows by pair_source:", dict(sorted(Counter(r["pair_source"] for r in sp).items())))
     print("  rows by match_type: ", dict(sorted(Counter(r["match_type"] for r in sp).items())))
-    scored = [r for r in sp if r["diversity_bonus"]]
-    pos = Counter(r["match_type"] for r in scored if float(r["diversity_bonus"]) > 0)
-    tot = Counter(r["match_type"] for r in scored)
-    bonus_vals = sorted({r["diversity_bonus"] for r in scored if float(r["diversity_bonus"]) > 0})
-    print(f"  rows with diversity_bonus > 0 (value {', '.join(bonus_vals) or 'none'}), by match_type:")
-    for t in sorted(tot):
-        print(f"    {t:<22} {pos.get(t, 0):>7} of {tot[t]:>7}")
-    print(f"    {'total':<22} {sum(pos.values()):>7} of {sum(tot.values()):>7}")
+    scored = [r for r in sp if r["score_uncapped"]]
     capped = sum(1 for r in scored if float(r["score_uncapped"]) > cap)
     print(f"  rows with score_uncapped > {cap:g} (score capped): {capped} of {len(scored)}")
     eo = sorted(float(r["score_uncapped"]) for r in sp
