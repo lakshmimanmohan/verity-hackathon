@@ -49,6 +49,9 @@ def main() -> int:
     true_pairs = {tuple(sorted(q)) for ids in by_entity.values() for q in combinations(ids, 2)}
 
     counts: Counter = Counter()
+    status_counts: Counter = Counter()
+    status_errors: list[str] = []
+    has_status: bool | None = None
     region_of: dict[tuple[str, str], str] = {}
     matched: set[tuple[str, str]] = set()
     oracle_tp = oracle_fp = 0
@@ -59,14 +62,28 @@ def main() -> int:
         w.writeheader()
         for r in rdr:
             key = (r["record_a"], r["record_b"])
-            s = float(r["score"])
-            t = float(r["effective_threshold"])
-            region = "below" if s < t - HALF_WIDTH else ("in" if s <= t + HALF_WIDTH else "above")
+            # Compare the written 6-decimal values in integer millionths so the band edges
+            # are exact (0.82 + 0.05 is not exactly 0.87 in floating point).
+            s = round(float(r["score"]) * 1_000_000)
+            t = round(float(r["effective_threshold"]) * 1_000_000)
+            hw = round(HALF_WIDTH * 1_000_000)
+            region = "below" if s < t - hw else ("in" if s <= t + hw else "above")
             region_of[key] = region
             is_true = key in true_pairs
             is_match = r["match_type"] in WRITE_TYPES
             if is_match:
                 matched.add(key)
+            if has_status is None:
+                has_status = "decision_status" in r
+            if has_status:
+                st = r["decision_status"]
+                status_counts[(region, st)] += 1
+                want = "review" if region == "in" else ("match" if is_match else "non_match")
+                if st != want and len(status_errors) < 20:
+                    status_errors.append(f"{key}: decision_status {st!r}, expected {want!r} "
+                                         f"(region {region}, match_type {r['match_type']})")
+                elif st != want:
+                    status_errors.append("...")
             counts[(region, r["match_type"], is_true)] += 1
             if region == "in":
                 w.writerow(r)
@@ -109,7 +126,28 @@ def main() -> int:
     print(f"Oracle ceiling (band decided perfectly, outside kept): recall {o_recall:.4f} "
           f"({(o_recall - recall) * 100:+.2f} points), TP {oracle_tp}, FP {oracle_fp}, "
           f"precision {o_prec:.4f}")
-    return 0
+
+    if not has_status:
+        print("\ndecision_status: column not in scored_pairs.csv (run predates it); checks skipped")
+        return 0
+    print("\ndecision_status by region")
+    print(f"  {'region':<6} {'match':>8} {'non_match':>10} {'review':>8}")
+    for region in ("below", "in", "above"):
+        print(f"  {region:<6} " + " ".join(
+            f"{status_counts[(region, s)]:>{w}}" for s, w in (("match", 8), ("non_match", 10), ("review", 8))))
+    totals = Counter()
+    for (_, s), n in status_counts.items():
+        totals[s] += n
+    print("  total  " + ", ".join(f"{s} {totals[s]}" for s in ("match", "non_match", "review")))
+    review_is_band = all(status_counts[(g, "review")] == 0 for g in ("below", "above")) and \
+        status_counts[("in", "match")] == 0 and status_counts[("in", "non_match")] == 0
+    print(f"CHECK decision_status == review selects exactly the band pairs: "
+          f"{'PASS' if review_is_band else 'FAIL'}")
+    print(f"CHECK outside the band, decision_status equals Verity's decision: "
+          f"{'PASS' if not status_errors else 'FAIL'}")
+    for e in status_errors:
+        print("   " + e)
+    return 0 if (review_is_band and not status_errors) else 1
 
 
 if __name__ == "__main__":
