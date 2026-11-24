@@ -17,6 +17,14 @@ Modes (exactly one)
                         and projects the full test band
   --final               the full test band (needs --freeze-prompt done, an unchanged prompt and
                         --approve-final-run); batch by default, --mode live for live calls
+  --final-sample FILE   the fixed weighted sample of test band pairs (record_a, record_b, weight; from
+                        eval/make_sample.py), live: needs <run>/options/b_llm/frozen_prompt.json matching
+                        the current prompt hash, model, reasoning effort and settings hash, plus
+                        --approve-final-run, and passes a cost gate first (pairs to call x the pilot's
+                        cost per call x 1.3 must fit under the ledger's remaining cap and under
+                        --platform-limit minus the ledger total). Keys, workers and the per-key rate come
+                        from frozen_prompt.json. The weights never reach the model and the truth file is
+                        never read. With --estimate-only: the checks, the projection and the gate, no call.
 
 No test band pair is sent to any LLM except by --final. Live calls and batches need an
 approved entry in options/prices.json, a key in the repo-root .env (ANTHROPIC_API_KEY or
@@ -798,6 +806,7 @@ def run_items(provider: Provider, items: list[Item], system: str, *, ledger: Led
         stop = threading.Event()
         lock = threading.Lock()
         hits = HitStats()
+        t_run0 = time.monotonic()
 
         def halt(reason: str) -> None:
             with lock:
@@ -871,7 +880,10 @@ def run_items(provider: Provider, items: list[Item], system: str, *, ledger: Led
                     if status == "block":
                         halt(f"observed prefix {obs} tokens below {PREFIX_BLOCK_BELOW}")
                 if hit_report_every and h["calls"] % hit_report_every == 0:
-                    line = hit_line(h)
+                    mins = max(time.monotonic() - t_run0, 1e-9) / 60
+                    with lock:
+                        spent_now = oc.spent_usd
+                    line = hit_line(h) + f"; cost so far ${spent_now:.4f}; {h['calls'] / mins:.1f} calls per minute"
                     if h["hit_ratio_excl_first"] is not None and h["hit_ratio_excl_first"] < HIT_RATIO_WARN:
                         line += f"  WARNING: below {HIT_RATIO_WARN:.2f}"
                     with lock:
@@ -1118,6 +1130,219 @@ def weighted_test_sample(rd: RunData, run: Path, size: int, seed: int = 0):
     return make_sample.draw_sample(make_sample.test_band_pairs(run), make_sample.test_entities(run), size, seed)
 
 
+def write_run_outputs(out_dir: Path, provider: Provider, oc: Outcome, items: list[Item], system: str, *, mode: str,
+                      split_note: str, ptext: str, pstatus: str, key_rpm: float, concurrency: int, truth=None,
+                      extra_meta: dict | None = None) -> int:
+    """timings.json, run_meta.json, report.txt and (only when every pair has an answer) decisions.csv.
+    Returns 0 when complete, 2 when some pairs still have no answer."""
+    system_sha = sha256_text(system)
+    write_timings(out_dir, provider, oc, len(items), mode)
+    models_seen = Counter(r.model for r in oc.results.values())
+    meta = {"provider": provider.name, "requested_model": provider.model, "models_reported": dict(models_seen),
+            "settings": provider.settings_label(),
+            "system_prompt_sha256": system_sha, "answer_settings": provider.answer_settings(), "mode": mode,
+            "pairs": len(items), "distinct_prompts": len({i.key for i in items}), "cache_hits": oc.cache_hits,
+            "calls": oc.n_calls, "spent_usd": round(oc.spent_usd, 6), "pending": len(oc.pending),
+            "stopped": oc.stopped, "refusals": sum(r.refused for r in oc.results.values()),
+            "api_errors": oc.errors, "unusable_answers": oc.unusable,
+            "prefix_check": {"predicted_tokens": predicted_prefix_tokens(system), "predicted_status": pstatus,
+                             "first_call": oc.first_prefix},
+            "prompt_cache_keys": provider.n_cache_keys(), "key_rpm": key_rpm, "concurrency": concurrency,
+            "prompt_cache": oc.hits, "hit_log": oc.hit_log}
+    meta.update(extra_meta or {})
+    (out_dir / "run_meta.json").write_text(json.dumps(meta, indent=1) + "\n", encoding="utf-8")
+    lines = [f"Option B {provider.name} / {provider.model} ({provider.settings_label()}): {split_note}",
+             f"calls {oc.n_calls}, cache hits {oc.cache_hits}, spent ${oc.spent_usd:.4f}, pending {len(oc.pending)}, "
+             f"refusals {meta['refusals']}, models reported {dict(models_seen)}"]
+    lines.append(ptext)
+    if oc.first_prefix:
+        fp = oc.first_prefix
+        lines.append(f"first live call: input_tokens {fp['input_tokens']}, cached {fp['cached_tokens']}, pair about "
+                     f"{fp['pair_tokens_estimate']} tokens: observed shared prefix {fp['observed_prefix_tokens']} ({fp['status']})")
+    if oc.hits:
+        lines += oc.hit_log
+        lines.append("final " + hit_line(oc.hits))
+        lines.append(f"api errors {oc.errors}, unusable answers {oc.unusable}; prompt-cache keys {provider.n_cache_keys()}, "
+                     f"{key_rpm:g} requests per minute per key, {concurrency} workers")
+    if oc.stopped:
+        lines.append(f"STOPPED EARLY: {oc.stopped}")
+    if oc.latencies:
+        xs = sorted(oc.latencies)
+        lines.append(f"latency per call: p50 {xs[len(xs) // 2]:.2f}s, p95 {xs[int(0.95 * (len(xs) - 1))]:.2f}s, max {xs[-1]:.2f}s")
+    for k in ("gate", "power", "started_utc", "ended_utc", "run_time_minutes"):
+        if k in (extra_meta or {}):
+            lines.append(f"{k.replace('_', ' ')}: {extra_meta[k]}")
+    if not oc.pending:
+        write_decisions(out_dir / "decisions.csv", items, oc, provider.model, provider.settings_label())
+        lines.append(f"decisions: {out_dir / 'decisions.csv'}")
+        if truth is not None:
+            tp = fp = fn = tn = 0
+            for it in items:
+                r = oc.results[it.key]
+                pred = r.decision == "same" and not r.refused
+                act = truth.same(it.a, it.b)
+                tp, fp, fn, tn = tp + (pred and act), fp + (pred and not act), fn + (not pred and act), tn + (not pred and not act)
+            p = tp / (tp + fp) if tp + fp else 0.0
+            rc = tp / (tp + fn) if tp + fn else 0.0
+            lines.append(f"quality on this stratified TRAIN sample (not representative: ~25% same): "
+                         f"precision {p:.4f} recall {rc:.4f} F1 {2 * p * rc / (p + rc) if p + rc else 0:.4f} "
+                         f"TP {tp} FP {fp} FN {fn} TN {tn}")
+    else:
+        lines.append("no decisions.csv: some pairs have no answer yet; rerun to resume (answered pairs are cached)")
+    report = "\n".join(lines)
+    (out_dir / "report.txt").write_text(report + "\n", encoding="utf-8")
+    print(report)
+    return 0 if not oc.pending else 2
+
+
+# ------------------------------------------------------------------ final run on the fixed sample
+
+PILOT_COST_PER_CALL = 0.001545     # tune2, the pilot with the frozen prompt (frozen_prompt.json), measured 2026-11-24
+GATE_MARGIN = 1.3
+PLATFORM_LIMIT_USD = 30.0
+SAMPLE_COLUMNS = ["record_a", "record_b", "weight"]
+
+
+def power_status() -> str:
+    """'ac', 'battery' or 'unknown' (Windows GetSystemPowerStatus; other systems report 'unknown')."""
+    if sys.platform != "win32":
+        return "unknown"
+    import ctypes
+
+    class SYSTEM_POWER_STATUS(ctypes.Structure):
+        _fields_ = [("ACLineStatus", ctypes.c_ubyte), ("BatteryFlag", ctypes.c_ubyte),
+                    ("BatteryLifePercent", ctypes.c_ubyte), ("SystemStatusFlag", ctypes.c_ubyte),
+                    ("BatteryLifeTime", ctypes.c_ulong), ("BatteryFullLifeTime", ctypes.c_ulong)]
+
+    st = SYSTEM_POWER_STATUS()
+    if not ctypes.windll.kernel32.GetSystemPowerStatus(ctypes.byref(st)):
+        return "unknown"
+    return {1: "ac", 0: "battery"}.get(st.ACLineStatus, "unknown")
+
+
+def keep_awake(on: bool) -> None:
+    """Ask Windows not to sleep while the run is going (released when on is False or the process ends)."""
+    if sys.platform != "win32":
+        return
+    import ctypes
+    ES_CONTINUOUS, ES_SYSTEM_REQUIRED = 0x80000000, 0x00000001
+    ctypes.windll.kernel32.SetThreadExecutionState(ES_CONTINUOUS | (ES_SYSTEM_REQUIRED if on else 0))
+
+
+def check_frozen(frozen_path: Path, system: str, provider: Provider) -> dict:
+    """The frozen prompt record must exist and match the current prompt hash, model string, reasoning effort and
+    settings hash; returns it. Raises SystemExit naming what differs."""
+    if not frozen_path.exists():
+        raise SystemExit(f"refusing: {frozen_path} does not exist (freeze the prompt after a passing tuning round first).")
+    fz = json.loads(frozen_path.read_text(encoding="utf-8"))
+    current = {"system_prompt_sha256": sha256_text(system), "model": provider.model,
+               "reasoning_effort": provider.settings.get("reasoning_effort"), "settings_sha256": provider.settings_sha()}
+    diff = [f"{k}: frozen {fz.get(k)!r}, now {v!r}" for k, v in current.items() if fz.get(k) != v]
+    if diff:
+        raise SystemExit("refusing: the current prompt or settings do not match frozen_prompt.json: " + "; ".join(diff))
+    slots = (fz.get("cache_key_scheme") or {}).get("slots")
+    if slots is not None and slots != provider.n_cache_keys():
+        raise SystemExit(f"refusing: frozen_prompt.json uses {slots} prompt-cache keys, options/prices.json {provider.n_cache_keys()}.")
+    return fz
+
+
+def load_sample_pairs(path: Path, test_band: set | None) -> list[tuple[str, str]]:
+    """The sample's (record_a, record_b) pairs, sorted. Only the pair columns are used; the weight column is read
+    only to check the file's layout and never reaches a request. Refuses extra columns (so no label column can
+    ride along), repeated pairs, and pairs that are not test band pairs."""
+    with path.open(newline="", encoding="utf-8-sig") as f:
+        rdr = csv.DictReader(f)
+        cols = list(rdr.fieldnames or [])
+        if cols != SAMPLE_COLUMNS:
+            raise SystemExit(f"refusing: {path} must have exactly the columns {SAMPLE_COLUMNS}, found {cols}.")
+        pairs = [(r["record_a"].strip(), r["record_b"].strip()) for r in rdr]
+    if len(set(pairs)) != len(pairs):
+        raise SystemExit(f"refusing: {path} repeats a pair.")
+    if test_band is not None:
+        bad = [q for q in pairs if q not in test_band]
+        if bad:
+            raise SystemExit(f"refusing: {len(bad)} sample pair(s) are not test band pairs, e.g. {bad[:3]}.")
+    return sorted(pairs)
+
+
+def final_sample_gate(n_to_call: int, ledger: Ledger, platform_limit: float, pilot_cost: float = PILOT_COST_PER_CALL,
+                      margin: float = GATE_MARGIN) -> tuple[bool, str]:
+    st = ledger.state()
+    total = st.total_micro / 1e6
+    remaining = (ledger.cap_micro - st.total_micro) / 1e6
+    headroom = platform_limit - total
+    need = n_to_call * pilot_cost * margin
+    ok = need <= remaining and need <= headroom
+    why = [] if ok else [w for w, bad in ((f"exceeds the ledger's remaining ${remaining:.2f}", need > remaining),
+                                          (f"exceeds the platform headroom ${headroom:.2f}", need > headroom)) if bad]
+    text = (f"cost gate: {n_to_call:,} pairs to call x ${pilot_cost:.6f} (pilot cost per call) x {margin:g} = ${need:.2f}; "
+            f"ledger total ${total:.4f}, remaining under the ${ledger.cap_micro / 1e6:.0f} cap ${remaining:.2f}; platform limit "
+            f"${platform_limit:.0f} - ledger total = ${headroom:.2f} -> " + ("PASS" if ok else "REFUSED: " + "; ".join(why)))
+    return ok, text
+
+
+def run_final_sample(*, provider: Provider, system: str, rd, sample_path: Path, frozen_path: Path, test_band: set | None,
+                     ledger: Ledger, cache: PairCache, out_dir: Path, run_id: str, max_usd: float, approve: bool,
+                     platform_limit: float = PLATFORM_LIMIT_USD, pilot_cost: float = PILOT_COST_PER_CALL,
+                     estimate_only: bool = False, require_ac: bool = True, key_rpm: float | None = None,
+                     concurrency: int | None = None, log=print) -> int:
+    """The final option B run on the fixed sample of test band pairs (see --final-sample)."""
+    fz = check_frozen(frozen_path, system, provider)
+    scheme = fz.get("cache_key_scheme") or {}
+    key_rpm = key_rpm if key_rpm is not None else float(scheme.get("requests_per_minute_per_key", 12))
+    concurrency = concurrency if concurrency is not None else int(scheme.get("workers", 2))
+    if not approve and not estimate_only:
+        raise SystemExit("refusing: --final-sample sends test band pairs to the model: add --approve-final-run to confirm.")
+    pairs = load_sample_pairs(sample_path, test_band)
+    settings_sha, system_sha = provider.settings_sha(), sha256_text(system)
+    items = make_items(rd, pairs, provider, system, settings_sha, system_sha)
+    assert [(it.a, it.b) for it in items] == pairs
+    pstatus, ptext = prefix_check_text(system)
+    log(ptext)
+    to_call = len({it.key for it in items if cache.get(it.key) is None})
+    per_min = min(provider.n_cache_keys() * key_rpm, 95.3) if provider.n_cache_keys() else 95.3
+    log(f"pairs: {len(items):,} (sample file {sample_path.name}); already answered in the local cache: "
+        f"{len(items) - to_call:,}; to call: {to_call:,}")
+    log(f"projection: about ${to_call * pilot_cost:.2f} at the pilot's ${pilot_cost:.6f} per call; about "
+        f"{to_call / per_min:.0f} minutes at {per_min:.1f} calls per minute ({provider.n_cache_keys()} keys x {key_rpm:g} per "
+        f"minute, {concurrency} workers; the pilot measured 95.3); run cap --max-usd ${max_usd:.2f}")
+    ok, gate_text = final_sample_gate(to_call, ledger, platform_limit, pilot_cost)
+    log(gate_text)
+    if pstatus == "block":
+        raise SystemExit("refusing: prefix below the shortest length shown to cache.")
+    if not ok:
+        raise SystemExit("refusing: " + gate_text)
+    if estimate_only:
+        log(f"estimate only: no call made; --approve-final-run {'given' if approve else 'NOT given'}")
+        return 0
+    power = power_status()
+    log(f"power: {power}")
+    if require_ac and power == "battery":
+        raise SystemExit("refusing: the machine is on battery; plug it in (a sleep would stall the run).")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    t_start = time.time()
+    log(f"start: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(t_start))} local "
+        f"({time.strftime('%H:%M:%SZ', time.gmtime(t_start))})")
+    keep_awake(True)
+    try:
+        oc = run_items(provider, items, system, ledger=ledger, cache=cache, run_id=run_id, run_cap_usd=max_usd,
+                       mode="live", concurrency=concurrency, out_dir=out_dir, stop_on_error=True,
+                       rate_limiter=KeyRateLimiter(key_rpm) if provider.n_cache_keys() else None,
+                       hit_report_every=500, check_prefix=True, log=log)
+    finally:
+        keep_awake(False)
+    t_end = time.time()
+    log(f"end: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(t_end))} local "
+        f"({time.strftime('%H:%M:%SZ', time.gmtime(t_end))}); run time {(t_end - t_start) / 60:.1f} minutes")
+    extra = {"final_sample": str(sample_path), "frozen_prompt": str(frozen_path), "gate": gate_text, "power": power,
+             "started_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(t_start)),
+             "ended_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(t_end)),
+             "run_time_minutes": round((t_end - t_start) / 60, 2), "test_pairs": len(items)}
+    return write_run_outputs(out_dir, provider, oc, items, system, mode="live",
+                             split_note=f"{len(items)} TEST band sample pairs ({sample_path.name})", ptext=ptext,
+                             pstatus=pstatus, key_rpm=key_rpm, concurrency=concurrency, truth=None, extra_meta=extra)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Option B: frontier-LLM baseline.")
     ap.add_argument("run", type=Path)
@@ -1130,6 +1355,7 @@ def main() -> int:
     g.add_argument("--freeze-prompt", action="store_true")
     g.add_argument("--eval-train", type=int, metavar="N")
     g.add_argument("--final", action="store_true")
+    g.add_argument("--final-sample", type=Path, default=None, metavar="SAMPLE_CSV")
     ap.add_argument("--split", choices=("test", "train", "test-sample"), default="test",
                     help="--dry-run: which pairs to price (test-sample: all true test band pairs plus random non-matches)")
     ap.add_argument("--sample-size", type=int, default=5000, help="--dry-run --split test-sample: sample size")
@@ -1148,17 +1374,24 @@ def main() -> int:
                     help="--eval-train: also exclude every pair of the smoke test and the caching diagnostic")
     ap.add_argument("--estimate-only", action="store_true",
                     help="--eval-train: print the prefix-length check and the cost estimate, then stop (no call)")
+    ap.add_argument("--platform-limit", type=float, default=PLATFORM_LIMIT_USD,
+                    help="--final-sample: the provider account's spending limit in USD (default 30)")
+    ap.add_argument("--pilot-cost-per-call", type=float, default=PILOT_COST_PER_CALL,
+                    help="--final-sample: measured cost per call of the pilot (default: tune2's)")
+    ap.add_argument("--allow-battery", action="store_true", help="--final-sample: run even when on battery")
     ap.add_argument("--label", default=None)
     ap.add_argument("--ledger", type=Path, default=DEFAULT_LEDGER)
     args = ap.parse_args()
 
     run = args.run
-    live = bool(args.eval_train or args.final)
+    live = bool(args.eval_train or args.final or (args.final_sample is not None and not args.estimate_only))
     provider = make_provider(args.provider, args.model, live=live)
     bdir = run / "options" / "b_llm"
     fewshot_path = bdir / "fewshot.json"
     rd = RunData(run)
 
+    if args.final_sample is not None and not fewshot_path.exists():
+        raise SystemExit("refusing: fewshot.json is missing (the final run never builds it: that would read the truth file).")
     if args.build_fewshot or not fewshot_path.exists():
         truth = TrainTruth(run, rd.side)
         tb = rd.band("train")
@@ -1221,6 +1454,16 @@ def main() -> int:
     cache = PairCache(CACHE_DIR / f"{provider.name}.jsonl")
     stamp = time.strftime("%Y%m%d-%H%M%S", time.gmtime())
 
+    if args.final_sample is not None:
+        label = args.label or f"sample-{stamp}"
+        return run_final_sample(provider=provider, system=system, rd=rd, sample_path=args.final_sample,
+                                frozen_path=bdir / "frozen_prompt.json", test_band=set(make_sample.test_band_pairs(run)),
+                                ledger=ledger, cache=cache, out_dir=pdir / label,
+                                run_id=f"{run.name}/b_llm/{provider.name}/{label}", max_usd=args.max_usd,
+                                approve=args.approve_final_run, platform_limit=args.platform_limit,
+                                pilot_cost=args.pilot_cost_per_call, estimate_only=args.estimate_only,
+                                require_ac=not args.allow_battery)
+
     if args.eval_train:
         truth = TrainTruth(run, rd.side)
         tb = rd.band("train")
@@ -1277,60 +1520,9 @@ def main() -> int:
                    call_spacing_s=args.call_spacing_s, stop_on_error=args.stop_on_error,
                    rate_limiter=KeyRateLimiter(args.key_rpm) if mode == "live" and provider.n_cache_keys() else None,
                    check_prefix=(mode == "live"))
-    write_timings(out_dir, provider, oc, len(items), mode)
-    models_seen = Counter(r.model for r in oc.results.values())
-    meta = {"provider": provider.name, "requested_model": provider.model, "models_reported": dict(models_seen),
-            "settings": provider.settings_label(),
-            "system_prompt_sha256": system_sha, "answer_settings": provider.answer_settings(), "mode": mode,
-            "pairs": len(items), "distinct_prompts": len({i.key for i in items}), "cache_hits": oc.cache_hits,
-            "calls": oc.n_calls, "spent_usd": round(oc.spent_usd, 6), "pending": len(oc.pending),
-            "stopped": oc.stopped, "refusals": sum(r.refused for r in oc.results.values()),
-            "api_errors": oc.errors, "unusable_answers": oc.unusable,
-            "prefix_check": {"predicted_tokens": predicted_prefix_tokens(system), "predicted_status": pstatus,
-                             "first_call": oc.first_prefix},
-            "reused_decoys_from": args.reuse_decoys_from if args.eval_train else None,
-            "prompt_cache_keys": provider.n_cache_keys(), "key_rpm": args.key_rpm, "concurrency": args.concurrency,
-            "prompt_cache": oc.hits, "hit_log": oc.hit_log}
-    (out_dir / "run_meta.json").write_text(json.dumps(meta, indent=1) + "\n", encoding="utf-8")
-    lines = [f"Option B {provider.name} / {provider.model} ({provider.settings_label()}): {split_note}",
-             f"calls {oc.n_calls}, cache hits {oc.cache_hits}, spent ${oc.spent_usd:.4f}, pending {len(oc.pending)}, "
-             f"refusals {meta['refusals']}, models reported {dict(models_seen)}"]
-    lines.append(ptext)
-    if oc.first_prefix:
-        fp = oc.first_prefix
-        lines.append(f"first live call: input_tokens {fp['input_tokens']}, cached {fp['cached_tokens']}, pair about "
-                     f"{fp['pair_tokens_estimate']} tokens: observed shared prefix {fp['observed_prefix_tokens']} ({fp['status']})")
-    if oc.hits:
-        lines += oc.hit_log
-        lines.append("final " + hit_line(oc.hits))
-        lines.append(f"api errors {oc.errors}, unusable answers {oc.unusable}; prompt-cache keys {provider.n_cache_keys()}, "
-                     f"{args.key_rpm:g} requests per minute per key, {args.concurrency} workers")
-    if oc.stopped:
-        lines.append(f"STOPPED EARLY: {oc.stopped}")
-    if oc.latencies:
-        xs = sorted(oc.latencies)
-        lines.append(f"latency per call: p50 {xs[len(xs) // 2]:.2f}s, p95 {xs[int(0.95 * (len(xs) - 1))]:.2f}s, max {xs[-1]:.2f}s")
-    if not oc.pending:
-        write_decisions(out_dir / "decisions.csv", items, oc, provider.model, provider.settings_label())
-        lines.append(f"decisions: {out_dir / 'decisions.csv'}")
-        if truth is not None:
-            tp = fp = fn = tn = 0
-            for it in items:
-                r = oc.results[it.key]
-                pred = r.decision == "same" and not r.refused
-                act = truth.same(it.a, it.b)
-                tp, fp, fn, tn = tp + (pred and act), fp + (pred and not act), fn + (not pred and act), tn + (not pred and not act)
-            p = tp / (tp + fp) if tp + fp else 0.0
-            rc = tp / (tp + fn) if tp + fn else 0.0
-            lines.append(f"quality on this stratified TRAIN sample (not representative: ~25% same): "
-                         f"precision {p:.4f} recall {rc:.4f} F1 {2 * p * rc / (p + rc) if p + rc else 0:.4f} "
-                         f"TP {tp} FP {fp} FN {fn} TN {tn}")
-    else:
-        lines.append("no decisions.csv: some pairs have no answer yet; rerun to resume (answered pairs are cached)")
-    report = "\n".join(lines)
-    (out_dir / "report.txt").write_text(report + "\n", encoding="utf-8")
-    print(report)
-    return 0 if not oc.pending else 2
+    return write_run_outputs(out_dir, provider, oc, items, system, mode=mode, split_note=split_note, ptext=ptext,
+                             pstatus=pstatus, key_rpm=args.key_rpm, concurrency=args.concurrency, truth=truth,
+                             extra_meta={"reused_decoys_from": args.reuse_decoys_from if args.eval_train else None})
 
 
 if __name__ == "__main__":
