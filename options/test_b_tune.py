@@ -290,6 +290,27 @@ class PrefixWindowTests(unittest.TestCase):
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
+    def test_the_pair_cache_key_includes_the_system_prompt_hash(self):
+        user = "Record A: name X"
+        k_old = pair_key("openai", "m", "settings", B.sha256_text("old system prompt"), user)
+        k_new = pair_key("openai", "m", "settings", B.sha256_text("new system prompt"), user)
+        self.assertNotEqual(k_old, k_new)                      # an edited prompt never reuses an earlier answer
+        self.assertEqual(k_new, pair_key("openai", "m", "settings", B.sha256_text("new system prompt"), user))
+
+    def test_the_prompt_asks_for_p_same_and_nothing_called_confidence(self):
+        text = B.PROMPT_PATH.read_text(encoding="utf-8")
+        self.assertIn('{"decision": "same" or "different", "p_same": a number from 0 to 1}', text)
+        self.assertIn("p_same is your probability, from 0 to 1, that the two records are the same organization.", text)
+        self.assertIn("for same and near 0 for different, whichever you answered.", " ".join(text.split()))
+        self.assertNotIn("confidence", text)
+        ex = B.render_examples([{"label": "same", "a": {"name": "A"}, "b": {"name": "B"}}], ["name"])
+        self.assertIn('Answer: {"decision": "same", "p_same": 0.95}', ex)
+        self.assertNotIn("confidence", ex)
+        self.assertEqual(B.parse_answer('{"decision": "different", "p_same": 0.02}'), ("different", 0.02))
+        with self.assertRaises(KeyError):
+            B.parse_answer('{"decision": "different", "confidence": 0.02}')
+        self.assertEqual(B.SCHEMA["required"], ["decision", "p_same"])
+
     def test_the_real_prompt_is_inside_the_target_window(self):
         import json
         run = HERE.parent / "results" / "dev_2026_run11"

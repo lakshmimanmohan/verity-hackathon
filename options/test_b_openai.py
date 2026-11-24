@@ -29,7 +29,7 @@ SYSTEM = "static instructions " * 90          # about 1,800 characters
 USER = "Record A:\n  company_name: ACME\n\nRecord B:\n  company_name: ACME Inc\n\nAre these ...?"
 
 
-def body(text='{"decision": "same", "confidence": 0.9}', status="completed", cached=1664, refusal=False,
+def body(text='{"decision": "same", "p_same": 0.9}', status="completed", cached=1664, refusal=False,
          incomplete=None):
     part = {"type": "refusal", "refusal": "I can't help with that."} if refusal else {"type": "output_text", "text": text}
     b = {"id": "resp_1", "model": MODEL, "status": status,
@@ -92,7 +92,7 @@ class OpenAITests(unittest.TestCase):
         self.assertEqual((fmt["type"], fmt["strict"], fmt["name"]), ("json_schema", True, "decision"))
         self.assertEqual(fmt["schema"], SCHEMA)
         self.assertEqual(fmt["schema"]["additionalProperties"], False)
-        self.assertEqual(sorted(fmt["schema"]["required"]), ["confidence", "decision"])
+        self.assertEqual(sorted(fmt["schema"]["required"]), ["decision", "p_same"])
         self.assertEqual(r["reasoning"], {"effort": "none"})
         self.assertEqual(r["max_output_tokens"], 64)
         self.assertIs(r["store"], False)
@@ -118,11 +118,16 @@ class OpenAITests(unittest.TestCase):
         self.assertTrue(r.answered)
 
     def test_clamps_confidence_and_rejects_bad_answers(self):
-        self.assertEqual(OpenAIProvider.from_body(body('{"decision": "same", "confidence": 1.7}')).confidence, 1.0)
-        for bad in ('not json', '{"decision": "maybe", "confidence": 0.5}', '{"decision": "same"}'):
+        self.assertEqual(OpenAIProvider.from_body(body('{"decision": "same", "p_same": 1.7}')).confidence, 1.0)
+        for bad in ('not json', '{"decision": "maybe", "p_same": 0.5}', '{"decision": "same"}'):
             r = OpenAIProvider.from_body(body(bad))
             self.assertIsNotNone(r.error)
             self.assertFalse(r.answered)
+
+    def test_the_old_confidence_field_is_not_accepted(self):
+        r = OpenAIProvider.from_body(body('{"decision": "same", "confidence": 0.9}'))
+        self.assertIsNotNone(r.error)
+        self.assertFalse(r.answered)
 
     def test_refusal_incomplete_and_failed(self):
         r = OpenAIProvider.from_body(body(refusal=True))

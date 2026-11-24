@@ -66,8 +66,8 @@ CACHE_DIR = REPO / "results" / "llm_cache"
 SCHEMA = {
     "type": "object",
     "properties": {"decision": {"type": "string", "enum": ["same", "different"]},
-                   "confidence": {"type": "number"}},
-    "required": ["decision", "confidence"],
+                   "p_same": {"type": "number"}},
+    "required": ["decision", "p_same"],
     "additionalProperties": False,
 }
 TYPE_RANK = {"NAME": 0, "STREET_ADDRESS": 1, "DESCRIPTIVE": 2, "QUASI_IDENTIFIER": 3, "IDENTIFIER": 4, "DATE": 5}
@@ -77,7 +77,7 @@ CHARS_PER_TOKEN_UPPER = 2.5         # for reservations: deliberately pessimistic
 OUTPUT_TOKENS_ESTIMATE = 25         # {"decision": "different", "confidence": 0.95} is ~18 tokens
 BATCH_MAX_REQUESTS = 100_000
 BATCH_MAX_BYTES = 200_000_000       # Anthropic's limit is 256 MB per batch; stay clear of it
-FEWSHOT_CONFIDENCE = {"same": 0.95, "different": 0.05}
+FEWSHOT_P_SAME = {"same": 0.95, "different": 0.05}      # the p_same shown in the few-shot answers
 # Shared-prefix length window (OpenAI gpt-5.4 caching, measured 2026-11-24 in cache_diagnostic.txt): a visible
 # prefix of about 1,670 tokens cached 0; about 1,870 and about 2,730 both cached 1,792. Tokens are estimated at
 # 3.5 characters each (round 3: 6,579 characters predicted 1,880, observed about 1,872).
@@ -207,7 +207,7 @@ def build_fewshot(rd: RunData, truth: TrainTruth, train_band) -> list[dict]:
 def render_examples(fewshot: list[dict], cols: list[str]) -> str:
     blocks = []
     for i, ex in enumerate(fewshot, start=1):
-        ans = json.dumps({"decision": ex["label"], "confidence": FEWSHOT_CONFIDENCE[ex["label"]]})
+        ans = json.dumps({"decision": ex["label"], "p_same": FEWSHOT_P_SAME[ex["label"]]})
         blocks.append(f"Example {i}\nRecord A:\n{render_record(ex['a'], cols)}\n\nRecord B:\n"
                       f"{render_record(ex['b'], cols)}\n\nAnswer: {ans}")
     return "\n\n".join(blocks)
@@ -254,7 +254,7 @@ def prefix_check_text(system: str) -> tuple[str, str]:
 def parse_answer(text: str) -> tuple[str, float]:
     d = json.loads(text)
     dec = d["decision"]
-    conf = float(d["confidence"])
+    conf = float(d["p_same"])          # P(same); kept in CallResult.confidence and the decisions file's confidence column
     if dec not in ("same", "different"):
         raise ValueError(f"decision {dec!r}")
     return dec, min(1.0, max(0.0, conf))
@@ -1064,27 +1064,36 @@ def sampler_pool(train_band, exclude_pairs: set, exclude_records: set) -> list:
 
 
 def stratified_train_sample(rd: RunData, truth: TrainTruth, train_band, exclude: set, n: int,
-                            exclude_records: frozenset | set = frozenset(), seed: int = 0) -> list:
+                            exclude_records: frozenset | set = frozenset(), seed: int = 0,
+                            fixed_decoys: list | None = None) -> list:
     """About 25% same, 25% decoy different (as many as exist), the rest other different.
-    Excludes the pairs in exclude and every pair touching a record in exclude_records."""
+    Excludes the pairs in exclude and every pair touching a record in exclude_records.
+    fixed_decoys: decoy pairs to use as the decoy stratum instead of drawing decoys from the pool (they
+    bypass exclude, which is how a later round reuses an earlier round's decoys on purpose)."""
     rng = random.Random(seed)
     pool = sampler_pool(train_band, exclude, set(exclude_records))
     true = [p for p in pool if truth.same(p[0], p[1])]
     decoy = [p for p in pool if truth.is_decoy_pair(p[0], p[1])]
     other = [p for p in pool if not truth.same(p[0], p[1]) and not truth.is_decoy_pair(p[0], p[1])]
     n_true, n_dec = round(n * 0.25), round(n * 0.25)
-    pick = (rng.sample(true, min(n_true, len(true))) + rng.sample(decoy, min(n_dec, len(decoy))))
+    if fixed_decoys is not None:
+        pick = rng.sample(true, min(n_true, len(true))) + list(fixed_decoys)
+    else:
+        pick = (rng.sample(true, min(n_true, len(true))) + rng.sample(decoy, min(n_dec, len(decoy))))
     pick += rng.sample(other, min(n - len(pick), len(other)))
     return sorted(pick)
 
 
 def earlier_live_pairs(rd: RunData, truth: TrainTruth, train_band, fs_ids: set, fs_records: set, bdir: Path) -> set:
-    """Every train pair an earlier live test may have sent: the smoke-test pairs (openai/smoke5/decisions.csv)
-    and the whole 60-pair seed-0 pool the caching diagnostic drew from (a superset of what it used)."""
+    """Every train pair an earlier live run may have sent: the pairs of every run folder under
+    <provider>/*/calls.jsonl (smoke test, tuning rounds) and the whole 60-pair seed-0 pool the caching
+    diagnostic drew from (a superset of what it used)."""
     used = set()
-    smoke = bdir / "openai" / "smoke5" / "decisions.csv"
-    if smoke.exists():
-        used |= {(r["record_a"], r["record_b"]) for r in read_csv(smoke)}
+    for calls in sorted(bdir.glob("*/*/calls.jsonl")):
+        for line in calls.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                c = json.loads(line)
+                used.add((c["a"], c["b"]))
     used |= {(p[0], p[1]) for p in stratified_train_sample(rd, truth, train_band, fs_ids, 60, fs_records, seed=0)}
     used |= {(p[0], p[1]) for p in stratified_train_sample(rd, truth, train_band, fs_ids, 5, fs_records, seed=0)}
     return used
@@ -1133,6 +1142,8 @@ def main() -> int:
     ap.add_argument("--stop-on-error", action="store_true", help="stop at the first API error (after the SDK's retries)")
     ap.add_argument("--key-rpm", type=float, default=12.0, help="live: requests per minute per prompt-cache key")
     ap.add_argument("--seed", type=int, default=0, help="--eval-train: sampler seed")
+    ap.add_argument("--reuse-decoys-from", default=None, metavar="LABEL",
+                    help="--eval-train: use the decoy pairs of an earlier run (e.g. tune1) as the decoy stratum")
     ap.add_argument("--exclude-earlier", action="store_true",
                     help="--eval-train: also exclude every pair of the smoke test and the caching diagnostic")
     ap.add_argument("--estimate-only", action="store_true",
@@ -1218,8 +1229,16 @@ def main() -> int:
             earlier = earlier_live_pairs(rd, truth, tb, fs_ids, fs_records, bdir)
             excl |= earlier
             print(f"excluding {len(earlier)} pairs of earlier live tests (smoke test, caching diagnostic pool)")
-        pairs = stratified_train_sample(rd, truth, tb, excl, args.eval_train, fs_records, seed=args.seed)
-        assert not any((p[0], p[1]) in excl or p[0] in fs_records or p[1] in fs_records for p in pairs)
+        fixed = None
+        if args.reuse_decoys_from:
+            src = [json.loads(x) for x in (bdir / "openai" / args.reuse_decoys_from / "calls.jsonl").read_text(encoding="utf-8").splitlines() if x.strip()]
+            fixed = sorted({(c["a"], c["b"]) for c in src if truth.is_decoy_pair(c["a"], c["b"])})
+            assert not any(a in fs_records or b in fs_records or (a, b) in fs_ids for a, b in fixed)
+            print(f"reusing the {len(fixed)} decoy pairs of {args.reuse_decoys_from} as the decoy stratum")
+        pairs = stratified_train_sample(rd, truth, tb, excl, args.eval_train, fs_records, seed=args.seed, fixed_decoys=fixed)
+        fixed_set = set(fixed or [])
+        assert not any(((p[0], p[1]) in excl and (p[0], p[1]) not in fixed_set) or p[0] in fs_records or p[1] in fs_records
+                       for p in pairs)
         label = args.label or f"train{args.eval_train}-{stamp}"
         mode = "live"
         split_note = f"{len(pairs)} stratified TRAIN band pairs (seed {args.seed})"
@@ -1240,6 +1259,10 @@ def main() -> int:
     pstatus, ptext = prefix_check_text(system)
     print(ptext)
     if args.eval_train:
+        n_same = sum(truth.same(it.a, it.b) for it in items)
+        n_decoy = sum(truth.is_decoy_pair(it.a, it.b) for it in items)
+        print(f"sample composition: {n_same} same, {n_decoy} decoy different, {len(items) - n_same - n_decoy} other different "
+              f"(the sampler asks for 25% same and 25% decoy and takes as many as exist)")
         print(estimate(provider, system, items, f"{len(items)} TRAIN band pairs (live)"))
         if pstatus == "block":
             raise SystemExit("prefix below the shortest length shown to cache: refusing to send.")
@@ -1265,6 +1288,7 @@ def main() -> int:
             "api_errors": oc.errors, "unusable_answers": oc.unusable,
             "prefix_check": {"predicted_tokens": predicted_prefix_tokens(system), "predicted_status": pstatus,
                              "first_call": oc.first_prefix},
+            "reused_decoys_from": args.reuse_decoys_from if args.eval_train else None,
             "prompt_cache_keys": provider.n_cache_keys(), "key_rpm": args.key_rpm, "concurrency": args.concurrency,
             "prompt_cache": oc.hits, "hit_log": oc.hit_log}
     (out_dir / "run_meta.json").write_text(json.dumps(meta, indent=1) + "\n", encoding="utf-8")

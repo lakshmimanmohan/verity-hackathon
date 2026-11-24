@@ -29,13 +29,13 @@ HOW TO DECIDE
 Weigh all the fields together. Agreement on specific details (phone, website domain, street
 address, full name) counts for more than agreement on general ones (city, state, a common word).
 A conflict on a specific detail that cannot be explained by formatting, abbreviation, truncation
-or a typo counts against "same". If the evidence is genuinely mixed, give a confidence near 0.5.
+or a typo counts against "same". If the evidence is genuinely mixed, give a p_same near 0.5.
 
 ANSWER FORMAT
 Reply with one JSON object and nothing else:
-{"decision": "same" or "different", "confidence": a number from 0 to 1}
-"confidence" is your probability that the two records are the same organization: near 1 when
-you are sure they are the same, near 0 when you are sure they are different.
+{"decision": "same" or "different", "p_same": a number from 0 to 1}
+p_same is your probability, from 0 to 1, that the two records are the same organization. It is near 1
+for same and near 0 for different, whichever you answered.
 
 EXAMPLES
 The examples below are labelled records from a training set.

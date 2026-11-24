@@ -1,0 +1,11 @@
+ACCEPTANCE RULE for tuning round 2 (written 2026-11-24, before the round was run; the prompt is frozen
+only if all four hold, otherwise report and stop, with one more edit round at most):
+  (a) decision errors are at most 3 of 1,000 (false matches plus false non-matches)
+  (b) at most 1% of answers are inconsistent (decision different with p_same at least 0.5, or decision same
+      with p_same below 0.5)
+  (c) the prompt-cache hit ratio excluding each key's first call is at least 0.80
+  (d) zero parse failures
+The only edit being tested: the output field "confidence" is renamed "p_same" and defined as P(same) whichever
+decision was given (system prompt, JSON schema, the 8 few-shot answers, the parser). Round 1 had 0 decision
+errors and 280 of 750 'different' answers with a confidence of 0.5 or more.
+Sample: 145 fresh same pairs, the 68 decoy pairs of tune1 (reused, see the report), 787 fresh other pairs.
