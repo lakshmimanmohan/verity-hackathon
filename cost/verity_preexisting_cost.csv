@@ -1,0 +1,9 @@
+﻿Component,Hours you spent originally (your estimate)
+"Column classification (content vs metadata, semantic types)",6
+"Rule learner (weights, threshold)",10
+Embedding pipeline and record store,10
+Blocking (neighbor search) and scoring,12
+Evidence gates and match types,10
+Merge and golden records,16
+Explorer / reporting,16
+Total,80

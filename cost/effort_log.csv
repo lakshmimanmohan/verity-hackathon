@@ -1,1 +1,17 @@
 date,hours,activity,bucket,production_needed
+2026-11-23,1,"Eval protocol, all amendments",eval,no
+2026-11-23,1,Data generator with hard cases,eval,no
+2026-11-23,3,Evaluator,eval,no
+2026-11-23,1,"Neo4j removal, SQLite store",verity,yes
+2026-11-23,0.5,"Repo setup, GitHub cleanup, old-folder fix",eval,no
+2026-11-23,1,"Reproducibility: data folders, exact search, dedupe, run_info, compare_runs",eval,no
+2026-11-23,2,scored_pairs.csv export,verity,yes
+2026-11-23,2,"Diagnosis: embedding_only, diversity bonus, recall loss",verity,no
+2026-11-23,2,"Verity fixes: bonus, embedding_only, hardcoded names",verity,yes
+2026-11-24,1,"Threshold fix, review status",verity,yes
+2026-11-24,0.5,Hand check of 100 pairs,eval,no
+2026-11-24,0.5,"Split, band.py, score_option.py",eval,no
+2026-11-24,0.5,Timing instrumentation,verity,yes
+2026-11-24,1,Option A,A,yes
+2026-11-24,0.25,"Cost research (LLM prices, budget)",B,no
+2026-11-24,,Option C (in progress),C,yes
