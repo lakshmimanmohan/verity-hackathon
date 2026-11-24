@@ -24,6 +24,8 @@ Quality bars, the borderline definition and volume assumptions are fixed in [`pr
 verity/     vendored Verity source (src/), requirements.txt, and requirements-ann.txt (optional Annoy)
 data/       generate_data_org.py   synthetic B2B records + sidecar truth file
 eval/       evaluate_matches.py    precision, recall, hard-case slices, decoy false matches
+            compare_runs.py        compare two run folders file by file
+            check_scored_pairs.py  check scored_pairs.csv and rebuild every score
 options/    one script per option (A to E)
 cost/       cost_model.py          cost per pair at 100K / 1M / 10M records per day, break-even
 results/    one folder per run: metrics, timings, config used
@@ -48,7 +50,9 @@ Verity keeps its records in a local SQLite file (`verity_store.sqlite`) in its d
 
 Every file Verity reads or writes, apart from the input CSV, lives in one data folder: `VERITY_DATA_DIR` if set in the shell, otherwise `verity/data/`. Give each run its own folder. A full run stops if the folder is not empty, so nothing from an earlier run can leak in. `--fresh` empties the folder first, but only one Verity created (it holds a `.verity_data_dir` marker).
 
-Neighbor search mode is set with `--nn-mode exact|approximate|auto`, or `VERITY_NN_MODE` in the shell (never in `.env`); the flag wins. `auto`, the default, uses Annoy at 10,000 records or more when it is installed, otherwise exact search. `approximate` stops if Annoy is not installed. Each run writes `run_info.json` into its data folder: requested and resolved mode, Annoy installed, record count, git commit, Python and sentence-transformers versions, embedding model and `PYTHONHASHSEED`.
+Neighbor search mode is set with `--nn-mode exact|approximate|auto`, or `VERITY_NN_MODE` in the shell (never in `.env`); the flag wins. `auto`, the default, uses Annoy at 10,000 records or more when it is installed, otherwise exact search. `approximate` stops if Annoy is not installed. Each run writes `run_info.json` into its data folder: requested and resolved mode, Annoy installed, record count, git commit, Python and sentence-transformers versions, embedding model and `PYTHONHASHSEED`, plus the count of pairs dropped before scoring.
+
+Besides `match_candidates.csv` (the pairs Verity accepts), each run writes `scored_pairs.csv`: one row per unordered pair Verity scored, whatever its `match_type` (accepted, `below_threshold`, `insufficient_evidence`, `overlap_rejected`), plus the exact-duplicate pairs, with the same dedupe. It holds the final `score` and `score_uncapped`, the record `cosine`, `diversity_bonus`, the applied and effective thresholds, the evidence result, and per-field JSON: `field_similarities` (the char-Jaccard values the score uses), `field_weights`, and `evidence_field_similarities` (the values the evidence gate reads). `scored_pairs_columns.json` next to it gives each column's semantic type and the constants needed to rebuild `score_uncapped` from a row; `eval/check_scored_pairs.py results/<run>` checks the file against `match_candidates.csv` and rebuilds every score. At 10,000 records `scored_pairs.csv` is about 130 MB, so it is gitignored; the sidecar is committed.
 
 Two `.env` files are in play. The repo-root `.env` (copied from `.env.example`) holds the LLM key for the options that call the LLM; Verity never reads it. Verity loads only `verity/.env`, reads no setting from it today, and stops if `VERITY_DATA_DIR` is set there: set it in the shell.
 

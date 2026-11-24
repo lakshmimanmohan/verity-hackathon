@@ -23,6 +23,7 @@ to fit results.
 
 - Core Verity changes (threshold fix, review band, per-field similarity export): in `verity/src/`, which is vendored source, not a submodule, so there is no submodule pin to update. Commit them here, one change per commit, separate from experiment code; each run's README.txt records the commit it used (from the run's `run_info.json`). Verity's dependencies go in `verity/requirements.txt`; Annoy is optional and lives in `verity/requirements-ann.txt`.
 - Run outputs: each run gets its own data folder, set with `VERITY_DATA_DIR` in the shell (never in `.env`). A full run stops if that folder is not empty; `--fresh` empties it, but only if Verity created it (marker file `.verity_data_dir`).
+- `scored_pairs.csv` (every scored pair, one row per pair; the band is read from its `score`) and its sidecar `scored_pairs_columns.json` are written to the data folder. The CSV is about 130 MB at 10,000 records and is gitignored; never commit it. Check it with `eval/check_scored_pairs.py results/<run>`.
 - Experiment code (options A to E, cost model, eval): in this repo only.
 - No company, product or people names in anything under `verity/`.
 
