@@ -1,0 +1,16 @@
+Dry run: test band sample of 5,000, 5,000 pairs, openai / gpt-5.4-2026-03-05 (max_output_tokens=64;reasoning_effort=none)
+  sample: all 340 true test band pairs (weight 1) + 4,660 random non-matches of 44,542 (seed 0, weight 9.5584 = inverse sampling rate); labels used only to draw the sample
+  weights sum to 44,882.0 (the full test band has 44,882 pairs)
+  tokens are ESTIMATES at 3.5 characters per token (no tokenizer, no API call); the pilot measures them
+  system prompt: 5,847 characters, ~1,671 tokens, of which ~1,664 cacheable
+  user turn: mean ~133 tokens, max ~148
+  output: ~25 tokens per answer (max 64)
+  tokens for the whole set: input ~9.02M, output ~125K
+  as batch files the payload is ~35 MB (the prompt travels with every request): 1 batch(es) of at most 50,000 requests / 190 MB
+  prices (USD per million tokens, 2026-11-24): input 2.5, cached input 0.25, output 15.0; batch multiplier 0.5, batch cached input 0.13; approved: False
+  cache-write fee: none listed for this model (assumed 0); batch cache hits are NOT documented, so the no-hit batch case is shown
+  STANDARD, live, prompt cached:     $     5.82   ($1.164 per 1,000 pairs)
+  STANDARD, live, no caching:        $    24.42   ($4.884 per 1,000 pairs)
+  BATCH, with cache hits:            $     2.95   ($0.590 per 1,000 pairs)
+  BATCH, no cache hits at all:       $    12.21   ($2.442 per 1,000 pairs)
+  ledger reservations if run as batches: $18.18 in all (pessimistic upper bounds, reserved batch by batch and settled to the actual cost; lifetime cap $45). A live run needs --max-usd of at least $6.
