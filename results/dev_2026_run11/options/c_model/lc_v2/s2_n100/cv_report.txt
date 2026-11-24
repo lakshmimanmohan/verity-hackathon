@@ -1,0 +1,43 @@
+Option C cv_report: lc_v2/s2_n100
+Model: lc_v2/s2_n100 (LightGBM, lightgbm 4.6.0)
+Run: C:\verity-hackathon\results\dev_2026_run11
+
+Train band pairs: 63665 (418 true, 63247 false)
+Training set: 100 pairs (25 true, 75 false); nested subset n=100 (sample seed 2), true share 25%; population weights true 16.720, false 843.293
+Test band pairs scored: 44882 (no test labels read)
+
+Grouped CV: 4 folds over 1825 train-side split components (seed 0, balanced by records)
+  fold  eval pairs  eval true  train pairs  train true
+     0          11          4           61          19
+     1          12          4           59          19
+     2          12          6           64          17
+     3          11          7           62          16
+  OOF coverage: 46 of 100 pairs (46.0%); true 21 of 25, false 25 of 75
+  OOF weights per pair: true 19.9048, false 2529.8800 (coverage x population)
+
+Model selection (weighted average precision on OOF)
+  {"num_leaves": 15, "min_child_samples": 20, "scale_pos_weight": "1"}  AP 1.0000
+  {"num_leaves": 15, "min_child_samples": 20, "scale_pos_weight": "sqrt"}  AP 1.0000   <- chosen
+  {"num_leaves": 15, "min_child_samples": 50, "scale_pos_weight": "1"}  AP 0.0052
+  {"num_leaves": 15, "min_child_samples": 50, "scale_pos_weight": "sqrt"}  AP 0.0052
+  {"num_leaves": 31, "min_child_samples": 20, "scale_pos_weight": "1"}  AP 1.0000
+  {"num_leaves": 31, "min_child_samples": 20, "scale_pos_weight": "sqrt"}  AP 1.0000
+  {"num_leaves": 31, "min_child_samples": 50, "scale_pos_weight": "1"}  AP 0.0052
+  {"num_leaves": 31, "min_child_samples": 50, "scale_pos_weight": "sqrt"}  AP 0.0052
+
+Calibration: isotonic regression on OOF predictions (weighted)
+  OOF ECE (10 equal-width bins, weighted): 0.0000
+  bin          weighted n      n   mean p   frac true
+  [0.0, 0.1)      63247.0     25   0.0000   0.0000
+  [0.9, 1.0]        418.0     21   1.0000   1.0000
+
+Cutoff rule
+  candidates t: the distinct calibrated OOF probabilities; predicted same when p >= t
+  band F1(t): weighted OOF band F1
+  P(t) = (TP_out + TPw(t)) / (M_out + PREDw(t)), train group: M_out = 3400 Verity matches outside the band, TP_out = 3400
+  t* = argmax band F1(t) subject to P(t) >= 0.98; ties to the larger t; none -> all different
+  result: t* = 1.000000 (max OOF band F1 with estimated overall precision >= 0.98)
+  at t*: OOF band F1 1.0000, precision 1.0000, recall 1.0000; estimated overall train precision 1.0000
+
+Test band: 392 of 44882 predicted same
+Wall time: 5.7s

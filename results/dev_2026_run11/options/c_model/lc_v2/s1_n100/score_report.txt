@@ -1,0 +1,39 @@
+Option: C learning curve seed 1 n=100
+Run: C:\verity-hackathon\results\dev_2026_run11
+Decisions: results\dev_2026_run11\options\c_model\lc_v2\s1_n100\decisions.csv  (44882 test band pairs; confidence given for 44882)
+Test group: 4500 records, 51309 scored pairs, 5541 true pairs
+
+Band (test band pairs, same-entity = positive)
+  pairs 44882  (true 340, 0.76%)
+  F1 0.3373  95% CI [0.3089, 0.3647]  (bootstrap, 1000 resamples, seed 0)
+  accuracy 0.9716  precision 0.2049  recall 0.9529
+  TP 324  FP 1257  FN 16  TN 43285
+
+Overall (test group; outside the band Verity's decision_status)
+  precision 0.7180  recall 0.5775  F1 0.6401
+  TP 3200  FP 1257  FN 2341
+
+Recall by hard-case slice (test group; pairs where either record carries the tag)
+  acronym           500 / 811      recall 0.6165
+  truncation        607 / 1043     recall 0.5820
+  po_box            368 / 765      recall 0.4810
+  easy             1843 / 3101     recall 0.5943
+
+Decoy pairs in the test group: 147, wrongly matched 0 (0.00%)
+
+Band average precision (cutoff-free, ranked by confidence): 0.1992
+
+Calibration (test band, 10 equal-width bins)
+  ECE 0.0453   (bar: <= 0.05)
+  ECE among pairs with confidence >= 0.05: 0.7816  (2594 pairs)
+  bin           pairs     mean conf   frac true
+  [0.0, 0.1)      42304   0.0002      0.0004
+  [0.1, 0.2)         17   0.1473      0.0000
+  [0.2, 0.3)          6   0.2716      0.0000
+  [0.3, 0.4)         60   0.3541      0.0000
+  [0.4, 0.5)         58   0.4405      0.0000
+  [0.5, 0.6)         39   0.5393      0.0000
+  [0.6, 0.7)        132   0.6466      0.0000
+  [0.7, 0.8)         74   0.7586      0.0000
+  [0.8, 0.9)        273   0.8390      0.0000
+  [0.9, 1.0]       1919   0.9941      0.1688

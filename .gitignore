@@ -17,3 +17,7 @@ results/*/verity_data/embeddings_global.pkl
 results/*/verity_data/*/embeddings.pkl
 results/*/verity_data/scored_pairs.csv
 results/*/band_pairs.csv
+# Option C learning curve v2: decisions and model files (regenerate with options/c_learning_curve.py, see lc_v2/README.txt)
+results/*/options/c_model/lc_v2/*/decisions.csv
+results/*/options/c_model/lc_v2/*/model.txt
+results/*/options/c_model/lc_v2/*/calibrator.json
