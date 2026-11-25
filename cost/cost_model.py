@@ -22,13 +22,18 @@ Model (all formulas are in the functions below and are tested in cost/test_cost_
                       (every option, B included); cost = the cheaper of always-on (whole cores, 50% utilisation) and
                       serverless (core-seconds billed). Hosting prices are ASSUMED.
   operations          hours per month x hourly rate (ASSUMED hours; retraining cadence for C and D)
-  one-time            effort-log hours with production_needed = yes x rate, by bucket (eval is never charged; verity is
-                      shared by every option), Verity pre-existing build and productization as separate lines, labeling
-                      for C and D (hours per 1,000 pairs measured from the "Hand check of 100 pairs" row), B's development
-                      API spend from the ledger (D inherits B's)
+  one-time            charged to options: the Verity pre-existing build (80 h) and productization (100 h), shared by every
+                      option, and labeling for C and D (hours per 1,000 pairs measured from the "Hand check of 100
+                      pairs" row). The PoC's own spend (effort-log hours, API spend from the ledger) is NOT charged to
+                      any option or scenario: it is the separate block "cost to build the evidence"
   total over horizon  one-time + horizon months x monthly running cost
-  who pays            Precisely-hosted LLM: Precisely pays the LLM. BYOK: the customer pays the LLM; Precisely pays
-                      the rest. Option E is "not run": no numbers.
+  who pays            three deployment scenarios (assumed; who pays is a commercial decision this PoC can inform but not
+                      settle): S1 Precisely-hosted (Precisely pays hosting, operations and LLM tokens; the customer pays
+                      the price passed through, not modeled), S2 Precisely-hosted matcher with the customer's own LLM key
+                      (Precisely pays hosting and operations, the customer pays LLM tokens), S3 customer self-hosted or
+                      on-prem (the customer pays hardware, operations and LLM tokens if they connect a key; Precisely pays
+                      development and support, not modeled). B is not feasible in S3 when data cannot leave the environment;
+                      D there runs with the LLM fallback off (quality not measured). Option E is "not run": no numbers.
 Without --effort-log-complete every output starts with the DRAFT line.
 """
 
@@ -158,27 +163,27 @@ def label_hours(p: Params, labels: int) -> float:
     return labels / 1000 * p.label_hours_per_1000
 
 
-def one_time_lines(p: Params, option: str, rate: float, labels: int, include_verity: bool = True) -> list[tuple[str, float]]:
-    """(line, USD) for the one-time cost of an option. eval is never charged; verity is shared by every option
-    (include_verity False drops the shared Verity lines: the "B without the shared Verity build" variant)."""
-    lines = ([("verity effort-log hours (production needed)", p.effort_hours.get("verity", 0.0) * rate),
-              ("verity pre-existing build (80 h, your estimate)", p.verity_preexisting_hours * rate),
-              ("verity productization (100 h, your figure)", p.verity_productization_hours * rate)] if include_verity else [])
-    if option == "A":
-        lines.append(("option A effort-log hours", p.effort_hours.get("A", 0.0) * rate))
-    if option in ("B", "D"):
-        lines.append(("option B effort-log hours", p.effort_hours.get("B", 0.0) * rate))
-        lines.append(("option B development API spend (ledger)", p.b_dev_api_usd))
+def one_time_lines(p: Params, option: str, rate: float, labels: int, include_verity: bool = True) -> list[tuple[str, float, str]]:
+    """(line, USD, kind) for the one-time cost charged to an option. kind is "development" (the Verity pre-existing build
+    and productization, shared by every option; include_verity False drops them: the "B without the shared Verity build"
+    variant) or "labeling" (C and D). The PoC's effort-log hours and ledger API spend are not here: they are the separate
+    block "cost to build the evidence"."""
+    lines = ([("verity pre-existing build (80 h, your estimate)", p.verity_preexisting_hours * rate, "development"),
+              ("verity productization (100 h, your figure)", p.verity_productization_hours * rate, "development")] if include_verity else [])
     if option in ("C", "D"):
-        lines.append(("option C effort-log hours", p.effort_hours.get("C", 0.0) * rate))
-        lines.append((f"labeling, {labels:,} labels x {p.label_hours_per_1000:g} h per 1,000", label_hours(p, labels) * rate))
-    if option == "D":
-        lines.append(("option D effort-log hours", p.effort_hours.get("D", 0.0) * rate))
+        lines.append((f"labeling, {labels:,} labels x {p.label_hours_per_1000:g} h per 1,000", label_hours(p, labels) * rate, "labeling"))
     return lines
 
 
 def one_time_total(p: Params, option: str, rate: float, labels: int, include_verity: bool = True) -> float:
-    return sum(v for _, v in one_time_lines(p, option, rate, labels, include_verity))
+    return sum(v for _, v, _ in one_time_lines(p, option, rate, labels, include_verity))
+
+
+def one_time_split(p: Params, option: str, rate: float, labels: int, include_verity: bool = True) -> dict:
+    out = {"development": 0.0, "labeling": 0.0}
+    for _, v, kind in one_time_lines(p, option, rate, labels, include_verity):
+        out[kind] += v
+    return out
 
 
 def monthly(p: Params, option: str, records_per_day: float, rate: float, labels: int, llm_mode: str = "standard",
@@ -188,7 +193,8 @@ def monthly(p: Params, option: str, records_per_day: float, rate: float, labels:
     llm = llm_cost_month(p, option, records_per_day, llm_mode)
     host = hosting_month(p, option, records_per_day)
     ops = ops_hours_month(p, option, retrains_per_month) * rate
-    ot = one_time_total(p, option, rate, labels, include_verity_one_time)
+    split = one_time_split(p, option, rate, labels, include_verity_one_time)
+    ot = split["development"] + split["labeling"]
     amort = ot / p.horizon_months
     running = llm + host["used"] + ops
     return {"option": option, "status": "modelled", "llm": llm, "hosting_model": host["model"]["used"],
@@ -196,8 +202,7 @@ def monthly(p: Params, option: str, records_per_day: float, rate: float, labels:
             "hosting_serverless": host["model"]["serverless"] + host["verity"]["serverless"], "operations": ops,
             "running": running, "one_time": ot, "one_time_amortized": amort, "total_month": running + amort,
             "total_horizon": ot + p.horizon_months * running,
-            "cost_precisely_hosted_llm": running + amort, "cost_customer_byok": llm,
-            "cost_precisely_byok": running + amort - llm,
+            "development": split["development"] / p.horizon_months, "labeling": split["labeling"] / p.horizon_months,
             "calls_per_day": calls_per_day(p, option, records_per_day), "cores_model": host["model"]["cores"],
             "cores_verity": host["verity"]["cores"]}
 
@@ -219,6 +224,62 @@ def monthly_b_variant(p: Params, variant: str, records_per_day: float, rate: flo
     if variant == "no-verity-build":
         return monthly(p, "B", records_per_day, rate, labels, include_verity_one_time=False)
     raise ValueError(variant)
+
+
+# ------------------------------------------------------------------ deployment scenarios: who pays
+SCENARIOS = {
+    "S1": "Precisely-hosted: Precisely pays hosting, operations and LLM tokens; the customer pays the price passed through (not modeled)",
+    "S2": "Precisely-hosted matcher with the customer's own LLM key (BYOK): Precisely pays hosting and operations; the customer pays LLM tokens",
+    "S3": "Customer self-hosted or on-prem: the customer pays hardware, operations and LLM tokens only if they connect their own key; "
+          "Precisely pays development and support (not modeled)",
+}
+COMPONENTS = ("llm", "hosting", "operations", "development", "labeling")
+COMPONENT_TEXT = {"llm": "LLM tokens", "hosting": "hosting (the matcher or model, and the shared Verity pipeline)", "operations": "operations (monitoring, retraining, LLM upkeep)",
+                  "development": "development (Verity build and productization, amortized)", "labeling": "labeling for C and D (amortized)"}
+PARTY = {
+    "S1": {"llm": "Precisely", "hosting": "Precisely", "operations": "Precisely", "development": "Precisely", "labeling": "Precisely"},
+    "S2": {"llm": "customer", "hosting": "Precisely", "operations": "Precisely", "development": "Precisely", "labeling": "Precisely"},
+    "S3": {"llm": "customer", "hosting": "customer", "operations": "customer", "development": "Precisely (not modeled)", "labeling": "customer"},
+}
+S3_FEASIBLE = {"A": "yes", "B": "no", "C": "yes", "D": "yes, with the LLM fallback off"}
+
+
+def scenario_rows(p: Params, option: str, records_per_day: float, rate: float, labels: int) -> list[dict]:
+    """One row per scenario for an option (two for D in S3: the LLM fallback off, and with the customer's own key
+    connected; B in S3 is costed with the customer's own key and flagged as not feasible when data cannot leave).
+    Each row splits the monthly cost by party: Precisely, customer, and their total. The development share in S3 is
+    Precisely's and is not modeled (left out of the total)."""
+    if option == "E":
+        return [{"option": "E", "label": "E", "scenario": "", "status": "not run"}]
+    m = monthly(p, option, records_per_day, rate, labels)
+    base = {c: m[c] for c in COMPONENTS}
+    rows = []
+    for sc in ("S1", "S2", "S3"):
+        variants = [(option, base, "as evaluated")]
+        if sc == "S3":
+            if option == "B":
+                variants = [("B (own key connected)", base, "as evaluated")]
+            elif option == "D":
+                variants = [("D (LLM fallback off)", {**base, "llm": 0.0}, "not measured"), ("D (own key connected)", base, "as evaluated")]
+        for label, comps, quality in variants:
+            parties = PARTY[sc]
+            precisely = sum(v for c, v in comps.items() if parties[c] == "Precisely")
+            customer = sum(v for c, v in comps.items() if parties[c] == "customer")
+            rows.append({"option": option, "label": label, "scenario": sc, "status": "modelled", "components": comps, "parties": dict(parties),
+                         "precisely": precisely, "customer": customer, "total": precisely + customer,
+                         "feasible_data_stays": S3_FEASIBLE[option] if sc == "S3" else "n/a (hosted)", "quality": quality,
+                         "not_modeled": "Precisely development and support" if sc == "S3" else ("price passed through to the customer" if sc == "S1" else ""),
+                         "calls_per_day": m["calls_per_day"] if comps["llm"] > 0 else 0.0, "cores_model": m["cores_model"], "cores_verity": m["cores_verity"],
+                         "hosting_model": m["hosting_model"], "hosting_verity": m["hosting_verity"]})
+    return rows
+
+
+def scenario_total_horizon(p: Params, option: str, volume: float, rate: float, labels: int, scenario: str, d_variant: str = "off") -> float:
+    """Total over the horizon in a scenario (S3 leaves out Precisely's development, which is not modeled)."""
+    rows = [r for r in scenario_rows(p, option, volume, rate, labels) if r["scenario"] == scenario]
+    if scenario == "S3" and option == "D":
+        rows = [r for r in rows if r["label"] == ("D (LLM fallback off)" if d_variant == "off" else "D (own key connected)")]
+    return rows[0]["total"] * p.horizon_months
 
 
 # ------------------------------------------------------------------ protocol bars
@@ -508,7 +569,7 @@ def load_inputs(repo: Path, run: Path, out_rows: list, productization_hours: flo
     p.effort_hours = {k: v["production"] for k, v in buckets.items()}
     for k, v in sorted(buckets.items()):
         add(f"effort-log hours, bucket {k}", f"{v['total']:g} total, {v['production']:g} production needed", "hours", "measured",
-            "cost/effort_log.csv", "eval is never charged to an option; verity is shared by every option" if k in ("eval", "verity") else "")
+            "cost/effort_log.csv", "the PoC's own effort: goes into the block 'cost to build the evidence', charged to no option or scenario")
     pre = [r for r in csv.reader((repo / "cost" / "verity_preexisting_cost.csv").open(encoding="utf-8-sig"))][-1]
     p.verity_preexisting_hours = float(pre[1])
     add("Verity pre-existing build", p.verity_preexisting_hours, "hours", "assumed", "cost/verity_preexisting_cost.csv (your estimate)")
@@ -517,13 +578,14 @@ def load_inputs(repo: Path, run: Path, out_rows: list, productization_hours: flo
     led = ledger_spend(repo / "results" / "llm_ledger.jsonl")
     p.b_dev_api_usd = led["by_class"].get("B development", 0.0)
     add("ledger classification rule", "tuning rounds (tune*), caching diagnostics (cache_diagnostic*), the smoke test (smoke*) and "
-        "the concurrency test = B one-time development (production needed); sample5000, decoycheck, dfull (D routed pairs) and the "
-        "coming Dec 4 runs (final*, dec4*) = evaluation, counted once and charged to no option", "", "assumed", "your instruction; cost/cost_model.py classify_ledger_label",
+        "the concurrency test = B development; sample5000, decoycheck, dfull (D routed pairs) and the "
+        "coming Dec 4 runs (final*, dec4*) = evaluation, counted once. Both classes are the PoC's API spend: they are shown in the block "
+        "'cost to build the evidence' and charged to no option or scenario", "", "assumed", "your instruction; cost/cost_model.py classify_ledger_label",
         "the concurrency test is my classification (a capacity measurement for B)")
     for lab, usd in sorted(led["by_label"].items()):
         add(f"ledger spend, run {lab}", round(usd, 4), "USD", "measured", "results/llm_ledger.jsonl", classify_ledger_label(lab))
-    add("ledger: B one-time development API spend", round(p.b_dev_api_usd, 4), "USD", "measured", "results/llm_ledger.jsonl", "charged to B and to D (D uses B's prompt)")
-    add("ledger: evaluation API spend (counted once)", round(led["by_class"].get("evaluation", 0.0), 4), "USD", "measured", "results/llm_ledger.jsonl", "charged to no option")
+    add("ledger: B development API spend", round(p.b_dev_api_usd, 4), "USD", "measured", "results/llm_ledger.jsonl", "cost to build the evidence; charged to no option or scenario")
+    add("ledger: evaluation API spend (counted once)", round(led["by_class"].get("evaluation", 0.0), 4), "USD", "measured", "results/llm_ledger.jsonl", "cost to build the evidence; charged to no option or scenario")
     if led["by_class"].get("unclassified"):
         add("ledger: UNCLASSIFIED spend", round(led["by_class"]["unclassified"], 4), "USD", "measured", "results/llm_ledger.jsonl", "add a rule in classify_ledger_label")
 
@@ -547,7 +609,21 @@ def load_inputs(repo: Path, run: Path, out_rows: list, productization_hours: flo
         add(f"volume {v:,} records per day", v, "records per day", "assumed", "protocol.md")
     add("hourly rates", "50, 100, 200", "USD per hour", "assumed", "your instruction")
     add("days per month", DAYS_PER_MONTH, "days", "assumed", "model parameter")
-    add("horizon", p.horizon_months, "months", "assumed", "one-time cost is amortized and totals are taken over this horizon")
+    add("horizon", p.horizon_months, "months", "assumed", "one-time cost (Verity build and productization, labeling) is amortized and totals are taken over this horizon")
+    note = ("who pays is a commercial decision this PoC can inform but not settle; the three scenarios and the party for each cost component "
+            "are assumptions, not findings")
+    for sc, text in SCENARIOS.items():
+        add(f"scenario {sc}", text, "", "assumed", "your instruction", note)
+    for sc in SCENARIOS:
+        add(f"scenario {sc}: who pays each component", "; ".join(f"{COMPONENT_TEXT[c]}: {PARTY[sc][c]}" for c in COMPONENTS), "", "assumed", "your instruction",
+            "hosting and operations assumptions are unchanged; only the party is assigned. Labeling is assumed to be done by Precisely when it hosts the matcher "
+            "and by the customer when the matcher runs in their environment (their data stays there)")
+    add("scenario S3: feasible when data cannot leave the environment", "A yes; B no; C yes; D yes with the LLM fallback off", "", "assumed", "your instruction",
+        "B needs an external LLM for every band pair; D's quality with the LLM fallback off was never measured (it is C's decisions for the routed pairs, "
+        "which the evaluation did not score)")
+    add("scenario S3: B and D cost basis", "B and D(own key connected) are costed with the customer's own LLM key; D(LLM fallback off) has no LLM line", "", "assumed", "model parameter")
+    add("cost to build the evidence", "separate block: effort-log hours x hourly rate and the ledger API spend", "", "measured", "cost/effort_log.csv and results/llm_ledger.jsonl",
+        "not charged to any option or scenario; undercounted for B and D until the effort log is complete")
     add("option E", "not run", "", "measured", "options/e_slm.py has no results", "no numbers are invented")
     lc = list(csv.DictReader((run / "options" / "c_model" / "lc_v2" / "learning_curve.csv").open(encoding="utf-8")))
     f1 = {int(r["n"]): float(r["f1_mean"]) for r in lc}
@@ -593,13 +669,29 @@ def main() -> int:
     say("Hours by bucket (total / production needed / other):")
     for k, v in sorted(ctx["buckets"].items()):
         say(f"  {k:<8}{v['total']:>6g} / {v['production']:>5g} / {v['other']:>5g}")
-    say(f"  Production hours logged: B {ctx['buckets'].get('B', {}).get('production', 0):g}, D {ctx['buckets'].get('D', {}).get('production', 0):g}. "
-        f"Building B (code, tuning rounds, final run) and D (routing, sweep, full-band run) is only partly in the log, so one-time costs for B and D "
-        f"are undercounted until the log is completed (use --effort-log-complete once it is).")
+    say(f"  These hours are the PoC's own effort. They go into the block 'cost to build the evidence' below and are not charged to any option or scenario. "
+        f"B and D are only partly in the log (logged production hours: B {ctx['buckets'].get('B', {}).get('production', 0):g}, "
+        f"D {ctx['buckets'].get('D', {}).get('production', 0):g}), so that block is undercounted until the log is completed (use --effort-log-complete once it is).")
     led = ctx["ledger"]
-    say(f"\nLedger spend by class: " + ", ".join(f"{k} ${v:.4f}" for k, v in sorted(led["by_class"].items())))
+    ev_rows = []
+    say("\nCost to build the evidence (the PoC's own spend; NOT charged to any option or scenario)")
+    say(f"  {'effort-log hours':<30}{'hours':>8}" + "".join(f"{'$' + format(r, 'g') + '/h':>12}" for r in RATES))
+    tot_h = 0.0
+    for k, v in sorted(ctx["buckets"].items()):
+        tot_h += v["total"]
+        say(f"  {'bucket ' + k:<30}{v['total']:>8g}" + "".join(f"{v['total'] * r:>12,.0f}" for r in RATES))
+        ev_rows.append(["effort-log hours", f"bucket {k}", f"{v['total']:g}"] + [f"{v['total'] * r:.2f}" for r in RATES])
+    say(f"  {'hours total':<30}{tot_h:>8g}" + "".join(f"{tot_h * r:>12,.0f}" for r in RATES))
+    ev_rows.append(["effort-log hours", "total", f"{tot_h:g}"] + [f"{tot_h * r:.2f}" for r in RATES])
+    api_total = sum(led["by_class"].values())
+    say(f"  API spend from the ledger: " + ", ".join(f"{k} ${v:.4f}" for k, v in sorted(led["by_class"].items())) + f"; total ${api_total:.4f}")
     for lab, usd in sorted(led["by_label"].items()):
-        say(f"  {lab:<28} ${usd:>8.4f}  {classify_ledger_label(lab)}")
+        say(f"    {lab:<28} ${usd:>8.4f}  {classify_ledger_label(lab)}")
+        ev_rows.append(["API spend (ledger)", f"{lab} ({classify_ledger_label(lab)})", ""] + [f"{usd:.4f}"] * 3)
+    ev_rows.append(["API spend (ledger)", "total", ""] + [f"{api_total:.4f}"] * 3)
+    say(f"  {'evidence total (hours x rate + API spend)':<44}" + "".join(f"{tot_h * r + api_total:>12,.0f}" for r in RATES))
+    ev_rows.append(["total", "hours x rate + API spend", ""] + [f"{tot_h * r + api_total:.2f}" for r in RATES])
+    write_csv(out / "evidence_cost.csv", ["kind", "item", "hours", "usd_at_50_per_hour", "usd_at_100_per_hour", "usd_at_200_per_hour"], ev_rows, draft)
 
     # labeling table
     say("\nLabeling for C and D, next to B's zero labels (hours at "
@@ -614,39 +706,73 @@ def main() -> int:
         "the learning curve (lc_v2); the spread between seeds is large (see learning_curve.csv). B's development also used labeled train pairs "
         "(8 few-shot examples and 2,000 tuning pairs, free from the generator); that is not charged as labeling here.")
 
-    # main grid
+    # who pays: every option, volume and scenario
+    def grid_row(lab, rate, vol, r):
+        if r["status"] == "not run":
+            return [lab, rate, vol, "E", "E", "", "not run"] + [""] * 23
+        c, pt = r["components"], r["parties"]
+        h = p.horizon_months
+        return [lab, rate, vol, r["option"], r["label"], r["scenario"], "modelled", r["feasible_data_stays"], r["quality"],
+                f"{r['precisely']:.2f}", f"{r['customer']:.2f}", f"{r['total']:.2f}",
+                f"{r['precisely'] * h:.2f}", f"{r['customer'] * h:.2f}", f"{r['total'] * h:.2f}",
+                f"{c['llm']:.2f}", pt["llm"], f"{r['hosting_model']:.2f}", f"{r['hosting_verity']:.2f}", pt["hosting"], f"{c['operations']:.2f}", pt["operations"],
+                f"{c['development']:.2f}", pt["development"], f"{c['labeling']:.2f}", pt["labeling"], f"{r['calls_per_day']:.0f}",
+                f"{r['cores_model']}", f"{r['cores_verity']}", r["not_modeled"]]
+
     grid = []
     for lab in LABEL_SCENARIOS:
         for rate in RATES:
             for vol in VOLUMES:
                 for opt in OPTIONS:
-                    m = monthly(p, opt, vol, rate, lab)
-                    if opt == "E":
-                        grid.append([lab, rate, vol, "E", "not run"] + [""] * 15)
-                        continue
-                    grid.append([lab, rate, vol, opt, "modelled", f"{m['calls_per_day']:.0f}", f"{m['llm']:.2f}", f"{m['hosting_model']:.2f}",
-                                 f"{m['hosting_verity']:.2f}", f"{m['operations']:.2f}", f"{m['running']:.2f}", f"{m['one_time']:.2f}",
-                                 f"{m['one_time_amortized']:.2f}", f"{m['total_month']:.2f}", f"{m['total_horizon']:.2f}",
-                                 f"{m['cost_precisely_hosted_llm']:.2f}", f"{m['cost_precisely_byok']:.2f}", f"{m['cost_customer_byok']:.2f}",
-                                 f"{m['cores_model']}", f"{m['cores_verity']}"])
+                    for r in scenario_rows(p, opt, vol, rate, lab):
+                        grid.append(grid_row(lab, rate, vol, r))
     write_csv(out / "cost_model.csv",
-              ["labels_for_C_and_D", "hourly_rate_usd", "records_per_day", "option", "status", "llm_calls_per_day", "llm_usd_month",
-               "hosting_model_usd_month", "hosting_verity_usd_month", "operations_usd_month", "running_usd_month", "one_time_usd",
-               "one_time_amortized_usd_month", "total_usd_month", "total_usd_over_horizon", "precisely_pays_llm_precisely_usd_month",
-               "byok_precisely_usd_month", "byok_customer_usd_month", "cores_model", "cores_verity"], grid, draft)
+              ["labels_for_C_and_D", "hourly_rate_usd", "records_per_day", "option", "option_row", "scenario", "status",
+               "feasible_when_data_cannot_leave_the_environment", "quality", "precisely_usd_month", "customer_usd_month", "total_usd_month",
+               "precisely_usd_12_months", "customer_usd_12_months", "total_usd_12_months", "llm_usd_month", "llm_paid_by", "hosting_model_usd_month",
+               "hosting_verity_usd_month", "hosting_paid_by", "operations_usd_month", "operations_paid_by", "development_amortized_usd_month",
+               "development_paid_by", "labeling_amortized_usd_month", "labeling_paid_by", "llm_calls_per_day", "cores_model", "cores_verity",
+               "not_modeled"], grid, draft)
 
-    say(f"\nMonthly cost at the base case (hourly rate ${BASE_RATE:g}, labels {BASE_LABELS:,}, standard prices with cache, hit ratio {p.hit_ratio:.3f}), USD per month")
-    say(f"  {'records/day':>12}{'option':>7}{'LLM':>12}{'hosting':>10}{'operations':>12}{'one-time/12':>13}{'total':>12}   BYOK: Precisely / customer")
+    say("\nDeployment scenarios (assumed; who pays is a commercial decision this PoC can inform but not settle)")
+    for sc, text in SCENARIOS.items():
+        say(f"  {sc}: {text}")
+    say("  Who pays each cost component (hosting and operations assumptions are unchanged; only the party is assigned):")
+    say(f"    {'component':<62}{'S1':<12}{'S2':<12}S3")
+    for c in COMPONENTS:
+        say(f"    {COMPONENT_TEXT[c]:<62}{PARTY['S1'][c]:<12}{PARTY['S2'][c]:<12}{PARTY['S3'][c]}")
+    say("    Labeling is assumed to be done by Precisely when it hosts the matcher and by the customer when the matcher runs in their environment.")
+    say("  S3 feasibility when data cannot leave the environment: A yes, B no, C yes, D yes with the LLM fallback off (its quality in that case is not measured).")
+
+    say(f"\nMonthly cost by component at the base case (hourly rate ${BASE_RATE:g}, labels {BASE_LABELS:,}, standard prices with cache, hit ratio {p.hit_ratio:.3f}), "
+        f"USD per month, all parties together")
+    say(f"  {'records/day':>12}{'option':>7}{'LLM':>12}{'hosting':>10}{'operations':>12}{'one-time/12':>13}{'total':>12}")
     for vol in VOLUMES:
         for opt in OPTIONS:
             m = monthly(p, opt, vol, BASE_RATE, BASE_LABELS)
             if opt == "E":
                 say(f"  {vol:>12,}{'E':>7}  not run")
                 continue
-            say(f"  {vol:>12,}{opt:>7}{m['llm']:>12,.0f}{m['hosting']:>10,.0f}{m['operations']:>12,.0f}{m['one_time_amortized']:>13,.0f}{m['total_month']:>12,.0f}"
-                f"   {m['cost_precisely_byok']:,.0f} / {m['cost_customer_byok']:,.0f}")
+            say(f"  {vol:>12,}{opt:>7}{m['llm']:>12,.0f}{m['hosting']:>10,.0f}{m['operations']:>12,.0f}{m['one_time_amortized']:>13,.0f}{m['total_month']:>12,.0f}")
     say(f"  (hosting is the cheaper of always-on and serverless; shared Verity pipeline per record is in every row: "
-        f"{p.verity_cpu_s_per_record * 1000:.1f} ms of one core per record{'' if p.verity_quotable else ', NOT FOR QUOTING'})")
+        f"{p.verity_cpu_s_per_record * 1000:.1f} ms of one core per record{'' if p.verity_quotable else ', NOT FOR QUOTING'}; "
+        f"one-time = the Verity build and productization shared by every option, plus labeling for C and D)")
+
+    for vol in (BASE_VOLUME, 100_000, 10_000_000):
+        say(f"\nWho pays at {vol:,} records per day, USD per month (hourly rate ${BASE_RATE:g}; C and D with {LABEL_SCENARIOS[-1]:,} labels, as evaluated; "
+            f"development and labeling amortized over {p.horizon_months} months)")
+        say(f"  {'option':<24}{'scen.':<6}{'Precisely':>13}{'customer':>13}{'total':>13}   {'feasible if data cannot leave (S3)':<36}quality")
+        for opt in OPTIONS:
+            for r in scenario_rows(p, opt, vol, BASE_RATE, LABEL_SCENARIOS[-1]):
+                if r["status"] == "not run":
+                    say(f"  {'E':<24}      not run (no results; no numbers)")
+                    continue
+                pre = f"{r['precisely']:,.0f}" if r["scenario"] != "S3" else f"{r['precisely']:,.0f}*"
+                say(f"  {r['label']:<24}{r['scenario']:<6}{pre:>13}{r['customer']:>13,.0f}{r['total']:>13,.0f}   "
+                    f"{r['feasible_data_stays'] if r['scenario'] == 'S3' else '':<36}{r['quality'] if opt == 'D' and r['scenario'] == 'S3' else ''}")
+        say("  * S3: Precisely's development and support are not modeled (shown as 0); S1: the price passed through to the customer is not modeled. "
+            "B in S3 is costed with the customer's own key and is not feasible when data cannot leave the environment.")
+    make_who_pays_chart(p, out, draft)
     cpm = calls_per_day(p, "B", 100_000) / 1440
     say(f"\nThroughput: B at 100K records/day needs {calls_per_day(p, 'B', 100_000):,.0f} calls a day = {cpm:,.0f} calls per minute "
         f"({cpm / 60:.1f} per second; about {cpm / 60 * 0.95:.0f} requests in flight at the measured p50 latency of 0.95 s). "
@@ -741,10 +867,13 @@ def main() -> int:
         for rate in RATES:
             for opt in ("A", "C", "D"):
                 r = break_even(lambda v, o=opt: total_horizon(p, o, v, rate, lab), lambda v: total_horizon(p, "B", v, rate, lab))
-                be_rows.append([lab, rate, opt, "" if r["volume"] is None else f"{r['volume']:.0f}", r["kind"]])
+                be_rows.append(["S1 and S2 (same total)", lab, rate, opt, "" if r["volume"] is None else f"{r['volume']:.0f}", r["kind"]])
                 if lab == BASE_LABELS:
                     be_text.append((opt, rate, r))
-    write_csv(out / "break_even.csv", ["labels_for_C_and_D", "hourly_rate_usd", "option", "break_even_records_per_day", "result"], be_rows, draft)
+                r3 = break_even(lambda v, o=opt: scenario_total_horizon(p, o, v, rate, lab, "S3"), lambda v: scenario_total_horizon(p, "B", v, rate, lab, "S3"))
+                be_rows.append(["S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)", lab, rate, opt,
+                                "" if r3["volume"] is None else f"{r3['volume']:.0f}", r3["kind"]])
+    write_csv(out / "break_even.csv", ["scenario", "labels_for_C_and_D", "hourly_rate_usd", "option", "break_even_records_per_day", "result"], be_rows, draft)
     say(f"\nBreak-even against B (total over {p.horizon_months} months equal; labels {BASE_LABELS:,}; volume range 1,000 to 100,000,000 records per day)")
     for opt, rate, r in be_text:
         if r["volume"] is None:
@@ -810,6 +939,40 @@ def main() -> int:
     make_charts(p, out, draft)
     print(text)
     return 0
+
+
+def make_who_pays_chart(p: Params, out: Path, draft: bool) -> None:
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    fig, axes = plt.subplots(2, 3, figsize=(15, 8.5))
+    for j, sc in enumerate(("S1", "S2", "S3")):
+        rows = [r for opt in "ABCD" for r in scenario_rows(p, opt, BASE_VOLUME, BASE_RATE, LABEL_SCENARIOS[-1]) if r["scenario"] == sc]
+        for i, show_b in enumerate((True, False)):
+            ax = axes[i][j]
+            sel = [r for r in rows if show_b or r["option"] != "B"]
+            short = {"B (own key connected)": "B\nown key", "D (LLM fallback off)": "D\nfallback off", "D (own key connected)": "D\nown key"}
+            names = [short.get(r["label"], r["label"]) for r in sel]
+            pre = [r["precisely"] for r in sel]
+            cus = [r["customer"] for r in sel]
+            ax.bar(names, pre, color="#1f77b4", label="Precisely")
+            ax.bar(names, cus, bottom=pre, color="#ff7f0e", label="customer")
+            for k, r in enumerate(sel):
+                ax.text(k, pre[k] + cus[k], f"${pre[k] + cus[k]:,.0f}" + ("*" if sc == "S3" else ""), ha="center", va="bottom", fontsize=7)
+                if sc == "S3" and r["option"] == "B":
+                    ax.text(k, 0, "not feasible if\ndata cannot leave", ha="center", va="bottom", fontsize=6, color="white")
+            ax.set_title(f"{sc}" + ("" if show_b else " (B removed, zoom)"), fontsize=10)
+            ax.set_ylabel("USD per month")
+            ax.tick_params(axis="x", labelsize=7)
+            ax.margins(y=0.15)
+    axes[0][0].legend(fontsize=8)
+    fig.text(0.5, 0.005, f"{BASE_VOLUME:,} records/day, ${BASE_RATE:g}/h, C and D with {LABEL_SCENARIOS[-1]:,} labels (as evaluated). E: not run. "
+             "S1: price passed through to the customer not modeled. S3: * Precisely's development and support not modeled. Who pays is a commercial decision this PoC "
+             "can inform but not settle.", ha="center", fontsize=7)
+    fig.suptitle(("DRAFT: effort log incomplete, one-time costs for B and D undercounted\n" if draft else "") + "Who pays, monthly cost per option and scenario")
+    fig.tight_layout(rect=(0, 0.03, 1, 0.94))
+    fig.savefig(out / "chart_who_pays.png", dpi=120)
+    plt.close(fig)
 
 
 def make_charts(p: Params, out: Path, draft: bool) -> None:
