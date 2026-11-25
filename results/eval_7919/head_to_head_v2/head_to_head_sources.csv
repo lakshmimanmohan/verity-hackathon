@@ -1,0 +1,133 @@
+table,row,column,source_file,how
+sample basis,A,D fallback tail,,constant text
+sample basis,A,ECE,results/eval_7919/options/a_threshold/score_report_sample5000.txt,read
+sample basis,A,F1 verdict,results/eval_7919/bars_table.csv,read
+sample basis,A,F1 vs B [95% CI],results/eval_7919/bars_table.csv,read
+sample basis,A,"LLM $ per 1,000 band pairs",results/eval_7919/results_table.csv,read
+sample basis,A,LLM $ per record,results/eval_7919/results_table.csv; results/eval_7919/cost_final/assumptions.csv,"derived: per 1,000 band pairs x 20.0499 band pairs per record / 1,000"
+sample basis,A,band F1 [95% CI],results/eval_7919/options/a_threshold/score_report_sample5000.txt,read
+sample basis,A,band pairs per record,results/eval_7919/cost_final/assumptions.csv,read
+sample basis,A,band precision,results/eval_7919/options/a_threshold/score_report_sample5000.txt,read
+sample basis,A,band recall,results/eval_7919/options/a_threshold/score_report_sample5000.txt,read
+sample basis,A,"break-even vs B at $100/h, 2,000 labels",results/eval_7919/cost_final/break_even.csv,read
+sample basis,A,"break-even vs B at $100/h, labels as evaluated",results/eval_7919/cost_final/break_even.csv,read
+sample basis,A,"break-even vs B at $200/h, 2,000 labels",results/eval_7919/cost_final/break_even.csv,read
+sample basis,A,"break-even vs B at $200/h, labels as evaluated",results/eval_7919/cost_final/break_even.csv,read
+sample basis,A,"break-even vs B at $50/h, 2,000 labels",results/eval_7919/cost_final/break_even.csv,read
+sample basis,A,"break-even vs B at $50/h, labels as evaluated",results/eval_7919/cost_final/break_even.csv,read
+sample basis,A,"latency per pair (p50, p95)",,constant text
+sample basis,A,"meets every bar (full-band basis, A, C and D only)",results/eval_7919/options/a_threshold/score_report.txt; results/eval_7919/options/a_threshold/score_report.txt; results/eval_7919/bars_table.csv; results/eval_7919/options/latency/latency_summary.json,derived: the protocol's bars applied to the full-band report
+sample basis,A,meets every bar (sample basis),results/eval_7919/options/a_threshold/score_report_sample5000.txt; results/eval_7919/options/a_threshold/score_report_sample5000.txt; results/eval_7919/bars_table.csv; results/eval_7919/options/latency/latency_summary.json,derived: the protocol's bars applied to the sample-basis report
+sample basis,A,monthly $ at 100K records/day (Precisely / customer / total),results/eval_7919/cost_final/cost_model.csv,read
+sample basis,A,monthly $ at 10M records/day (Precisely / customer / total),results/eval_7919/cost_final/cost_model.csv,read
+sample basis,A,monthly $ at 1M records/day (Precisely / customer / total),results/eval_7919/cost_final/cost_model.csv,read
+sample basis,A,overall precision,results/eval_7919/options/a_threshold/score_report_sample5000.txt,read
+sample basis,A,overall recall,results/eval_7919/options/a_threshold/score_report_sample5000.txt,read
+sample basis,B,D fallback tail,,constant text
+sample basis,B,ECE,results/eval_7919/options/b_llm/openai/sample5000/score_report_sample5000.txt,read
+sample basis,B,F1 verdict,results/eval_7919/bars_table.csv,read
+sample basis,B,F1 vs B [95% CI],results/eval_7919/bars_table.csv,read
+sample basis,B,"LLM $ per 1,000 band pairs",results/eval_7919/results_table.csv,read
+sample basis,B,LLM $ per record,results/eval_7919/results_table.csv; results/eval_7919/cost_final/assumptions.csv,"derived: per 1,000 band pairs x 20.0499 band pairs per record / 1,000"
+sample basis,B,band F1 [95% CI],results/eval_7919/options/b_llm/openai/sample5000/score_report_sample5000.txt,read
+sample basis,B,band pairs per record,results/eval_7919/cost_final/assumptions.csv,read
+sample basis,B,band precision,results/eval_7919/options/b_llm/openai/sample5000/score_report_sample5000.txt,read
+sample basis,B,band recall,results/eval_7919/options/b_llm/openai/sample5000/score_report_sample5000.txt,read
+sample basis,B,"break-even vs B at $100/h, 2,000 labels",results/eval_7919/cost_final/break_even.csv,read
+sample basis,B,"break-even vs B at $100/h, labels as evaluated",results/eval_7919/cost_final/break_even.csv,read
+sample basis,B,"break-even vs B at $200/h, 2,000 labels",results/eval_7919/cost_final/break_even.csv,read
+sample basis,B,"break-even vs B at $200/h, labels as evaluated",results/eval_7919/cost_final/break_even.csv,read
+sample basis,B,"break-even vs B at $50/h, 2,000 labels",results/eval_7919/cost_final/break_even.csv,read
+sample basis,B,"break-even vs B at $50/h, labels as evaluated",results/eval_7919/cost_final/break_even.csv,read
+sample basis,B,"latency per pair (p50, p95)",results/eval_7919/options/b_llm/openai/sample5000/timings.json,read
+sample basis,B,"meets every bar (full-band basis, A, C and D only)",,constant text
+sample basis,B,meets every bar (sample basis),results/eval_7919/options/b_llm/openai/sample5000/score_report_sample5000.txt; results/eval_7919/options/a_threshold/score_report_sample5000.txt; results/eval_7919/bars_table.csv; results/eval_7919/options/latency/latency_summary.json,derived: the protocol's bars applied to the sample-basis report
+sample basis,B,monthly $ at 100K records/day (Precisely / customer / total),results/eval_7919/cost_final/cost_model.csv,read
+sample basis,B,monthly $ at 10M records/day (Precisely / customer / total),results/eval_7919/cost_final/cost_model.csv,read
+sample basis,B,monthly $ at 1M records/day (Precisely / customer / total),results/eval_7919/cost_final/cost_model.csv,read
+sample basis,B,overall precision,results/eval_7919/options/b_llm/openai/sample5000/score_report_sample5000.txt,read
+sample basis,B,overall recall,results/eval_7919/options/b_llm/openai/sample5000/score_report_sample5000.txt,read
+sample basis,C,D fallback tail,,constant text
+sample basis,C,ECE,results/eval_7919/options/c_model/c_v1_lgbm/score_report_sample5000.txt,read
+sample basis,C,F1 verdict,results/eval_7919/bars_table.csv,read
+sample basis,C,F1 vs B [95% CI],results/eval_7919/bars_table.csv,read
+sample basis,C,"LLM $ per 1,000 band pairs",results/eval_7919/results_table.csv,read
+sample basis,C,LLM $ per record,results/eval_7919/results_table.csv; results/eval_7919/cost_final/assumptions.csv,"derived: per 1,000 band pairs x 20.0499 band pairs per record / 1,000"
+sample basis,C,band F1 [95% CI],results/eval_7919/options/c_model/c_v1_lgbm/score_report_sample5000.txt,read
+sample basis,C,band pairs per record,results/eval_7919/cost_final/assumptions.csv,read
+sample basis,C,band precision,results/eval_7919/options/c_model/c_v1_lgbm/score_report_sample5000.txt,read
+sample basis,C,band recall,results/eval_7919/options/c_model/c_v1_lgbm/score_report_sample5000.txt,read
+sample basis,C,"break-even vs B at $100/h, 2,000 labels",results/eval_7919/cost_final/break_even.csv,read
+sample basis,C,"break-even vs B at $100/h, labels as evaluated",results/eval_7919/cost_final/break_even.csv,read
+sample basis,C,"break-even vs B at $200/h, 2,000 labels",results/eval_7919/cost_final/break_even.csv,read
+sample basis,C,"break-even vs B at $200/h, labels as evaluated",results/eval_7919/cost_final/break_even.csv,read
+sample basis,C,"break-even vs B at $50/h, 2,000 labels",results/eval_7919/cost_final/break_even.csv,read
+sample basis,C,"break-even vs B at $50/h, labels as evaluated",results/eval_7919/cost_final/break_even.csv,read
+sample basis,C,"latency per pair (p50, p95)",results/eval_7919/options/latency/latency_summary.json,read
+sample basis,C,"meets every bar (full-band basis, A, C and D only)",results/eval_7919/options/c_model/c_v1_lgbm/score_report.txt; results/eval_7919/options/a_threshold/score_report.txt; results/eval_7919/bars_table.csv; results/eval_7919/options/latency/latency_summary.json,derived: the protocol's bars applied to the full-band report
+sample basis,C,meets every bar (sample basis),results/eval_7919/options/c_model/c_v1_lgbm/score_report_sample5000.txt; results/eval_7919/options/a_threshold/score_report_sample5000.txt; results/eval_7919/bars_table.csv; results/eval_7919/options/latency/latency_summary.json,derived: the protocol's bars applied to the sample-basis report
+sample basis,C,monthly $ at 100K records/day (Precisely / customer / total),results/eval_7919/cost_final/cost_model.csv,read
+sample basis,C,monthly $ at 10M records/day (Precisely / customer / total),results/eval_7919/cost_final/cost_model.csv,read
+sample basis,C,monthly $ at 1M records/day (Precisely / customer / total),results/eval_7919/cost_final/cost_model.csv,read
+sample basis,C,overall precision,results/eval_7919/options/c_model/c_v1_lgbm/score_report_sample5000.txt,read
+sample basis,C,overall recall,results/eval_7919/options/c_model/c_v1_lgbm/score_report_sample5000.txt,read
+sample basis,D,D fallback tail,results/eval_7919/cost_final/assumptions.csv,read
+sample basis,D,ECE,results/eval_7919/options/d_hybrid/score_report_sample5000.txt,read
+sample basis,D,F1 verdict,results/eval_7919/bars_table.csv,read
+sample basis,D,F1 vs B [95% CI],results/eval_7919/bars_table.csv,read
+sample basis,D,"LLM $ per 1,000 band pairs",results/eval_7919/results_table.csv,read
+sample basis,D,LLM $ per record,results/eval_7919/results_table.csv; results/eval_7919/cost_final/assumptions.csv,"derived: per 1,000 band pairs x 20.0499 band pairs per record / 1,000"
+sample basis,D,band F1 [95% CI],results/eval_7919/options/d_hybrid/score_report_sample5000.txt,read
+sample basis,D,band pairs per record,results/eval_7919/cost_final/assumptions.csv,read
+sample basis,D,band precision,results/eval_7919/options/d_hybrid/score_report_sample5000.txt,read
+sample basis,D,band recall,results/eval_7919/options/d_hybrid/score_report_sample5000.txt,read
+sample basis,D,"break-even vs B at $100/h, 2,000 labels",results/eval_7919/cost_final/break_even.csv,read
+sample basis,D,"break-even vs B at $100/h, labels as evaluated",results/eval_7919/cost_final/break_even.csv,read
+sample basis,D,"break-even vs B at $200/h, 2,000 labels",results/eval_7919/cost_final/break_even.csv,read
+sample basis,D,"break-even vs B at $200/h, labels as evaluated",results/eval_7919/cost_final/break_even.csv,read
+sample basis,D,"break-even vs B at $50/h, 2,000 labels",results/eval_7919/cost_final/break_even.csv,read
+sample basis,D,"break-even vs B at $50/h, labels as evaluated",results/eval_7919/cost_final/break_even.csv,read
+sample basis,D,"latency per pair (p50, p95)",results/eval_7919/options/latency/latency_summary.json,read
+sample basis,D,"meets every bar (full-band basis, A, C and D only)",results/eval_7919/options/d_hybrid/score_report_fullband.txt; results/eval_7919/options/a_threshold/score_report.txt; results/eval_7919/bars_table.csv; results/eval_7919/options/latency/latency_summary.json,derived: the protocol's bars applied to the full-band report; LLM share from bars_table.csv
+sample basis,D,meets every bar (sample basis),results/eval_7919/options/d_hybrid/score_report_sample5000.txt; results/eval_7919/options/a_threshold/score_report_sample5000.txt; results/eval_7919/bars_table.csv; results/eval_7919/options/latency/latency_summary.json,derived: the protocol's bars applied to the sample-basis report; LLM share from bars_table.csv
+sample basis,D,monthly $ at 100K records/day (Precisely / customer / total),results/eval_7919/cost_final/cost_model.csv,read
+sample basis,D,monthly $ at 10M records/day (Precisely / customer / total),results/eval_7919/cost_final/cost_model.csv,read
+sample basis,D,monthly $ at 1M records/day (Precisely / customer / total),results/eval_7919/cost_final/cost_model.csv,read
+sample basis,D,overall precision,results/eval_7919/options/d_hybrid/score_report_sample5000.txt,read
+sample basis,D,overall recall,results/eval_7919/options/d_hybrid/score_report_sample5000.txt,read
+sample basis,D (orig),D fallback tail,cost/assumptions.csv row 'D per-pair latency with the LLM fallback (simulation)',missing
+sample basis,D (orig),ECE,results/eval_7919/options/d_hybrid/score_report_sample5000_original.txt,read
+sample basis,D (orig),F1 verdict,results/eval_7919/bars_table.csv,read
+sample basis,D (orig),F1 vs B [95% CI],results/eval_7919/bars_table.csv,read
+sample basis,D (orig),"LLM $ per 1,000 band pairs",results/eval_7919/results_table.csv,read
+sample basis,D (orig),LLM $ per record,results/eval_7919/results_table.csv; results/eval_7919/cost_final/assumptions.csv,"derived: per 1,000 band pairs x 20.0499 band pairs per record / 1,000"
+sample basis,D (orig),band F1 [95% CI],results/eval_7919/options/d_hybrid/score_report_sample5000_original.txt,read
+sample basis,D (orig),band pairs per record,results/eval_7919/cost_final/assumptions.csv,read
+sample basis,D (orig),band precision,results/eval_7919/options/d_hybrid/score_report_sample5000_original.txt,read
+sample basis,D (orig),band recall,results/eval_7919/options/d_hybrid/score_report_sample5000_original.txt,read
+sample basis,D (orig),"break-even vs B at $100/h, 2,000 labels",cost/break_even.csv (no row for D (orig)),missing
+sample basis,D (orig),"break-even vs B at $100/h, labels as evaluated",cost/break_even.csv (no row for D (orig)),missing
+sample basis,D (orig),"break-even vs B at $200/h, 2,000 labels",cost/break_even.csv (no row for D (orig)),missing
+sample basis,D (orig),"break-even vs B at $200/h, labels as evaluated",cost/break_even.csv (no row for D (orig)),missing
+sample basis,D (orig),"break-even vs B at $50/h, 2,000 labels",cost/break_even.csv (no row for D (orig)),missing
+sample basis,D (orig),"break-even vs B at $50/h, labels as evaluated",cost/break_even.csv (no row for D (orig)),missing
+sample basis,D (orig),"latency per pair (p50, p95)",options/latency/latency_summary.json (measures D with the v2 setting only),missing
+sample basis,D (orig),"meets every bar (full-band basis, A, C and D only)",,constant text
+sample basis,D (orig),meets every bar (sample basis),results/eval_7919/options/d_hybrid/score_report_sample5000_original.txt; results/eval_7919/options/a_threshold/score_report_sample5000.txt; results/eval_7919/bars_table.csv; results/eval_7919/options/latency/latency_summary.json,derived: the protocol's bars applied to the sample-basis report; LLM share from bars_table.csv
+sample basis,D (orig),monthly $ at 100K records/day (Precisely / customer / total),cost/cost_model.csv (it has no D (orig) rows; cost/options_vs_bars.csv holds only the 1M total),missing
+sample basis,D (orig),monthly $ at 10M records/day (Precisely / customer / total),cost/cost_model.csv (it has no D (orig) rows; cost/options_vs_bars.csv holds only the 1M total),missing
+sample basis,D (orig),monthly $ at 1M records/day (Precisely / customer / total),results/eval_7919/cost_final/options_vs_bars.csv,read (total only: the cost model has no Precisely/customer split for D (orig))
+sample basis,D (orig),overall precision,results/eval_7919/options/d_hybrid/score_report_sample5000_original.txt,read
+sample basis,D (orig),overall recall,results/eval_7919/options/d_hybrid/score_report_sample5000_original.txt,read
+full band,A,band F1 [95% CI],results/eval_7919/options/a_threshold/score_report.txt,read
+full band,A,band precision,results/eval_7919/options/a_threshold/score_report.txt,read
+full band,A,band recall,results/eval_7919/options/a_threshold/score_report.txt,read
+full band,C,band F1 [95% CI],results/eval_7919/options/c_model/c_v1_lgbm/score_report.txt,read
+full band,C,band precision,results/eval_7919/options/c_model/c_v1_lgbm/score_report.txt,read
+full band,C,band recall,results/eval_7919/options/c_model/c_v1_lgbm/score_report.txt,read
+full band,D,band F1 [95% CI],results/eval_7919/options/d_hybrid/score_report_fullband.txt,read
+full band,D,band precision,results/eval_7919/options/d_hybrid/score_report_fullband.txt,read
+full band,D,band recall,results/eval_7919/options/d_hybrid/score_report_fullband.txt,read
+full band,D (orig),band F1 [95% CI],results/eval_7919/options/d_hybrid/score_report_fullband_original.txt,read
+full band,D (orig),band precision,results/eval_7919/options/d_hybrid/score_report_fullband_original.txt,read
+full band,D (orig),band recall,results/eval_7919/options/d_hybrid/score_report_fullband_original.txt,read
