@@ -1,7 +1,7 @@
 """
 Latency figures of the freeze run: what was saved, the per-record view of D's routed pairs, and B's per-record time. Read-only: it reads
 only files under results/eval_7919 and results/freeze_<date>, plus one dev file (the concurrency measurement at 10 workers, labeled dev),
-and writes only latency_final.md into --out-dir (default results/eval_7919/latency_final/). It makes no call and opens no data or truth file.
+and writes only latency_final.md and latency_final.json into --out-dir (default results/eval_7919/latency_final/). It makes no call and opens no data or truth file.
 
   python eval/latency_final.py [--run results/eval_7919] [--freeze results/freeze_2026-11-25]
                                [--dev-concurrency results/dev_2026_run11/options/b_llm/openai/concurrency/concurrency.json]
@@ -229,6 +229,32 @@ def render(res: dict) -> str:
     return "\n".join(L)
 
 
+def to_json(res: dict) -> dict:
+    """The numbers behind latency_final.md, as a result file other scripts can read."""
+    pr, b, cs = res["per_record"], res["b_per_record"], res["c_summary"]
+    sample = res["b_calls"]["sample5000"]
+    rows = []
+    for label, lat in (("freeze run, call p50 (2 workers)", b["freeze_p50"]), ("freeze run, call p95 (2 workers)", b["freeze_p95"])) + (
+            (("DEV: call p50 at 10 workers", b["dev_level"]["latency_p50_s"]), ("DEV: call p95 at 10 workers", b["dev_level"]["latency_p95_s"])) if b["dev_level"] else ()):
+        mean_s, rounds_s = b_per_record(b["calls"], lat)
+        rows.append({"latency_used": label, "latency_s": lat, "mean_time_per_record_s": mean_s, "whole_rounds_time_per_record_s": rounds_s, "workers": WORKERS,
+                     "basis": "dev" if label.startswith("DEV") else "freeze run"})
+    return {
+        "note": "numbers behind latency_final.md; read from the freeze run's files (B per-record rows marked DEV use the dev concurrency measurement)",
+        "routed_pairs": pr["routed_pairs"], "band_pairs": pr["band_pairs"], "routed_share": pr["pair_share"],
+        "test_group_records": pr["records"], "records_with_routed_pair": pr["records_with_any"], "records_with_routed_pair_share": pr["share_with_any"],
+        "routed_pairs_per_record_both_ends": pr["endpoints_per_record"], "routed_pairs_per_record_once": pr["pairs_once_per_record"],
+        "max_routed_pairs_on_one_record": pr["max_per_record"], "records_by_routed_pairs": {str(k): v for k, v in pr["histogram"].items()},
+        "expected_share_independent": pr["expected_share_user"], "expected_share_exponent": pr["exponent_user"],
+        "expected_share_independent_degree": pr["expected_share_degree"], "expected_share_degree_exponent": pr["exponent_degree"],
+        "b_call_latency_sample5000": {"calls": sample["n"], "p50_s": sample["p50"], "p95_s": sample["p95"], "max_s": sample["max"], "source": sample["source"]},
+        "c_latency_median_of_repeats": {"p50_ms": cs["median"]["p50_ms"], "p95_ms": cs["median"]["p95_ms"], "max_ms": cs["median"]["max_ms"], "mean_ms": cs["median"]["mean_ms"],
+                                        "pairs": cs["pairs"], "source": cs["source"]},
+        "c_per_pair_array_saved": bool(res["c_arrays"]), "d_fallback_simulation_run": False,
+        "b_calls_per_record": b["calls"], "b_per_record": rows, "sources": {"routed_records": pr["sources"], "b_timings": b["freeze_source"], "dev_concurrency": b["dev_source"]},
+    }
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Latency figures of the freeze run.")
     ap.add_argument("--run", type=Path, default=REPO / "results" / "eval_7919")
@@ -245,7 +271,8 @@ def main() -> int:
     out = args.out_dir or run / "latency_final"
     out.mkdir(parents=True, exist_ok=True)
     (out / "latency_final.md").write_text(render(res), encoding="utf-8")
-    print(f"wrote {out / 'latency_final.md'}; read {len(set(R.read))} files")
+    (out / "latency_final.json").write_text(json.dumps(to_json(res), indent=1) + "\n", encoding="utf-8")
+    print(f"wrote {out / 'latency_final.md'} and latency_final.json; read {len(set(R.read))} files")
     return 0
 
 

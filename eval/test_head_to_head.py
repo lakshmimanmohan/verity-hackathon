@@ -284,6 +284,38 @@ class BarsAndBasesTests(Fixture):
         with self.assertRaises(SystemExit):
             H.Reader([self.run, self.freeze]).path(self.root / "elsewhere")
 
+    def write_latency_json(self):
+        j = {"routed_pairs": 3, "band_pairs": 12, "routed_share": 0.25, "test_group_records": 5, "records_with_routed_pair": 4, "records_with_routed_pair_share": 0.8,
+             "routed_pairs_per_record_both_ends": 1.2, "max_routed_pairs_on_one_record": 2, "b_calls_per_record": 20.0,
+             "b_call_latency_sample5000": {"calls": 5, "p50_s": 1.0, "p95_s": 2.0, "max_s": 3.0, "source": "x"},
+             "b_per_record": [{"latency_used": "freeze run, call p50 (2 workers)", "latency_s": 1.0, "mean_time_per_record_s": 2.0, "whole_rounds_time_per_record_s": 2.0, "workers": 10, "basis": "freeze run"}]}
+        self.w("latency_final/latency_final.json", json.dumps(j))
+        return self.run / "latency_final" / "latency_final.json"
+
+    def test_latency_json_replaces_the_dev_simulation_cell_and_adds_a_per_record_line(self):
+        path = self.write_latency_json()
+        R = H.Reader([self.run, self.freeze])
+        res = H.build(self.run, self.freeze, R, None, path)
+        T = res["T"]
+        self.assertEqual(T.get("D", "D fallback tail"),
+                         "25.000% of pairs (3 of 12) call the LLM, each call p50 1.000 s, p95 2.000 s; 80.00% of test records include at least one; the dev simulation (0.085% share) is withdrawn")
+        self.assertEqual(T.cells[("D", "D fallback tail")][1], "results/eval_7919/latency_final/latency_final.json")
+        self.assertEqual(T.get("B", "per-record latency (LLM calls)"),
+                         "20.00 calls per record; at 10 workers 2.00 s on average, 2.00 s counting whole rounds of 10 calls (freeze run call p50 1.000 s; queueing not included)")
+        self.assertIn("1.2000 routed pairs (LLM calls) per record on average; 80.00% of test records (4 of 5) have at least one, at most 2; each call p50 1.000 s", T.get("D", "per-record latency (LLM calls)"))
+        self.assertEqual(T.get("A", "per-record latency (LLM calls)"), "no LLM call")
+        self.assertTrue(T.get("D (orig)", "D fallback tail").startswith("missing (expected source"))
+        H.write_outputs(res, self.out)
+        md = (self.out / "head_to_head.md").read_text(encoding="utf-8")
+        self.assertIn("per-record latency (LLM calls)", md)
+        self.assertIn("is withdrawn", md)
+        self.assertNotIn("simulation from measured distributions", md)
+
+    def test_without_the_latency_json_the_old_cell_is_unchanged(self):
+        res, _ = self.build()
+        self.assertIn("simulation from measured distributions", res["T"].get("D", "D fallback tail"))
+        self.assertNotIn("per-record latency (LLM calls)", res["T"].columns)
+
     def test_hand_check_files_are_never_read(self):
         (self.run / "hand_check").mkdir()
         (self.run / "hand_check" / "hand_check_key.csv").write_text("secret", encoding="utf-8")

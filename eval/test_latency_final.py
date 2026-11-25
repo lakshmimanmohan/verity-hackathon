@@ -141,6 +141,39 @@ class BuildTests(Fixture):
         self.assertNotIn("simulated p99", md)
 
 
+class JsonTests(Fixture):
+    def test_latency_final_json_holds_the_numbers_behind_the_markdown(self):
+        res, _ = self.run_build()
+        j = LF.to_json(res)
+        self.assertEqual((j["routed_pairs"], j["band_pairs"]), (3, 12))
+        self.assertAlmostEqual(j["routed_share"], 0.25)
+        self.assertEqual((j["test_group_records"], j["records_with_routed_pair"]), (6, 5))
+        self.assertAlmostEqual(j["records_with_routed_pair_share"], 5 / 6)
+        self.assertAlmostEqual(j["routed_pairs_per_record_both_ends"], 1.0)
+        self.assertEqual(j["records_by_routed_pairs"], {"1": 4, "2": 1})
+        self.assertEqual(j["b_call_latency_sample5000"]["calls"], 5)
+        self.assertEqual(j["b_call_latency_sample5000"]["p50_s"], 3.0)
+        self.assertAlmostEqual(j["b_call_latency_sample5000"]["p95_s"], 4.8)
+        self.assertEqual((j["c_latency_median_of_repeats"]["p50_ms"], j["c_latency_median_of_repeats"]["p95_ms"], j["c_latency_median_of_repeats"]["max_ms"]), (0.08, 0.28, 2.0))
+        self.assertFalse(j["c_per_pair_array_saved"])
+        self.assertFalse(j["d_fallback_simulation_run"])
+        self.assertEqual(j["b_calls_per_record"], 2.0)
+        rows = {r["latency_used"]: r for r in j["b_per_record"]}
+        fr = rows["freeze run, call p50 (2 workers)"]
+        self.assertAlmostEqual(fr["mean_time_per_record_s"], 0.2)                           # 2 calls x 1.0 s / 10 workers
+        self.assertEqual(fr["whole_rounds_time_per_record_s"], 1.0)                         # ceil(2 / 10) = 1 round
+        dev = rows["DEV: call p95 at 10 workers"]
+        self.assertEqual((dev["latency_s"], dev["basis"]), (2.0, "dev"))
+        json.dumps(j)                                                                       # serialisable
+
+    def test_main_writes_the_markdown_and_the_json_only(self):
+        res, _ = self.run_build()
+        self.out.mkdir(parents=True)
+        (self.out / "latency_final.md").write_text(LF.render(res), encoding="utf-8")
+        (self.out / "latency_final.json").write_text(json.dumps(LF.to_json(res)), encoding="utf-8")
+        self.assertEqual(sorted(p.name for p in self.out.iterdir()), ["latency_final.json", "latency_final.md"])
+
+
 class ReadingRulesTests(Fixture):
     def test_only_allowed_files_are_read(self):
         R = LF.Reader([self.run, self.freeze], [self.dev])

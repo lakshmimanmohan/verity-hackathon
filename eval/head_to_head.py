@@ -6,10 +6,13 @@ arithmetic from cells read from files, and marked as derived); a figure the froz
 source. Nothing is invented, nothing is rerun, no truth file and no data file is opened.
 
   python eval/head_to_head.py [--run results/eval_7919] [--freeze results/freeze_2026-11-25]
-                              [--cost-dir results/eval_7919/cost] [--out-dir results/eval_7919/head_to_head]
+                              [--cost-dir results/eval_7919/cost] [--latency-json results/eval_7919/latency_final/latency_final.json]
+                              [--out-dir results/eval_7919/head_to_head]
 
 --cost-dir is the folder of the cost model outputs to read (default: the freeze run's stage 12 outputs, <run>/cost; for example
 results/eval_7919/cost_final for the rerun with the complete effort log). It must lie under the run folder.
+--latency-json (a result file of the run, e.g. results/eval_7919/latency_final/latency_final.json) replaces the dev-simulation "D fallback tail" cell with
+the freeze run's own figures and adds a per-record latency line for B and D; without it the cells are as before.
 
 Bases: the quality columns are on the fixed 5,000-pair sample; cost, break-even and latency columns come from the cost model and
 benchmarks and are not sample figures. The full-band table is exact for A, C and D and is not comparable with B's sample figures.
@@ -151,7 +154,7 @@ def bar_verdicts(opt: str, overall_p: float, overall_r: float, a_recall: float, 
 
 # ---------------------------------------------------------------------------------------------- the tables
 
-def build(run: Path, freeze: Path, R: Reader, cost_dir: Path | None = None) -> dict:
+def build(run: Path, freeze: Path, R: Reader, cost_dir: Path | None = None, latency_json: Path | None = None) -> dict:
     cost_dir = Path(cost_dir) if cost_dir else run / "cost"
     rel = lambda p: Path(p).resolve().relative_to(REPO).as_posix()
     O = run / "options"
@@ -256,13 +259,34 @@ def build(run: Path, freeze: Path, R: Reader, cost_dir: Path | None = None) -> d
     T.put("D", "latency per pair (p50, p95)", lat_text("D") + " (one core, features included, plus routing)", lat_src)
     T.missing("D (orig)", "latency per pair (p50, p95)", "options/latency/latency_summary.json (measures D with the v2 setting only)")
     fb = assumptions.get("D per-pair latency with the LLM fallback (simulation)")
+    lj = R.json(latency_json) if latency_json else None
+    lj_src = rel(latency_json) if latency_json else ""
     for o in OPTS:
-        if o == "D" and fb:
+        if lj is not None and o == "D":
+            b50, b95 = lj["b_call_latency_sample5000"]["p50_s"], lj["b_call_latency_sample5000"]["p95_s"]
+            T.put(o, "D fallback tail",
+                  f"{100 * lj['routed_share']:.3f}% of pairs ({lj['routed_pairs']:,} of {lj['band_pairs']:,}) call the LLM, each call p50 {b50:.3f} s, p95 {b95:.3f} s; "
+                  f"{100 * lj['records_with_routed_pair_share']:.2f}% of test records include at least one; the dev simulation (0.085% share) is withdrawn", lj_src)
+        elif lj is not None and o == "D (orig)":
+            T.missing(o, "D fallback tail", "results/eval_7919/latency_final/latency_final.json (it describes the v2 setting only)")
+        elif lj is None and o == "D" and fb:
             T.put(o, "D fallback tail", fb["value"] + " [simulation from measured distributions]", assumptions_src)
         elif o in ("D", "D (orig)"):
             T.missing(o, "D fallback tail", "cost/assumptions.csv row 'D per-pair latency with the LLM fallback (simulation)'")
         else:
             T.put(o, "D fallback tail", "n/a (no LLM fallback)", "", "constant text")
+    if lj is not None:                                         # a per-record latency line for B and D
+        col = "per-record latency (LLM calls)"
+        rows = {r["latency_used"]: r for r in lj["b_per_record"]}
+        fr = rows["freeze run, call p50 (2 workers)"]
+        T.put("A", col, "no LLM call", "", "constant text")
+        T.put("C", col, "no LLM call", "", "constant text")
+        T.put("B", col, f"{lj['b_calls_per_record']:.2f} calls per record; at {fr['workers']} workers {fr['mean_time_per_record_s']:.2f} s on average, "
+              f"{fr['whole_rounds_time_per_record_s']:.2f} s counting whole rounds of {fr['workers']} calls (freeze run call p50 {fr['latency_s']:.3f} s; queueing not included)", lj_src)
+        T.put("D", col, f"{lj['routed_pairs_per_record_both_ends']:.4f} routed pairs (LLM calls) per record on average; {100 * lj['records_with_routed_pair_share']:.2f}% of test records "
+              f"({lj['records_with_routed_pair']:,} of {lj['test_group_records']:,}) have at least one, at most {lj['max_routed_pairs_on_one_record']}; each call p50 "
+              f"{lj['b_call_latency_sample5000']['p50_s']:.3f} s", lj_src)
+        T.missing("D (orig)", col, "results/eval_7919/latency_final/latency_final.json (it describes the v2 setting only)")
 
     # break-even against B
     for rate in RATES:
@@ -415,7 +439,7 @@ def write_outputs(res: dict, out: Path) -> None:
               ("Protocol bars (computed from the frozen reports with the protocol rules)", [EVERY_SAMPLE, EVERY_FULL]),
               ("Cost per pair and per record (not sample figures)", ["LLM $ per 1,000 band pairs", "LLM $ per record", "band pairs per record"]),
               ("Monthly cost (S1, $100/h, labels as evaluated; cost model, not sample figures)", [c for c in T.columns if c.startswith("monthly")]),
-              ("Latency (benchmarks, not sample figures)", ["latency per pair (p50, p95)", "D fallback tail"]),
+              ("Latency (benchmarks, not sample figures)", ["latency per pair (p50, p95)", "D fallback tail"] + (["per-record latency (LLM calls)"] if "per-record latency (LLM calls)" in T.columns else [])),
               ("Break-even against B (S1 and S2 total; cost model, not sample figures)", [c for c in T.columns if c.startswith("break-even")])]
     n = 1
     for title, cols in groups:
@@ -485,6 +509,7 @@ def main() -> int:
     ap.add_argument("--run", type=Path, default=REPO / "results" / "eval_7919")
     ap.add_argument("--freeze", type=Path, default=None)
     ap.add_argument("--cost-dir", type=Path, default=None, help="folder of the cost model outputs to read (default: <run>/cost, the freeze run's stage 12 outputs)")
+    ap.add_argument("--latency-json", type=Path, default=None, help="latency_final.json of the freeze run: replaces the dev-simulation 'D fallback tail' cell and adds a per-record latency line")
     ap.add_argument("--out-dir", type=Path, default=None, help="where to write (default: <run>/head_to_head)")
     args = ap.parse_args()
     run = args.run.resolve()
@@ -494,7 +519,10 @@ def main() -> int:
     R = Reader([run, Path(freeze)])
     cost_dir = (args.cost_dir or run / "cost").resolve()
     R.path(cost_dir)                                              # must lie under the allowed roots
-    res = build(run, Path(freeze).resolve(), R, cost_dir)
+    latency_json = args.latency_json.resolve() if args.latency_json else None
+    if latency_json:
+        R.path(latency_json)                                      # must lie under the run folder
+    res = build(run, Path(freeze).resolve(), R, cost_dir, latency_json)
     out = args.out_dir or run / "head_to_head"
     write_outputs(res, out)
     print(f"wrote {out / 'head_to_head.csv'}, head_to_head.md and head_to_head_sources.csv; read {len(set(R.read))} files, all under {[str(r.relative_to(REPO)) for r in R.roots]}")
