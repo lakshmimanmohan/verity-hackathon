@@ -1,0 +1,8 @@
+option,basis,band_f1,band_f1_ci_lo,band_f1_ci_hi,band_precision,band_recall,f1_diff_vs_B,f1_diff_lo,f1_diff_hi,f1_bar,overall_precision,precision_bar,overall_recall,recall_bar,ece,ece_bar,latency_p95_ms,latency_bar,llm_share,llm_share_bar,meets_every_bar
+A,full band; F1 difference on the sample,0.1058,0.0652,0.1472,1.0,0.0559,-0.8798,-0.9268,-0.827,fail,1.0,pass,0.512,reference (A is the baseline),,n/a (bar is for C and D),,n/a (bar is for C),,n/a (bar is for D),no
+B,sample estimate (weighted); B is the baseline of the F1 bar,0.9856,0.9587,1.0,0.9743,0.9972,,,,reference (B is the baseline),0.9971,pass,0.5713,pass,0.0142,n/a (bar is for C and D),,n/a (bar is for C),,n/a (bar is for D),yes
+C,full band; F1 difference on the sample,0.9633,0.9491,0.9765,0.9743,0.9525,-0.0229,-0.0641,0.0118,inconclusive,0.9972,pass,0.5685,pass,0.0003,pass,0.2791,pass,,n/a (bar is for D),not shown (inconclusive)
+D,exact full band; F1 difference on the sample,0.9862,0.977,0.9943,0.9754,0.9972,-0.0126,-0.04,0.0028,inconclusive,0.9972,pass,0.5713,pass,0.0004,pass,0.2803,n/a (bar is for C),0.009676979691972195,pass,not shown (inconclusive)
+D (orig),exact full band; F1 difference on the sample; original routing rule,0.9689,0.9563,0.9806,0.98,0.9581,-0.02,-0.0601,0.0132,inconclusive,0.9978,pass,0.5688,pass,0.0002,pass,0.2803,n/a (bar is for C),0.00036345463631820454,pass,not shown (inconclusive)
+D (forced),exact full band; F1 difference on the sample; forced reading (diagnostic),0.9862,0.977,0.9943,0.9754,0.9972,-0.0126,-0.04,0.0028,inconclusive,0.9972,pass,0.5713,pass,0.0004,pass,0.2803,n/a (bar is for C),0.009676979691972195,pass,not shown (inconclusive)
+E,not run,,,,,,,,,,,,,,,,,,,,not run

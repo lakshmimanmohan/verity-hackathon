@@ -1,0 +1,81 @@
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe eval/make_decoy_check.py C:\verity-hackathon\results\eval_7919   [reads truth; 2026-11-25T18:26:03Z]
+decoy test band pairs (same decoy group, different entities): 66 of 44,022 band pairs; 12 are in the 5,000-pair sample (already answered in the cache)
+written: C:\verity-hackathon\results\eval_7919\options\b_llm\decoy_check_pairs.csv
+upper-bound cost estimate if none were cached: 66 x $0.001527 = $0.101; for the 54 not in the sample: $0.082
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe options/b_llm_baseline.py C:\verity-hackathon\results\eval_7919 --provider openai --final-sample C:\verity-hackathon\results\eval_7919\options\b_llm\decoy_check_pairs.csv --label decoycheck --max-usd 1.0 --estimate-only   [truth sealed; 2026-11-25T18:26:05Z]
+prefix-length check: system prompt 6,684 characters (appendix 885 characters, sha256 857de291325e); predicted shared prefix 1910 tokens, inside the target 1900 to 1950
+pairs: 66 (sample file decoy_check_pairs.csv); distinct prompts 66 (0 pairs repeat another pair's exact record content and share its answer); already answered in the local cache: 14; calls to make: 52
+projection: about $0.08 at the pilot's $0.001545 per call; about 1 minutes at 95.3 calls per minute (8 keys x 12 per minute, 2 workers; the pilot measured 95.3); run cap --max-usd $1.00
+cost gate: 52 pairs to call x $0.001545 (pilot cost per call) x 1.3 = $0.10; ledger total $22.0670, remaining under the $45 cap $22.93; platform limit $30 - ledger total = $7.93 -> PASS
+estimate only: no call made; --approve-final-run NOT given
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe options/b_llm_baseline.py C:\verity-hackathon\results\eval_7919 --provider openai --final-sample C:\verity-hackathon\results\eval_7919\options\b_llm\decoy_check_pairs.csv --label decoycheck --max-usd 1.0 --approve-final-run   [truth sealed; 2026-11-25T18:26:06Z]
+prefix-length check: system prompt 6,684 characters (appendix 885 characters, sha256 857de291325e); predicted shared prefix 1910 tokens, inside the target 1900 to 1950
+pairs: 66 (sample file decoy_check_pairs.csv); distinct prompts 66 (0 pairs repeat another pair's exact record content and share its answer); already answered in the local cache: 14; calls to make: 52
+projection: about $0.08 at the pilot's $0.001545 per call; about 1 minutes at 95.3 calls per minute (8 keys x 12 per minute, 2 workers; the pilot measured 95.3); run cap --max-usd $1.00
+cost gate: 52 pairs to call x $0.001545 (pilot cost per call) x 1.3 = $0.10; ledger total $22.0670, remaining under the $45 cap $22.93; platform limit $30 - ledger total = $7.93 -> PASS
+power: ac
+start: 2026-11-25 12:26:07 local (18:26:07Z)
+first live call: input_tokens 2101, cached 1792; observed shared prefix 1967 tokens, outside the target 1900 to 1950 (not blocked)
+end: 2026-11-25 12:26:54 local (18:26:54Z); run time 0.8 minutes
+Option B openai / gpt-5.4-2026-03-05 (max_output_tokens=64;reasoning_effort=none): 66 TEST band sample pairs (decoy_check_pairs.csv)
+calls 52, cache hits 14, spent $0.0785, pending 0, refusals 0, models reported {'gpt-5.4-2026-03-05': 66}
+prefix-length check: system prompt 6,684 characters (appendix 885 characters, sha256 857de291325e); predicted shared prefix 1910 tokens, inside the target 1900 to 1950
+first live call: input_tokens 2101, cached 1792, pair about 134 tokens: observed shared prefix 1967 (outside)
+final hit ratio after 52 calls: overall 0.852 (93,184 / 109,327 input tokens); excluding each key's first call 0.852 (44 calls)
+api errors 0, unusable answers 0; prompt-cache keys 8, 12 requests per minute per key, 2 workers
+latency per call: p50 1.09s, p95 1.40s, max 2.23s
+gate: cost gate: 52 pairs to call x $0.001545 (pilot cost per call) x 1.3 = $0.10; ledger total $22.0670, remaining under the $45 cap $22.93; platform limit $30 - ledger total = $7.93 -> PASS
+power: ac
+started utc: 2026-11-25T18:26:07Z
+ended utc: 2026-11-25T18:26:54Z
+run time minutes: 0.77
+decisions: C:\verity-hackathon\results\eval_7919\options\b_llm\openai\decoycheck\decisions.csv
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe eval/decoy_check_report.py C:\verity-hackathon\results\eval_7919 --label decoycheck   [reads truth; 2026-11-25T18:26:57Z]
+Option B (frozen prompt, gpt-5.4) on every test band pair whose records share a decoy group but have different entities, run eval_7919: 66 pairs (supplementary check, no bar)
+every pair is a different-organization pair: false matches 0 of 66
+  zero-error bounds (exact one-sided 95% Clopper-Pearson; the bootstrap interval is degenerate when an error count is 0):
+    false matches: 0 of 66 false pairs; false-match rate <= 0.04438 (up to 3 false matches on 66 false pairs)
+  (with 0 false matches in 66 pairs the exact one-sided 95% bound on the false-match rate for pairs like these is 0.0444, about 3 / 66)
+
+p_same distribution (all pairs are truly different)
+  [0.0, 0.2)    66   decided same 0
+  [0.2, 0.4)     0   decided same 0
+  [0.4, 0.6)     0   decided same 0
+  [0.6, 0.8)     0   decided same 0
+  [0.8, 1.0]     0   decided same 0
+  highest p_same 0.18, mean 0.066
+
+False matches (decided same): 0, all shown
+
+The 3 highest-p_same pairs that were decided different (closest calls), both records side by side
+  Rb695c27c17 | Rcee42d1597   decision different, p_same 0.18
+      address_line     POB 19779                                    | 9083 Center Boulevard
+      city             Raleigh                                      | Columbus
+      company_name     Hayes and Garcia Financial Services, Inc.    | Hayes & Garcia Financial Services Inc
+      phone            (missing)                                    | 7096982711
+      postal_code      27624                                        | 43216
+      state            NC                                           | OH
+      website          hayesgarcia.com                              | hayesgarcia.com
+  R1d80d3312f | Rddafd655d3   decision different, p_same 0.17
+      address_line     9758 Washington Ln.                          | 3392 Jefferson Avenue
+      city             Minneapolis                                  | Houston
+      company_name     Brightpath Harbor Financ                     | Brightpath Harbor Financial Services Corp
+      phone            7252239620                                   | 911.726.7028
+      postal_code      55432                                        | 77017
+      state            MN                                           | TX
+      website          brightpathharbor.com                         | brightpathharbor.com
+  R4e8191eeb9 | Rde77f1c371   decision different, p_same 0.17
+      address_line     3895 Lincoln Court                           | 6737 Pine Street
+      city             Kansas City                                  | Austin
+      company_name     Frontier Meridian Construction, Company      | Frontier Meridian Construction Co
+      phone            (missing)                                    | +1 581 732 0652
+      postal_code      64180                                        | 78763
+      state            MO                                           | TX
+      website          frontiermeridian.com                         | frontiermeridian.com
+
+Run: calls 52, cache hits 14 (pairs already answered in the sample run), spent $0.0785; hit ratio excluding each key's first call 0.852; refusals 0, parse failures 0, API errors 0; run time 0.77 minutes
+

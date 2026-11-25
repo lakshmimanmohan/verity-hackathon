@@ -1,0 +1,71 @@
+{
+ "stage": 0,
+ "name": "preflight",
+ "mode": "real",
+ "seed": 7919,
+ "ended_utc": "2026-11-25T17:16:06Z",
+ "seconds": 0.5,
+ "ledger_cost_usd": 0.0,
+ "exit": 0,
+ "reads_truth": [],
+ "guards": [
+  {
+   "time": "2026-11-25T17:16:05Z",
+   "stage": 0,
+   "guard": "frozen files unchanged since the manifest",
+   "fired": false,
+   "detail": "all match"
+  },
+  {
+   "time": "2026-11-25T17:16:05Z",
+   "stage": 0,
+   "guard": "the real run uses the evaluation seed",
+   "fired": false,
+   "detail": "seed 7919"
+  },
+  {
+   "time": "2026-11-25T17:16:05Z",
+   "stage": 0,
+   "guard": "the manifest is committed",
+   "fired": false,
+   "detail": "results/freeze_2026-11-25/freeze_manifest.json"
+  },
+  {
+   "time": "2026-11-25T17:16:05Z",
+   "stage": 0,
+   "guard": "HEAD is the manifest commit",
+   "fired": false,
+   "detail": "manifest e0e02ce1673ae1174ad746003c086d6dd7e65fb9, HEAD e20fddbea699a2a843ed41afbb0e299114e8c6d6"
+  },
+  {
+   "time": "2026-11-25T17:16:05Z",
+   "stage": 0,
+   "guard": "clean tree (no modified tracked files, no untracked files outside .gitignore)",
+   "fired": false,
+   "detail": "clean"
+  },
+  {
+   "time": "2026-11-25T17:16:05Z",
+   "stage": 0,
+   "guard": "AC power",
+   "fired": false,
+   "detail": "power: ac"
+  },
+  {
+   "time": "2026-11-25T17:16:05Z",
+   "stage": 0,
+   "guard": "OPENAI_API_KEY is set (value never read out)",
+   "fired": false,
+   "detail": "set"
+  }
+ ],
+ "notes": [
+  "ledger total $13.9207 before the run",
+  "effort log (not frozen) sha256 1c09589013a42775..."
+ ],
+ "outputs": {
+  "results/freeze_2026-11-25/preflight.json": "3d16fa7e4a3010e43b739dcab82f4fe60306372b39cc8575601d3e273b70c663",
+  "results/freeze_2026-11-25/freeze_manifest.json": "42c4442caa3da3643ad870e9b76f8c7ef3b0e13a2c387e25d4ccf30f94af1e2c"
+ },
+ "manifest_sha256": "42c4442caa3da3643ad870e9b76f8c7ef3b0e13a2c387e25d4ccf30f94af1e2c"
+}

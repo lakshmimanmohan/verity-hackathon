@@ -1,0 +1,32 @@
+Run: C:\verity-hackathon\results\eval_7919
+Band: effective_threshold +/- 0.05 per row, inclusive
+Wrote 200499 band rows to C:\verity-hackathon\results\eval_7919\band_pairs.csv
+
+Pairs by region, match_type and truth (true = same entity)
+  region match_type                true    false    total
+  below  below_threshold              0      800      800
+  below  insufficient_evidence        0     1652     1652
+  below  ALL                          0     2452     2452
+  in     below_threshold             56    31842    31898
+  in     full_signal                 18        0       18
+  in     insufficient_evidence      794   167754   168548
+  in     weak_signal                 35        0       35
+  in     ALL                        903   199596   200499
+  above  full_signal               4797        0     4797
+  above  insufficient_evidence     4926     1779     6705
+  above  weak_signal               1639        0     1639
+  above  ALL                      11362     1779    13141
+
+Missed true pairs (6274 of 12763) by region: below 0, in 850, above 4926, not scored 498
+
+Verity: recall 0.5084, TP 6489, FP 0
+Oracle ceiling (band decided perfectly, outside kept): recall 0.5750 (+6.66 points), TP 7339, FP 0, precision 1.0000
+
+decision_status by region
+  region    match  non_match   review
+  below         0       2452        0
+  in            0          0   200499
+  above      6436       6705        0
+  total  match 6436, non_match 9157, review 200499
+CHECK decision_status == review selects exactly the band pairs: PASS
+CHECK outside the band, decision_status equals Verity's decision: PASS

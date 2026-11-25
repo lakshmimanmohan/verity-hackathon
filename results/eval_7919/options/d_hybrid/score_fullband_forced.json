@@ -1,0 +1,26 @@
+{
+ "option": "D (forced reading), exact full test band",
+ "weighted": false,
+ "band_pairs": 44022.0,
+ "band_true": 358.0,
+ "band_f1": 0.9861878453038674,
+ "band_f1_ci": [
+  0.977009838020471,
+  0.9943370317909979
+ ],
+ "band_precision": 0.9754098360655737,
+ "band_recall": 0.9972067039106145,
+ "band_accuracy": 0.9997728408523011,
+ "band_tp": 357.0,
+ "band_fp": 9.0,
+ "band_fn": 1.0,
+ "band_tn": 43655.0,
+ "overall_precision": 0.9972350230414746,
+ "overall_recall": 0.5712777191129884,
+ "overall_f1": 0.7264182611614636,
+ "overall_tp": 3246.0,
+ "overall_fp": 9.0,
+ "overall_fn": 2436.0,
+ "ece": 0.00043138121848166694,
+ "band_average_precision": 0.9764989793897932
+}

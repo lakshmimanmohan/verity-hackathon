@@ -1,0 +1,48 @@
+Option B final run sample5000 on test_sample5000.csv: 5000 sampled test band pairs (358 same, 4642 different; weights sum to 44,022.0 = 358 same + 43,664 different in the test band)
+errors among the sampled pairs: 1 false non-matches, 1 false matches
+
+False negatives (same organization, decided different): 1, all shown
+  R096cb866e9 | R0e7aa337cd   decision different, p_same 0.28, weight 1.0000, tags po_box+typo
+      address_line     P.O. Box 70492                               | 955 Ridge Road
+      city             Austin                                       | Austin
+      company_name     Brightpath Cedau Environmental Services, Lim | Brightath Cedar Environmental Services Ltd
+      phone            (missing)                                    | 276.544.2676
+      postal_code      78743                                        | 78743
+      state            TX                                           | TX
+      website          (missing)                                    | (missing)
+
+False positives (different organizations, decided same): 1, all shown
+  R76ec325432 | Rfa30d8aac2   decision same, p_same 0.90, weight 9.4063, tags acronym+clean+missing_phone+typo_address
+      address_line     7022 Main Boulevard                          | 4038 Washington Street
+      city             Sacramento                                   | Sacramento
+      company_name     Heritage Coastal Equipment Rental Inc        | H.C.T. Corp.
+      phone            490.712.3071                                 | (missing)
+      postal_code      95851                                        | 95821
+      state            CA                                           | CA
+      website          heritagecoastal.com                          | heritagecoastal.com
+
+Errors by tag (a pair counts under every hard tag either record carries); weighted = estimate for the test band
+  tag           pairs  same  diff   FN   FP   recall (w)   false-match rate (w)   FP-rate bound
+  acronym         548   137   411    0    1       1.0000                0.00243   
+  truncation      688    55   633    0    0       1.0000                0.00000   <= 0.0047
+  po_box          679   238   441    1    0       0.9958                0.00000   <= 0.0068
+  decoy            12     0    12    0    0            -                0.00000   <= 0.2209
+  easy            825     6   819    0    0       1.0000                0.00000   <= 0.0037
+  no tag         2406     0  2406    0    0            -                0.00000   <= 0.0012
+
+p_same in 5 bins against truth (sample counts; weighted counts estimate the test band)
+  bin           pairs  same  decided same  weighted pairs  weighted frac same
+  [0.0, 0.2)     4640     0             0        43,645.2              0.0000
+  [0.2, 0.4)        2     1             0            10.4              0.0961
+  [0.4, 0.6)        0     0             0             0.0              0.0000
+  [0.6, 0.8)        4     4             4             4.0              1.0000
+  [0.8, 1.0]      354   353           354           362.4              0.9740
+  inconsistent answers (decision against p_same at 0.5): 0 of 5000
+
+Run (calls.jsonl, run_meta.json)
+  calls 4996 (log lines), cache hits 0, pairs 5000, distinct prompts 4996; models reported {'gpt-5.4-2026-03-05': 4996}
+  tokens: input 10,506,631, cached 8,924,160, output 94,924; hit ratio overall 0.849, excluding each key's first call 0.850 (8 keys)
+  cost: total $7.6105, per call $0.001523
+  latency per call: p50 1.05 s, p95 1.33 s, max 9.28 s
+  refusals 0, parse failures 0, API errors 0 (error lines 0), stopped None
+  run time 59.66 minutes (2026-11-25T17:20:03Z to 2026-11-25T18:19:43Z)

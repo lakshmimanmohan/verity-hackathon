@@ -1,0 +1,82 @@
+{
+ "frozen": "2026-11-24",
+ "status": "FROZEN. Tuning round 2 (tune2) passed all four acceptance rules; no further prompt edit is allowed before the final run.",
+ "this_run_serves_as_the_pilot": "Tuning round 2 (1,000 train band pairs, seed 2; 145 fresh same, 68 decoys reused from tune1, 787 fresh other) with the frozen prompt is the pilot: cost, latency and cache hit ratio measured there are the numbers used for the final-run projection. No separate pilot is run.",
+ "provider": "openai",
+ "model": "gpt-5.4-2026-03-05",
+ "reasoning_effort": "none",
+ "max_output_tokens": 64,
+ "temperature": "not set",
+ "store": false,
+ "system_prompt_sha256": "857de291325e9b49d7878eb34d180c180e716c99da5a96b60a5aaf747fd5ac94",
+ "system_prompt_characters": 6684,
+ "settings_sha256": "0262beaa76c9b69cca4465fff7ef9cf5d0961f59ab8b9890066001a9e5fedab8",
+ "prompt_parts_sha256_of_file_bytes": {
+  "options/b_system_prompt.txt": "a8946097e6e4350c77bfb94bb88d0d3f050eff15b10eb21eceee135465fba723",
+  "options/b_prompt_appendix.txt": "d8958012acc1c67ec1424e3081934b50496a14e1e529e698d20613338bc08526",
+  "results/dev_2026_run11/options/b_llm/fewshot.json": "2345a01923495f8d365983df3210e61e3808e7b79806a65955eb1d9e56a857d7"
+ },
+ "output_schema": {
+  "type": "object",
+  "properties": {
+   "decision": {
+    "type": "string",
+    "enum": [
+     "same",
+     "different"
+    ]
+   },
+   "p_same": {
+    "type": "number"
+   }
+  },
+  "required": [
+   "decision",
+   "p_same"
+  ],
+  "additionalProperties": false
+ },
+ "output_field_note": "p_same is P(same) whichever decision was given; the decisions file's confidence column is filled from p_same",
+ "user_turn": "both records' content fields in semantic-type order, then 'Are these two records the same organization? Reply with the JSON object only.'",
+ "cache_key_scheme": {
+  "prompt_cache_key": "verity-b-<first 12 hex of the system prompt sha256>-<slot>",
+  "slots": 8,
+  "assignment": "round-robin over the pairs in sorted (record_a, record_b) order",
+  "requests_per_minute_per_key": 12,
+  "workers": 2,
+  "first_call_runs_alone": true,
+  "retention": "default (prompt_cache_retention not set)"
+ },
+ "prefix": {
+  "predicted_tokens": 1910,
+  "observed_first_call_tokens": 1974,
+  "target_window": [
+   1900,
+   1950
+  ],
+  "block_below": 1870,
+  "warn_above": 2000
+ },
+ "acceptance_evidence": "results/dev_2026_run11/options/b_llm/openai/tune2/tune_report.txt",
+ "code_commit_at_the_run": "3e1e5ea",
+ "pricing": {
+  "input": 2.5,
+  "cached_input": 0.25,
+  "output": 15.0,
+  "price_date": "2026-11-24"
+ },
+ "projection_final_5000_pairs": {
+  "basis": "pilot (tune2): $0.001545 per call mean (tune1 $0.001530), hit ratio excluding first calls 0.847, 95.3 calls per minute (limiter ceiling 96 = 8 keys x 12)",
+  "cost_usd": 7.72,
+  "time_minutes": 52.5,
+  "ledger_total_before_usd": 3.2145,
+  "ledger_total_after_usd": 10.94,
+  "ledger_remaining_after_usd": 34.06,
+  "platform_limit_usd": 30,
+  "platform_headroom_before_usd": 26.79,
+  "platform_headroom_after_usd": 19.06,
+  "worst_case_no_cache_usd": 27.5,
+  "worst_case_note": "no cache hits at all would cost about $0.0055 per call; the run stops if the hit ratio excluding first calls is below 0.5 after 100 calls past warm-up, so exposure before that stop is about $0.6",
+  "not_included": "option D calls on the same pairs are local cache hits; the full 44,882-pair test band would cost about $69 at this per-call cost and is not planned (protocol amendment: fixed 5,000-pair sample)"
+ }
+}

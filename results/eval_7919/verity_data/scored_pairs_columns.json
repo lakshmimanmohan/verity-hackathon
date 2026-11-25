@@ -1,0 +1,37 @@
+{
+  "field_semantic_types": {
+    "address_line": "STREET_ADDRESS",
+    "city": "DESCRIPTIVE",
+    "company_name": "NAME",
+    "phone": "QUASI_IDENTIFIER",
+    "postal_code": "DESCRIPTIVE",
+    "state": "DESCRIPTIVE",
+    "website": "DESCRIPTIVE"
+  },
+  "score_formula": {
+    "w_embed_blend": 0.65,
+    "w_field_blend": 0.35,
+    "w_when_field_weights_empty": {
+      "embed": 1.0,
+      "field": 0.0
+    },
+    "hybrid_embed_weight": 0.65,
+    "hybrid_char_weight": 0.35,
+    "hybrid_semantic_types": [
+      "DESCRIPTIVE",
+      "NAME",
+      "STREET_ADDRESS"
+    ],
+    "score_cap": 1.0,
+    "rule": "score_uncapped = w_e*cosine + w_f*sum_k(field_weights[k]*s_k), where s_k = hybrid_embed_weight*cosine + hybrid_char_weight*field_similarities[k] if field_semantic_types[k] is in hybrid_semantic_types, else field_similarities[k]; (w_e, w_f) = (w_embed_blend, w_field_blend), or (1, 0) when field_weights is empty; score = min(score_uncapped, score_cap). Exact-duplicate rows (pair_source exact or both) have score 1.0 by rule."
+  },
+  "learned_threshold": 0.455581,
+  "review_margin": 0.05,
+  "decision_status_rule": "review when |score - effective_threshold| <= review_margin (inclusive, on the 6-decimal values); otherwise match when match_type is full_signal, weak_signal or embedding_only (the rows of match_candidates.csv), else non_match",
+  "effective_threshold": 0.82,
+  "column_notes": {
+    "field_similarities": "per-field char Jaccard: the field-only part the score uses",
+    "evidence_field_similarities": "per-field display similarity read by the evidence gate, not by the score",
+    "applied_threshold": "threshold Verity applied: learned threshold for pairs with no shared keys, effective threshold otherwise"
+  }
+}

@@ -1,0 +1,21 @@
+Paired comparison on the sample: C:\verity-hackathon\results\eval_7919\options\b_llm\test_sample5000.csv
+  run C:\verity-hackathon\results\eval_7919
+  5,000 sample pairs (358 same-entity), weights sum 44,022.0 = test band pairs; 1000 resamples, seed 0, same resample for both options; percentile 95% intervals
+
+C v1 LightGBM
+  band F1         0.9627  95% CI [0.9315, 0.9836]
+  band precision  0.9732  95% CI [0.9197, 1.0000]
+  band recall     0.9525  95% CI [0.9272, 0.9735]
+B (frontier LLM)
+  band F1         0.9856  95% CI [0.9587, 1.0000]
+  band precision  0.9743  95% CI [0.9232, 1.0000]
+  band recall     0.9972  95% CI [0.9913, 1.0000]
+
+Difference (first minus second) = C v1 LightGBM minus B (frontier LLM)
+  band F1         -0.0229  95% CI [-0.0641, +0.0118]  (width 0.0759)
+  band precision  -0.0012  95% CI [-0.0752, +0.0700]  (width 0.1452)
+  band recall     -0.0447  95% CI [-0.0702, -0.0240]  (width 0.0462)
+
+Bar: band F1 difference vs -0.02 (C v1 LightGBM against B (frontier LLM) as the baseline): -0.0229 [-0.0641, +0.0118] -> INCONCLUSIVE  (pass: lower end > -0.02; fail: upper end < -0.02; else inconclusive)
+
+For reference, unpaired (independent resamples): band F1 difference interval [-0.0614, +0.0145] (width 0.0759) against paired width 0.0759

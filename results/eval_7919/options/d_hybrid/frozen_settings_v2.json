@@ -1,0 +1,40 @@
+{
+ "date": "2026-11-25",
+ "rule_file": "selection_rule_v2.txt",
+ "rule_file_sha256_lf": "9d76bede9e14a00cc89f55baa56530277784c8757730f27d59fc262a0412d51a",
+ "selected": true,
+ "lo": 0.005,
+ "hi": 0.9,
+ "lo_candidates": [
+  0.005,
+  0.01,
+  0.05,
+  0.1,
+  0.5
+ ],
+ "share_max": 0.01,
+ "development_seeds": [
+  11,
+  12,
+  13,
+  42,
+  2026
+ ],
+ "chosen_metrics": {
+  "f1": 0.9897669130187607,
+  "precision": 0.9914578587699316,
+  "recall": 0.9880817253121453,
+  "fp": 15,
+  "fn": 21,
+  "routed": 576,
+  "share": 0.0025950504818414047
+ },
+ "per_seed_band_f1": {
+  "dstudy_11": 0.9947643979057592,
+  "dstudy_12": 0.9928057553956835,
+  "dstudy_13": 0.9873417721518988,
+  "rehearsal_42": 0.9880597014925374,
+  "rehearsal_2026": 0.9852507374631269
+ },
+ "note": "chosen by the rule in the rule file; applied unchanged to seed 7919 with C retrained on that seed's train split"
+}

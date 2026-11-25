@@ -1,0 +1,27 @@
+{
+ "stage": 13,
+ "name": "results",
+ "mode": "real",
+ "seed": 7919,
+ "ended_utc": "2026-11-25T18:27:36Z",
+ "seconds": 0.6,
+ "ledger_cost_usd": 0.0,
+ "exit": 0,
+ "reads_truth": [],
+ "guards": [
+  {
+   "time": "2026-11-25T18:27:35Z",
+   "stage": 13,
+   "guard": "frozen files unchanged since the manifest",
+   "fired": false,
+   "detail": "all match"
+  }
+ ],
+ "notes": [],
+ "outputs": {
+  "results/eval_7919/results_table.csv": "a72f415451f946294c4ec22207f9ba326266b9760b0b620175a5ad8fd200ef81",
+  "results/eval_7919/results_table.txt": "4f3e40015898b9d064cbbc0aaf164f9bb22ec06d0cab3a42d0e6691fe8b39401",
+  "results/freeze_2026-11-25/freeze_report.txt": "ec8d408c600ffb7629840644ed445ead52bbf8d0d91f111925c959a5fe0eaea0"
+ },
+ "manifest_sha256": "42c4442caa3da3643ad870e9b76f8c7ef3b0e13a2c387e25d4ccf30f94af1e2c"
+}

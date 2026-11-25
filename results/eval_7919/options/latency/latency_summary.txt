@@ -1,0 +1,20 @@
+Per-pair latency on 44,022 test band pairs, features included, one pair at a time (OMP_NUM_THREADS=1), 3 repeats
+               p50 ms   p95 ms   max ms  mean ms
+  C r1         0.0826   0.2871  66.0761    0.113
+  C r2         0.0831   0.2791   2.1451   0.1027
+  C r3         0.0813   0.2777   1.5294   0.1016
+  C median     0.0826   0.2791   2.1451   0.1027
+  D r1          0.083   0.2884  66.0806   0.1135
+  D r2         0.0835   0.2803   2.1469   0.1032
+  D r3         0.0816    0.279   1.5324   0.1021
+  D median      0.083   0.2803   2.1469   0.1032
+  routing r1   0.0004   0.0013   0.2176   0.0005
+  routing r2   0.0004   0.0012    0.045   0.0005
+  routing r3   0.0004   0.0012   0.1292   0.0005
+  routing median   0.0004   0.0012   0.1292   0.0005
+  single core: 9737.1 pairs per second (C), 9689.9 (D)
+  decision mismatches: C vs decisions.csv 0; D vs decisions_fullband.csv 0
+
+Parallel: 10 processes, one thread each, disjoint slices of 4,402 pairs; wall 0.633 s; 69575.0 pairs per second in total (7.15x one core)
+  per-pair under load, pooled: C p50 0.1078 ms, p95 0.2023 ms, max 73.5953 ms; D p50 0.1083, p95 0.2033, max 73.5988
+  per-process p95 (C), sorted: [0.1039, 0.1997, 0.1998, 0.2002, 0.2013, 0.2036, 0.2067, 0.2069, 0.2081, 0.2094]; decision mismatches 0

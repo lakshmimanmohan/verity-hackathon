@@ -1,0 +1,35 @@
+{
+ "stage": 6,
+ "name": "option C",
+ "mode": "real",
+ "seed": 7919,
+ "ended_utc": "2026-11-25T17:19:59Z",
+ "seconds": 46.2,
+ "ledger_cost_usd": 0.0,
+ "exit": 0,
+ "reads_truth": [
+  "c_decision_model (train labels only)",
+  "score C v1 LightGBM",
+  "score C v1 LightGBM (sample)"
+ ],
+ "guards": [
+  {
+   "time": "2026-11-25T17:19:12Z",
+   "stage": 6,
+   "guard": "frozen files unchanged since the manifest",
+   "fired": false,
+   "detail": "all match"
+  }
+ ],
+ "notes": [],
+ "outputs": {
+  "results/eval_7919/options/c_model/c_v1_lgbm/decisions.csv": "2d7fb8e1d403b693a68b0e4d9e6495d972a01f5ba7a371df121625aaa4998234",
+  "results/eval_7919/options/c_model/c_v1_lgbm/cv_report.txt": "fc5736ebc6c0618275b9b1e8ee518221161a5f233db0418889ee01c4866b6f79",
+  "results/eval_7919/options/c_model/c_v1_lgbm/features.json": "fcf8067c11228377a5d039b0a42118f46ca9d618c2a232e015c3833cc62c7181",
+  "results/eval_7919/options/c_model/c_v1_lgbm/model.txt": "1b15d1b4ebcc5da12d5cc2a0654d49351b180cd7a043dd4efcd801f10bde74a6",
+  "results/eval_7919/options/c_model/c_v1_lgbm/calibrator.json": "b30138fdf40bd0e633e656e64f47ccf1613faa32e6afa25080f09552b9e2ee59",
+  "results/eval_7919/options/c_model/c_v1_lgbm/score_report.txt": "7323cbf6abfe7fa5660a25b6b55f6688225ca02a0cfe2ddf0722af35a4e92d6d",
+  "results/eval_7919/options/c_model/c_v1_lgbm/score_report_sample5000.txt": "def74a70633e976fc3666026b04091299654f75f830646a83370465a54e7d6ef"
+ },
+ "manifest_sha256": "42c4442caa3da3643ad870e9b76f8c7ef3b0e13a2c387e25d4ccf30f94af1e2c"
+}

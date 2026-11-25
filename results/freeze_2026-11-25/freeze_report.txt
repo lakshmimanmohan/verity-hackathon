@@ -1,0 +1,59 @@
+Freeze report (real, seed 7919), written 2026-11-25T18:27:35Z
+  run folder results/eval_7919; freeze folder results/freeze_2026-11-25; manifest sha256 42c4442caa3da364...; git commit e0e02ce1673ae1174ad746003c086d6dd7e65fb9
+  frozen files: 41; model gpt-5.4-2026-03-05, reasoning effort none, prompt 857de291325e, D lo 0.005 hi 0.9 (original rule: lo 0.5 hi 0.9)
+
+  stage                 seconds  ledger $  exit  reads truth
+   0 preflight                0    0.0000     0  -
+        ledger total $13.9207 before the run
+        effort log (not frozen) sha256 1c09589013a42775...
+   1 generate                 0    0.0000     0  generate (writes the truth file)
+        10,000 rows, csv sha256 d77e4b780d9512e7..., truth sha256 4ee4ae1ea39164f9...
+   2 verity                 167    0.0000     0  -
+        verity.total 165.609971 s; 216092 scored pairs; commit e20fddbea6
+   3 data profile             0    0.0000     0  data_profile
+   4 checks                  11    0.0000     0  band.py, evaluate_matches, make_sample (selection only)
+        band: 200,499 review pairs over 10,000 records (20.05 per record)
+        test band pairs 44,022: 358 same-entity, 43,664 non-matches
+        sample (seed 0): 5,000 pairs = 358 same-entity (weight 1) + 4,642 non-matches (weight 9.406290 each)
+        weights sum to 44,022.0000; test band has 44,022 pairs
+   5 option A                 8    0.0000     0  score A. threshold only, score A. threshold only (sample)
+   6 option C                46    0.0000     0  c_decision_model (train labels only), score C v1 LightGBM, score C v1 LightGBM (sample)
+   7 option B              3589    7.6105     0  -
+        pairs: 5,000 (sample file test_sample5000.csv); distinct prompts 4,996 (4 pairs repeat another pair's exact record content and share its answer); already answered in the local cache: 0; calls to make: 4,996
+        projection: about $7.72 at the pilot's $0.001545 per call; about 52 minutes at 95.3 calls per minute (8 keys x 12 per minute, 2 workers; the pilot measured 95.3); run cap --max-usd $12.00
+        cost gate: 4,996 pairs to call x $0.001545 (pilot cost per call) x 1.3 = $10.03; ledger total $13.9207, remaining under the $45 cap $31.08; platform limit $30 - ledger total = $16.08 -> PASS
+        B archive: decisions.csv and calls.jsonl.gz (298,872 bytes; under 1 MB: commit it)
+        B: 4996 calls, cache hits 0, spent $7.6111, hit ratio excl. first 0.8504036391875013
+   8 option D               375    0.5358     0  score D. hybrid, exact full test band, score D. hybrid (C + LLM) (sample), score D (original rule), exact full test band, score D (original rule) (C + LLM) (sample), score D (forced reading), exact full test band, score D (forced reading) (C + LLM) (sample)
+        426 test band pairs routed to the LLM by v2; 16 by the original rule
+        pairs: 426 (sample file routed_fullband_pairs.csv); distinct prompts 425 (1 pairs repeat another pair's exact record content and share its answer); already answered in the local cache: 67; calls to make: 358
+        projection: about $0.55 at the pilot's $0.001545 per call; about 4 minutes at 95.3 calls per minute (8 keys x 12 per minute, 2 workers; the pilot measured 95.3); run cap --max-usd $1.00
+        cost gate: 358 pairs to call x $0.001545 (pilot cost per call) x 1.3 = $0.72; ledger total $21.5312, remaining under the $45 cap $23.47; platform limit $30 - ledger total = $8.47 -> PASS
+        fallback off: C's cutoff 0.7500, [lo, hi) = [0.005, 0.9): inside [lo, hi): identity with C verified; 0 pairs differ from C
+        original rule: lo 0.5, hi 0.9: 16 routed pairs; scored as the secondary row
+        literal vs forced reading (v2, lo 0.005, hi 0.9): 0 of 44,022 test band pairs differ
+        literal vs forced reading (original, lo 0.5, hi 0.9): 0 of 44,022 test band pairs differ
+   9 decoy check             55    0.0785     0  make_decoy_check (selection only), decoy_check_report
+        pairs: 66 (sample file decoy_check_pairs.csv); distinct prompts 66 (0 pairs repeat another pair's exact record content and share its answer); already answered in the local cache: 14; calls to make: 52
+        projection: about $0.08 at the pilot's $0.001545 per call; about 1 minutes at 95.3 calls per minute (8 keys x 12 per minute, 2 workers; the pilot measured 95.3); run cap --max-usd $1.00
+        cost gate: 52 pairs to call x $0.001545 (pilot cost per call) x 1.3 = $0.10; ledger total $22.0670, remaining under the $45 cap $22.93; platform limit $30 - ledger total = $7.93 -> PASS
+  10 scoring                 30    0.0000     0  score B. frontier LLM (frozen prompt) (sample), compare B (frontier LLM) vs A (threshold only), compare B (frontier LLM) vs C v1 LightGBM, compare C v1 LightGBM vs B (frontier LLM), compare D (hybrid) vs B (frontier LLM), compare D (hybrid) vs C v1 LightGBM, compare D (original rule) vs B (frontier LLM), compare D (hybrid) vs D (original rule), compare D (forced reading) vs B (frontier LLM), b_sample_report, d_report, d_full_report
+  11 bars table               0    0.0000     0  -
+          option     band F1 [95% CI]          F1 vs B [95% CI]              F1 bar           prec bar    recall bar        ECE bar     p95 ms bar    LLM share bar    every bar?
+          A          0.1058 [0.0652, 0.1472]   -0.8798 [-0.9268, -0.8270]    fail           1.0000 pass   0.5120 reference        n/a            n/a              n/a    no
+          B          0.9856 [0.9587, 1.0000]   baseline                      reference      0.9971 pass   0.5713 pass    0.0142 n/a            n/a              n/a    yes
+          C          0.9633 [0.9491, 0.9765]   -0.0229 [-0.0641, +0.0118]    inconclusive   0.9972 pass   0.5685 pass    0.0003 pass     0.279 pass             n/a    not shown (inconclusive)
+          D          0.9862 [0.9770, 0.9943]   -0.0126 [-0.0400, +0.0028]    inconclusive   0.9972 pass   0.5713 pass    0.0004 pass     0.280 n/a      0.00968 pass   not shown (inconclusive)
+          D (orig)   0.9689 [0.9563, 0.9806]   -0.0200 [-0.0601, +0.0132]    inconclusive   0.9978 pass   0.5688 pass    0.0002 pass     0.280 n/a      0.00036 pass   not shown (inconclusive)
+  12 cost model               6    0.0000     0  -
+        effort log read as it is (not frozen): sha256 1c09589013a42775707175347c9db8e8268e2343ba0a5d53050a117ce758704a
+        Verity pipeline time: the cost model uses the dev repeats (flagged); spot check only: this run's verity.total 165.609971 s, dev median 101.89 s (all threads, 3 repeats)
+  13 results             not done
+  total                    4287    8.2248   (stage 13 itself not counted)
+
+  guards checked: 40; fired: 0
+  guards that passed: --approve-seed-7919 given; AC power; B decoycheck: cap covers the stage's gate projection; B dfull: cap covers the stage's gate projection; B sample5000: cap covers the stage's gate projection; HEAD is the manifest commit; OPENAI_API_KEY is set (value never read out); PYTHONHASHSEED=0; clean tree (no modified tracked files, no untracked files outside .gitignore); decoy pairs at most 300; exact neighbor search; frozen asset fewshot.json matches the manifest; frozen asset frozen_prompt.json matches the manifest; frozen asset frozen_settings.json matches the manifest; frozen asset frozen_settings_v2.json matches the manifest; frozen asset selection_rule.txt matches the manifest; frozen asset selection_rule_v2.txt matches the manifest; frozen files unchanged since the manifest; no earlier generation record; no uncommitted changes in verity/src; the manifest is committed; the real run uses the evaluation seed; the run folder does not exist
+
+  deviations: none
+  B archive: calls.jsonl.gz 298,872 bytes (commit it); gzipped calls.jsonl of the stage
+  tag: freeze-2026-11-25 at the manifest commit (python eval/freeze_run.py tag); to publish it: git push origin freeze-2026-11-25

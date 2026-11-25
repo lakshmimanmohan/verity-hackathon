@@ -1,0 +1,40 @@
+{"time": "2026-11-25T17:16:05Z", "stage": 0, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T17:16:05Z", "stage": 0, "guard": "the real run uses the evaluation seed", "fired": false, "detail": "seed 7919"}
+{"time": "2026-11-25T17:16:05Z", "stage": 0, "guard": "the manifest is committed", "fired": false, "detail": "results/freeze_2026-11-25/freeze_manifest.json"}
+{"time": "2026-11-25T17:16:05Z", "stage": 0, "guard": "HEAD is the manifest commit", "fired": false, "detail": "manifest e0e02ce1673ae1174ad746003c086d6dd7e65fb9, HEAD e20fddbea699a2a843ed41afbb0e299114e8c6d6"}
+{"time": "2026-11-25T17:16:05Z", "stage": 0, "guard": "clean tree (no modified tracked files, no untracked files outside .gitignore)", "fired": false, "detail": "clean"}
+{"time": "2026-11-25T17:16:05Z", "stage": 0, "guard": "AC power", "fired": false, "detail": "power: ac"}
+{"time": "2026-11-25T17:16:05Z", "stage": 0, "guard": "OPENAI_API_KEY is set (value never read out)", "fired": false, "detail": "set"}
+{"time": "2026-11-25T17:16:06Z", "stage": 1, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T17:16:06Z", "stage": 1, "guard": "the real run uses the evaluation seed", "fired": false, "detail": "seed 7919"}
+{"time": "2026-11-25T17:16:06Z", "stage": 1, "guard": "--approve-seed-7919 given", "fired": false, "detail": "seed 7919 is generated once, only with --approve-seed-7919"}
+{"time": "2026-11-25T17:16:06Z", "stage": 1, "guard": "the run folder does not exist", "fired": false, "detail": "results/eval_7919"}
+{"time": "2026-11-25T17:16:06Z", "stage": 1, "guard": "no earlier generation record", "fired": false, "detail": "seed 7919 is generated once"}
+{"time": "2026-11-25T17:16:06Z", "stage": 2, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T17:18:53Z", "stage": 2, "guard": "exact neighbor search", "fired": false, "detail": "resolved exact"}
+{"time": "2026-11-25T17:18:53Z", "stage": 2, "guard": "no uncommitted changes in verity/src", "fired": false, "detail": "False"}
+{"time": "2026-11-25T17:18:53Z", "stage": 2, "guard": "PYTHONHASHSEED=0", "fired": false, "detail": "0"}
+{"time": "2026-11-25T17:18:53Z", "stage": 3, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T17:18:54Z", "stage": 4, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T17:19:05Z", "stage": 5, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T17:19:12Z", "stage": 6, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T17:19:59Z", "stage": 7, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T17:19:59Z", "stage": 7, "guard": "frozen asset fewshot.json matches the manifest", "fired": false, "detail": "results/dev_2026_run11/options/b_llm/fewshot.json -> results/eval_7919/options/b_llm/fewshot.json"}
+{"time": "2026-11-25T17:19:59Z", "stage": 7, "guard": "frozen asset frozen_prompt.json matches the manifest", "fired": false, "detail": "results/dev_2026_run11/options/b_llm/frozen_prompt.json -> results/eval_7919/options/b_llm/frozen_prompt.json"}
+{"time": "2026-11-25T17:19:59Z", "stage": 7, "guard": "AC power", "fired": false, "detail": "power: ac"}
+{"time": "2026-11-25T17:20:01Z", "stage": 7, "guard": "B sample5000: cap covers the stage's gate projection", "fired": false, "detail": "cap $12.00, gate projection $10.03"}
+{"time": "2026-11-25T18:19:48Z", "stage": 8, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T18:19:48Z", "stage": 8, "guard": "frozen asset selection_rule.txt matches the manifest", "fired": false, "detail": "results/dev_2026_run11/options/d_hybrid/selection_rule.txt -> results/eval_7919/options/d_hybrid/selection_rule.txt"}
+{"time": "2026-11-25T18:19:48Z", "stage": 8, "guard": "frozen asset frozen_settings.json matches the manifest", "fired": false, "detail": "results/dev_2026_run11/options/d_hybrid/frozen_settings.json -> results/eval_7919/options/d_hybrid/frozen_settings.json"}
+{"time": "2026-11-25T18:19:48Z", "stage": 8, "guard": "frozen asset selection_rule_v2.txt matches the manifest", "fired": false, "detail": "results/dev_2026_run11/options/d_hybrid/selection_rule_v2.txt -> results/eval_7919/options/d_hybrid/selection_rule_v2.txt"}
+{"time": "2026-11-25T18:19:48Z", "stage": 8, "guard": "frozen asset frozen_settings_v2.json matches the manifest", "fired": false, "detail": "results/dev_2026_run11/options/d_hybrid/frozen_settings_v2.json -> results/eval_7919/options/d_hybrid/frozen_settings_v2.json"}
+{"time": "2026-11-25T18:19:49Z", "stage": 8, "guard": "AC power", "fired": false, "detail": "power: ac"}
+{"time": "2026-11-25T18:19:51Z", "stage": 8, "guard": "B dfull: cap covers the stage's gate projection", "fired": false, "detail": "cap $1.00, gate projection $0.72"}
+{"time": "2026-11-25T18:26:03Z", "stage": 9, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T18:26:05Z", "stage": 9, "guard": "decoy pairs at most 300", "fired": false, "detail": "66 pairs"}
+{"time": "2026-11-25T18:26:05Z", "stage": 9, "guard": "AC power", "fired": false, "detail": "power: ac"}
+{"time": "2026-11-25T18:26:06Z", "stage": 9, "guard": "B decoycheck: cap covers the stage's gate projection", "fired": false, "detail": "cap $1.00, gate projection $0.10"}
+{"time": "2026-11-25T18:26:58Z", "stage": 10, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T18:27:28Z", "stage": 11, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T18:27:29Z", "stage": 12, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T18:27:35Z", "stage": 13, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}

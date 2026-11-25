@@ -1,0 +1,13 @@
+{
+ "pairs": 44022,
+ "llm_routed_pairs": 426,
+ "differing_from_c": 0,
+ "identical_to_c": true,
+ "lo": 0.005,
+ "hi": 0.9,
+ "compared_with": "options/c_model/c_v1_lgbm/decisions.csv (C's calibrated cutoff)",
+ "differing_examples": [],
+ "c_cutoff": 0.7499857250357433,
+ "cutoff_inside_lo_hi": true,
+ "case": "inside [lo, hi): identity with C verified"
+}

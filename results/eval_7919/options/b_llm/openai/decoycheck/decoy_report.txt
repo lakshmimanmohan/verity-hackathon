@@ -1,0 +1,43 @@
+Option B (frozen prompt, gpt-5.4) on every test band pair whose records share a decoy group but have different entities, run eval_7919: 66 pairs (supplementary check, no bar)
+every pair is a different-organization pair: false matches 0 of 66
+  zero-error bounds (exact one-sided 95% Clopper-Pearson; the bootstrap interval is degenerate when an error count is 0):
+    false matches: 0 of 66 false pairs; false-match rate <= 0.04438 (up to 3 false matches on 66 false pairs)
+  (with 0 false matches in 66 pairs the exact one-sided 95% bound on the false-match rate for pairs like these is 0.0444, about 3 / 66)
+
+p_same distribution (all pairs are truly different)
+  [0.0, 0.2)    66   decided same 0
+  [0.2, 0.4)     0   decided same 0
+  [0.4, 0.6)     0   decided same 0
+  [0.6, 0.8)     0   decided same 0
+  [0.8, 1.0]     0   decided same 0
+  highest p_same 0.18, mean 0.066
+
+False matches (decided same): 0, all shown
+
+The 3 highest-p_same pairs that were decided different (closest calls), both records side by side
+  Rb695c27c17 | Rcee42d1597   decision different, p_same 0.18
+      address_line     POB 19779                                    | 9083 Center Boulevard
+      city             Raleigh                                      | Columbus
+      company_name     Hayes and Garcia Financial Services, Inc.    | Hayes & Garcia Financial Services Inc
+      phone            (missing)                                    | 7096982711
+      postal_code      27624                                        | 43216
+      state            NC                                           | OH
+      website          hayesgarcia.com                              | hayesgarcia.com
+  R1d80d3312f | Rddafd655d3   decision different, p_same 0.17
+      address_line     9758 Washington Ln.                          | 3392 Jefferson Avenue
+      city             Minneapolis                                  | Houston
+      company_name     Brightpath Harbor Financ                     | Brightpath Harbor Financial Services Corp
+      phone            7252239620                                   | 911.726.7028
+      postal_code      55432                                        | 77017
+      state            MN                                           | TX
+      website          brightpathharbor.com                         | brightpathharbor.com
+  R4e8191eeb9 | Rde77f1c371   decision different, p_same 0.17
+      address_line     3895 Lincoln Court                           | 6737 Pine Street
+      city             Kansas City                                  | Austin
+      company_name     Frontier Meridian Construction, Company      | Frontier Meridian Construction Co
+      phone            (missing)                                    | +1 581 732 0652
+      postal_code      64180                                        | 78763
+      state            MO                                           | TX
+      website          frontiermeridian.com                         | frontiermeridian.com
+
+Run: calls 52, cache hits 14 (pairs already answered in the sample run), spent $0.0785; hit ratio excluding each key's first call 0.852; refusals 0, parse failures 0, API errors 0; run time 0.77 minutes

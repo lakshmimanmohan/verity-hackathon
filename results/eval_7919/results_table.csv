@@ -1,0 +1,8 @@
+option,band_f1,band_f1_ci_lo,band_f1_ci_hi,band_precision,band_recall,overall_precision,overall_recall,ece,f1_diff_vs_B,f1_bar,latency_p95_ms,llm_share,llm_usd_per_1000_band_pairs,llm_cost_per_call_source,total_usd_month_at_1M_records_per_day,meets_every_bar
+A,0.1058,0.0652,0.1472,1.0,0.0559,1.0,0.512,,-0.8798,fail,,,0.0000,measured in this run,1659.96,no
+B,0.9856,0.9587,1.0,0.9743,0.9972,0.9971,0.5713,0.0142,,reference (B is the baseline),,,1.5234,measured in this run,930723.45,yes
+C,0.9633,0.9491,0.9765,0.9743,0.9525,0.9972,0.5685,0.0003,-0.0229,inconclusive,0.2791,,0.0000,measured in this run,4909.17,not shown (inconclusive)
+D,0.9862,0.977,0.9943,0.9754,0.9972,0.9972,0.5713,0.0004,-0.0126,inconclusive,0.2803,0.009676979691972195,0.0147,measured in this run,14315.97,not shown (inconclusive)
+D (orig),0.9689,0.9563,0.9806,0.98,0.9581,0.9978,0.5688,0.0002,-0.02,inconclusive,0.2803,0.00036345463631820454,0.0006,measured in this run,5667.81,not shown (inconclusive)
+D (forced),0.9862,0.977,0.9943,0.9754,0.9972,0.9972,0.5713,0.0004,-0.0126,inconclusive,0.2803,0.009676979691972195,0.0147,measured in this run,14315.97,not shown (inconclusive)
+E,,,,,,,,,,,,,,,,not run

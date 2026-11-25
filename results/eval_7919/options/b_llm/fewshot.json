@@ -1,0 +1,210 @@
+[
+ {
+  "stratum": "same, truncation",
+  "label": "same",
+  "ids": [
+   "R61004f1569",
+   "R83c674983a"
+  ],
+  "a": {
+   "company_name": "Riverside Engine",
+   "address_line": "1361 Main Rd",
+   "city": "Atlanta",
+   "postal_code": "30358-4680",
+   "state": "GA",
+   "website": "",
+   "phone": "264-452-0951"
+  },
+  "b": {
+   "company_name": "Riverside Engineering Group L.L.C.",
+   "address_line": "1361 Main Rd.",
+   "city": "Atlanta",
+   "postal_code": "30358",
+   "state": "GA",
+   "website": "riversideengineering.com",
+   "phone": ""
+  }
+ },
+ {
+  "stratum": "same, acronym",
+  "label": "same",
+  "ids": [
+   "Rb230ea812b",
+   "Re43b4e0e4a"
+  ],
+  "a": {
+   "company_name": "P.A.P.",
+   "address_line": "6498 Jefferson Dr.",
+   "city": "Raleigh",
+   "postal_code": "27639-5971",
+   "state": "NC",
+   "website": "www.pinecrestatlantic.com",
+   "phone": "4472557074"
+  },
+  "b": {
+   "company_name": "Pinecrest Atlantic Pharmacy",
+   "address_line": "6498 Jefferson Drive",
+   "city": "Raleigh",
+   "postal_code": "27639",
+   "state": "NC",
+   "website": "pinecrestatlantic.com",
+   "phone": "(447) 255-7074"
+  }
+ },
+ {
+  "stratum": "different, same name (decoy)",
+  "label": "different",
+  "ids": [
+   "R42b8789277",
+   "R4e5774e9c7"
+  ],
+  "a": {
+   "company_name": "Sunrise Software Inc",
+   "address_line": "5682 Park Way",
+   "city": "Atlanta",
+   "postal_code": "30343",
+   "state": "GA",
+   "website": "sunrisesoftware.com",
+   "phone": "738.480.9703"
+  },
+  "b": {
+   "company_name": "Sunrise Software Inc",
+   "address_line": "6758 Sunset Avenue",
+   "city": "Omaha",
+   "postal_code": "68174",
+   "state": "NE",
+   "website": "sunrisesoftware.com",
+   "phone": "(385) 238-5636"
+  }
+ },
+ {
+  "stratum": "different, same name (decoy)",
+  "label": "different",
+  "ids": [
+   "R8ed12b7113",
+   "Re024407d26"
+  ],
+  "a": {
+   "company_name": "Shah & Nguyen Technologies Inc",
+   "address_line": "6807 Market Way",
+   "city": "Kansas City",
+   "postal_code": "64187",
+   "state": "MO",
+   "website": "shahnguyen.com",
+   "phone": "+1 309 447 6566"
+  },
+  "b": {
+   "company_name": "Shah & Nguyen Technologies INC",
+   "address_line": "1283 Washington St",
+   "city": "Sacramento",
+   "postal_code": "95850-8472",
+   "state": "CA",
+   "website": "",
+   "phone": "706-825-3180"
+  }
+ },
+ {
+  "stratum": "same, plain variation",
+  "label": "same",
+  "ids": [
+   "R144957536b",
+   "Re9bc90d338"
+  ],
+  "a": {
+   "company_name": "Highland Engineering Group Incorporated",
+   "address_line": "380 0Mill Rd.",
+   "city": "Omaha",
+   "postal_code": "68126",
+   "state": "NE",
+   "website": "www.highlandengineering.com",
+   "phone": ""
+  },
+  "b": {
+   "company_name": "Highland Engineering Group INC",
+   "address_line": "3800 Mill Road",
+   "city": "OMAHA",
+   "postal_code": "68126",
+   "state": "NE",
+   "website": "",
+   "phone": "+1 723 722 2643"
+  }
+ },
+ {
+  "stratum": "same, po_box",
+  "label": "same",
+  "ids": [
+   "R4b6062692a",
+   "Rccc704bc70"
+  ],
+  "a": {
+   "company_name": "Ward Data Systems, Incorporated",
+   "address_line": "POB 10349",
+   "city": "San Diego",
+   "postal_code": "92199",
+   "state": "CA",
+   "website": "",
+   "phone": ""
+  },
+  "b": {
+   "company_name": "Ward Data Systems, Inc",
+   "address_line": "2691 Airport Pkwy",
+   "city": "San Diego",
+   "postal_code": "92199",
+   "state": "CA",
+   "website": "warddata.com",
+   "phone": "+1 342 350 3926"
+  }
+ },
+ {
+  "stratum": "different, random",
+  "label": "different",
+  "ids": [
+   "R4c61f0f74d",
+   "Ra21ca0cc90"
+  ],
+  "a": {
+   "company_name": "Northgate Health Partners LLC",
+   "address_line": "527 River Boulevard",
+   "city": "Atlanta",
+   "postal_code": "30392",
+   "state": "GA",
+   "website": "northgatehealth.com",
+   "phone": "+1 411 261 7052"
+  },
+  "b": {
+   "company_name": "Northgate Pharmacy Comp",
+   "address_line": "502 Washington Street",
+   "city": "Omaha",
+   "postal_code": "68152",
+   "state": "NE",
+   "website": "northgatepharmacy.com",
+   "phone": "4434967846"
+  }
+ },
+ {
+  "stratum": "different, highest score",
+  "label": "different",
+  "ids": [
+   "R246ccce674",
+   "Rb1d8167172"
+  ],
+  "a": {
+   "company_name": "Meridian Sterling Environmental Services Inc",
+   "address_line": "2215 Lincoln Drive",
+   "city": "Phoenix",
+   "postal_code": "85002",
+   "state": "AZ",
+   "website": "meridiansterling.com",
+   "phone": "378-529-7719"
+  },
+  "b": {
+   "company_name": "Meridian Dental Group Ltd",
+   "address_line": "6732 Highland Ave",
+   "city": "Phoenix",
+   "postal_code": "85062",
+   "state": "AZ",
+   "website": "meridiandental.com",
+   "phone": "3032309910"
+  }
+ }
+]

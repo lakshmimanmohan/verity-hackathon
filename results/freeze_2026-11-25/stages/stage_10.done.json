@@ -1,0 +1,49 @@
+{
+ "stage": 10,
+ "name": "scoring",
+ "mode": "real",
+ "seed": 7919,
+ "ended_utc": "2026-11-25T18:27:28Z",
+ "seconds": 29.7,
+ "ledger_cost_usd": 0.0,
+ "exit": 0,
+ "reads_truth": [
+  "score B. frontier LLM (frozen prompt) (sample)",
+  "compare B (frontier LLM) vs A (threshold only)",
+  "compare B (frontier LLM) vs C v1 LightGBM",
+  "compare C v1 LightGBM vs B (frontier LLM)",
+  "compare D (hybrid) vs B (frontier LLM)",
+  "compare D (hybrid) vs C v1 LightGBM",
+  "compare D (original rule) vs B (frontier LLM)",
+  "compare D (hybrid) vs D (original rule)",
+  "compare D (forced reading) vs B (frontier LLM)",
+  "b_sample_report",
+  "d_report",
+  "d_full_report"
+ ],
+ "guards": [
+  {
+   "time": "2026-11-25T18:26:58Z",
+   "stage": 10,
+   "guard": "frozen files unchanged since the manifest",
+   "fired": false,
+   "detail": "all match"
+  }
+ ],
+ "notes": [],
+ "outputs": {
+  "results/eval_7919/options/b_llm/openai/sample5000/score_report_sample5000.txt": "1ad7a96dc7932f9536e594248b1cf5d229811d93fe70e89b93ebbf0c6e20a005",
+  "results/eval_7919/options/compare/b_vs_a.txt": "5e2150ad9433e646cf2ec7e09eab4a0feb42a2fcd226e1f870b6c3a76a954472",
+  "results/eval_7919/options/compare/b_vs_c_v1_lgbm.txt": "b44276de77b6ecc5e33ca578eeee9159722f6a769298632a6210fe4fea709c34",
+  "results/eval_7919/options/compare/c_v1_lgbm_vs_b.txt": "e0043c10051d14167018a85556e72ceb16365e96f1ce7c89bff608e878650635",
+  "results/eval_7919/options/d_hybrid/compare_d_vs_b.txt": "5f91666196b4e13068872196768fcd66eb38d428b6049e991b81dd12278c6fea",
+  "results/eval_7919/options/d_hybrid/compare_d_vs_c.txt": "fa3eb1979aa2ec96c3aa91f0ce52dbf9dee82c42fb60df17db81a8e9a669b340",
+  "results/eval_7919/options/d_hybrid/compare_d_original_vs_b.txt": "db9c5d0a62984f3e71d7abc54d265d0f629cb3bb36f34f0ecc92ba5e23703b7c",
+  "results/eval_7919/options/d_hybrid/compare_d_vs_d_original.txt": "7b6dfc731f836ea53bb9e4ed74bbcf4b5f2b4bb79b188459057fec25d97afe5d",
+  "results/eval_7919/options/d_hybrid/compare_d_forced_vs_b.txt": "cf74799d2a01b7b9f5c49514f1b6788408559400f79933215a7901be419d7bb3",
+  "results/eval_7919/options/b_llm/openai/sample5000/sample_report.txt": "3f423c363114fb4b5d5d076c2b1820d62b7b5cb810432c36f86309f0f22c6d3b",
+  "results/eval_7919/options/d_hybrid/d_report.txt": "665d28bb7178c6e600409c7a288291888db213cb3c973b4dea792f39f6dcf2df",
+  "results/eval_7919/options/d_hybrid/d_fullband_report.txt": "91cf0859f181305047871bc363e90c09c796a166b66ea072b2ac76317f4fdf0c"
+ },
+ "manifest_sha256": "42c4442caa3da3643ad870e9b76f8c7ef3b0e13a2c387e25d4ccf30f94af1e2c"
+}

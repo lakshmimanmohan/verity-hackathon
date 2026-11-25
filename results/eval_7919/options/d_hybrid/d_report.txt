@@ -1,0 +1,84 @@
+Option D (hybrid) on the 5,000-pair test band sample, run eval_7919: lo 0.005, hi 0.9 (chosen by selection_rule_v2.txt, frozen_settings_v2.json)
+
+Routes (C's calibrated p: p >= hi decided same, lo <= p < hi the LLM, p < lo decided different)
+  route         sampled  weighted (test band)    share
+  c_different      4602              43,279.3   0.9831
+  llm                67                 403.3   0.0092
+  c_same            331                 339.4   0.0077
+  LLM calls: 67 sampled; weighted LLM share of the band 0.0092 = about 403 calls on the 44,022 band pairs
+  projected cost: $0.0140 per 1,000 band pairs ($0.001527 per call, B's measured cost), about $0.616 for the band; B alone costs $1.527 per 1,000 band pairs
+
+Errors among the sampled pairs: 1 false non-matches, 2 false matches (358 same, 4642 different sampled)
+
+False negatives (same organization, decided different): 1, all shown
+  R96cdf3c908 | Re02270a4f6   decision different, p 0.000, route c_different, weight 1.0000, tags acronym+po_box
+      address_line     Post Office Box 12050                        | 6749 Center Blvd
+      city             Omaha                                        | Omaha
+      company_name     Barnes Health Partners Incorporated          | B.H.P. INC
+      phone            (missing)                                    | 657.513.4037
+      postal_code      68173-3579                                   | 68173
+      state            NE                                           | NE
+      website          (missing)                                    | barneshealth.com
+
+False positives (different organizations, decided same): 2, all shown
+  R3dbc01fce5 | Rfe7e8b1eb9   decision same, p 1.000, route c_same, weight 9.4063, tags clean+po_box
+      address_line     4059 Mill Street                             | P.O. Box 35032
+      city             Boston                                       | BOSTON
+      company_name     Coastal Health Partners Co                   | Coastal Beacon Packaging LLC
+      phone            8783185708                                   | (missing)
+      postal_code      02162                                        | 02162
+      state            MA                                           | MA
+      website          coastalhealth.com                            | coastalbeacon.com
+  R76ec325432 | Rfa30d8aac2   decision same, p 0.900, route llm, weight 9.4063, tags acronym+clean+missing_phone+typo_address
+      address_line     7022 Main Boulevard                          | 4038 Washington Street
+      city             Sacramento                                   | Sacramento
+      company_name     Heritage Coastal Equipment Rental Inc        | H.C.T. Corp.
+      phone            490.712.3071                                 | (missing)
+      postal_code      95851                                        | 95821
+      state            CA                                           | CA
+      website          heritagecoastal.com                          | heritagecoastal.com
+
+Errors by tag (sample counts; recall and false-match rate weighted to the test band)
+  tag         pairs  same  diff   FN   FP   recall (w)   false-match rate (w)   FP-rate bound
+  acronym       548   137   411    1    1       0.9927                0.00243   
+  truncation    688    55   633    0    0       1.0000                0.00000   <= 0.0047
+  po_box        679   238   441    1    1       0.9958                0.00227   
+  decoy          12     0    12    0    0            -                0.00000   <= 0.2209
+  easy          825     6   819    0    0       1.0000                0.00000   <= 0.0037
+  no tag       2406     0  2406    0    0            -                0.00000   <= 0.0012
+
+C v1 LightGBM's errors on the full test band: 9 false matches and 17 missed true pairs; where the chosen rule (lo 0.005, hi 0.9) sends each pair
+
+  C false matches: 9; routed to the LLM 2, c_same 7, c_different 0
+    pair                         C p  route       in sample B answer (recorded)       D decision   tags
+    R0e594681a6 Rfe7e8b1eb9    1.000  c_same      no        not in sample (no B answer)(not sampled)case+po_box
+    R3dbc01fce5 Rfe7e8b1eb9    1.000  c_same      yes       different 0.02             same         clean+po_box
+    R4bf9a7eb12 Rdcf61806b5    0.750  llm         no        not in sample (no B answer)(not sampled)missing_phone+po_box
+    R59218396a4 Rfe7e8b1eb9    1.000  c_same      no        not in sample (no B answer)(not sampled)po_box+standard
+    R5ef23dffe8 Reccf440a7d    1.000  c_same      no        not in sample (no B answer)(not sampled)clean+po_box
+    R6db6959dac Reccf440a7d    1.000  c_same      no        not in sample (no B answer)(not sampled)po_box+standard
+    R76a3f4a4dc Rb746bae058    1.000  c_same      no        not in sample (no B answer)(not sampled)missing_phone+standard
+    R8ceffe5e7c Reccf440a7d    1.000  c_same      no        not in sample (no B answer)(not sampled)po_box+standard
+    Rc861c051f7 Rd4eaf41dcb    0.750  llm         no        not in sample (no B answer)(not sampled)acronym+missing_phone+po_box
+
+  C missed true pairs: 17; routed to the LLM 16, c_same 0, c_different 1
+    pair                         C p  route       in sample B answer (recorded)       D decision   tags
+    R009d5c8244 R05988575b6    0.086  llm         yes       same 0.88                  same         po_box+truncation
+    R02c9c5b985 Ra48958f497    0.136  llm         yes       same 0.89                  same         missing_phone+po_box+truncation+typo
+    R09635066c4 R7eb98840bd    0.504  llm         yes       same 0.91                  same         acronym+po_box
+    R0cd4ec8224 Re5d4503d4c    0.086  llm         yes       same 0.94                  same         missing_phone+po_box+typo_address
+    R2c7e906f7f R730c2668ea    0.273  llm         yes       same 0.95                  same         po_box+standard
+    R40c61aa362 Ra37422e5b5    0.273  llm         yes       same 0.92                  same         po_box+standard
+    R4ebb4bc175 Rcf247febe9    0.036  llm         yes       same 0.93                  same         po_box+truncation+typo
+    R5dd5d9c628 R7b68eb2a93    0.273  llm         yes       same 0.94                  same         case+missing_phone+truncation
+    R6cecec4794 R76f406e1ed    0.139  llm         yes       same 0.96                  same         missing_phone+truncation
+    R730c2668ea R83a6e910bb    0.273  llm         yes       same 0.94                  same         acronym+po_box+typo_address
+    R7c05c481ea R88eadcf555    0.086  llm         yes       same 0.97                  same         acronym+case+missing_phone
+    R7d37da1a99 Rd77d35fd08    0.036  llm         yes       same 0.77                  same         missing_phone+po_box+truncation+typo+typo_address
+    R7d3e1f243d Rfe2b6f312a    0.362  llm         yes       same 0.97                  same         acronym+missing_phone
+    R838abc80a1 R88eadcf555    0.273  llm         yes       same 0.99                  same         acronym+case+missing_phone
+    R96cdf3c908 Re02270a4f6    0.000  c_different yes       same 0.88                  different    acronym+po_box
+    Rba8aeb774a Rdb4a782ff7    0.086  llm         yes       same 0.94                  same         po_box+truncation
+    Rce4941b1ff Rf07104d376    0.709  llm         yes       same 0.96                  same         acronym+po_box
+
+  18 of C's 26 full-band errors are routed to the LLM; the other 8 keep C's decision.

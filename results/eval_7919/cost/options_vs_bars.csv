@@ -1,0 +1,9 @@
+# DRAFT: effort log incomplete, one-time costs for B and D undercounted
+option,basis,band_f1,f1_diff_vs_B,f1_diff_lo,f1_diff_hi,f1_bar,overall_precision,precision_bar,overall_recall,recall_bar,ece,ece_bar,latency_p95_ms,latency_bar,llm_share,llm_share_bar,meets_every_bar,total_usd_month_at_1M_per_day,total_usd_12_months_at_1M_per_day,labels
+A,full band; F1 difference on the sample,0.1058,-0.8798,-0.9268,-0.8270,fail,1.0,pass,0.512,reference (A is the baseline),,n/a (bar is for C and D),,n/a (bar is for C),,n/a (bar is for D),no,1659.96,19919.52,0
+B,sample estimate (weighted); B is the baseline of the F1 bar,0.9856,,,,reference (B is the baseline),0.9971,pass,0.5713,pass,0.0142,n/a (bar is for C and D),,n/a (bar is for C),,n/a (bar is for D),yes,930723.45,11168681.37,0
+C,full band; F1 difference on the sample,0.9633,-0.0229,-0.0641,0.0118,inconclusive,0.9972,pass,0.5685,pass,0.0003,pass,0.2791,pass,,n/a (bar is for D),not shown (inconclusive),4909.17,58910.06,66031
+D,exact full band; F1 difference on the sample,0.9862,-0.0126,-0.0400,0.0028,inconclusive,0.9972,pass,0.5713,pass,0.0004,pass,0.2803,n/a (bar is for C),0.009676979691972195,pass,not shown (inconclusive),14315.97,171791.65,66031
+D_original,exact full band; F1 difference on the sample; original routing rule,0.9689,-0.0200,-0.0601,0.0132,inconclusive,0.9978,pass,0.5688,pass,0.0002,pass,0.2803,n/a (bar is for C),0.00036345463631820454,pass,not shown (inconclusive),5667.81,68013.76,66031
+D_forced,exact full band; F1 difference on the sample; forced reading (diagnostic),0.9862,-0.0126,-0.0400,0.0028,inconclusive,0.9972,pass,0.5713,pass,0.0004,pass,0.2803,n/a (bar is for C),0.009676979691972195,pass,not shown (inconclusive),14315.97,171791.65,66031
+E,not run,,,,,,,,,,,,,,,,,,,

@@ -1,0 +1,57 @@
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe options/a_threshold.py C:\verity-hackathon\results\eval_7919   [truth sealed; 2026-11-25T17:19:05Z]
+Wrote 44022 test band decisions to C:\verity-hackathon\results\eval_7919\options\a_threshold\decisions.csv (20 same, 44002 different)
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe eval/score_option.py C:\verity-hackathon\results\eval_7919 --decisions C:\verity-hackathon\results\eval_7919\options\a_threshold\decisions.csv --name A. threshold only   [reads truth; 2026-11-25T17:19:06Z]
+Option: A. threshold only
+Run: C:\verity-hackathon\results\eval_7919
+Decisions: C:\verity-hackathon\results\eval_7919\options\a_threshold\decisions.csv  (44022 test band pairs; confidence given for 0)
+Test group: 4500 records, 50300 scored pairs, 5682 true pairs
+
+Band (test band pairs, same-entity = positive)
+  pairs 44022  (true 358, 0.81%)
+  F1 0.1058  95% CI [0.0652, 0.1472]  (bootstrap, 1000 resamples, seed 0)
+  zero-error bounds (exact one-sided 95% Clopper-Pearson; the bootstrap interval is degenerate when an error count is 0):
+    false matches: 0 of 43,664 false pairs; false-match rate <= 0.00007 (up to 3 false matches on 43,664 false pairs)
+    implied worst case on a band of 358 true and 43,664 false pairs: precision >= 0.8697, recall = 0.0559, F1 >= 0.1050
+  accuracy 0.9923  precision 1.0000  recall 0.0559
+  TP 20  FP 0  FN 338  TN 43664
+
+Overall (test group; outside the band Verity's decision_status)
+  precision 1.0000  recall 0.5120  F1 0.6772
+  TP 2909  FP 0  FN 2773
+
+Recall by hard-case slice (test group; pairs where either record carries the tag)
+  acronym           393 / 884      recall 0.4446
+  truncation        505 / 1013     recall 0.4985
+  po_box            191 / 907      recall 0.2106
+  easy             1876 / 3096     recall 0.6059
+
+Decoy pairs in the test group: 111, wrongly matched 0 (0.00%)
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe eval/score_option.py C:\verity-hackathon\results\eval_7919 --decisions C:\verity-hackathon\results\eval_7919\options\a_threshold\decisions.csv --name A. threshold only --sample C:\verity-hackathon\results\eval_7919\options\b_llm\test_sample5000.csv   [reads truth; 2026-11-25T17:19:09Z]
+Option: A. threshold only
+Run: C:\verity-hackathon\results\eval_7919
+Decisions: C:\verity-hackathon\results\eval_7919\options\a_threshold\decisions.csv  (5000 test band pairs sampled of 44022, weights sum 44022.0 [--sample test_sample5000.csv; 39022 other decisions ignored]; confidence given for 0)
+Test group: 4500 records, 50300 scored pairs, 5682 true pairs
+
+Band (test band pairs, same-entity = positive) (weighted estimate)
+  pairs 44022.0  (true 358.0, 0.81%)
+  F1 0.1058  95% CI [0.0666, 0.1516]  (bootstrap, 1000 resamples, seed 0)
+  zero-error bounds (exact one-sided 95% Clopper-Pearson; the bootstrap interval is degenerate when an error count is 0):
+    false matches: 0 of 4,642 false pairs; false-match rate <= 0.00065 (up to 28 false matches on 43,664 false pairs)
+    implied worst case on a band of 358 true and 43,664 false pairs: precision >= 0.4152, recall = 0.0559, F1 >= 0.0985
+  accuracy 0.9923  precision 1.0000  recall 0.0559
+  TP 20.0  FP 0.0  FN 338.0  TN 43664.0
+
+Overall (test group; outside the band Verity's decision_status) (weighted estimate)
+  precision 1.0000  recall 0.5120  F1 0.6772
+  TP 2909.0  FP 0.0  FN 2773.0
+
+Recall by hard-case slice (test group; pairs where either record carries the tag) (weighted estimate)
+  acronym         393.0 / 884.0    recall 0.4446
+  truncation      505.0 / 1013.0   recall 0.4985
+  po_box          191.0 / 907.0    recall 0.2106
+  easy           1876.0 / 3096.0   recall 0.6059
+
+Decoy pairs in the test group: 157.9, wrongly matched 0.0 (0.00%) (weighted estimate)

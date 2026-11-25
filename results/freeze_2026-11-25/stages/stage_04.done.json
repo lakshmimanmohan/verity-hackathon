@@ -1,0 +1,39 @@
+{
+ "stage": 4,
+ "name": "checks",
+ "mode": "real",
+ "seed": 7919,
+ "ended_utc": "2026-11-25T17:19:05Z",
+ "seconds": 10.8,
+ "ledger_cost_usd": 0.0,
+ "exit": 0,
+ "reads_truth": [
+  "band.py",
+  "evaluate_matches",
+  "make_sample (selection only)"
+ ],
+ "guards": [
+  {
+   "time": "2026-11-25T17:18:54Z",
+   "stage": 4,
+   "guard": "frozen files unchanged since the manifest",
+   "fired": false,
+   "detail": "all match"
+  }
+ ],
+ "notes": [
+  "band: 200,499 review pairs over 10,000 records (20.05 per record)",
+  "test band pairs 44,022: 358 same-entity, 43,664 non-matches",
+  "sample (seed 0): 5,000 pairs = 358 same-entity (weight 1) + 4,642 non-matches (weight 9.406290 each)",
+  "weights sum to 44,022.0000; test band has 44,022 pairs"
+ ],
+ "outputs": {
+  "results/eval_7919/check_scored_pairs.txt": "047d5a6e597b096723c1d8a05483a0a5f10f195c7c8f47fef3a28921c1e861d2",
+  "results/eval_7919/band_report.txt": "944e107042b48207b1a286000794a3853f35f04027e10bc17226a2dbb6f868ec",
+  "results/eval_7919/evaluator_output.txt": "b851bc4e64ef44d6be6b0858db0492da8c2d0765b7ed4407b871e613be75e149",
+  "results/eval_7919/split_records.csv": "cbe32b8b2080580a30a04b26fc215f6b16a6c326ebf56029cb89ad54b257a378",
+  "results/eval_7919/band_summary.json": "563a27628c6c17c1c872ae1394d494ce41339ceac181ec7afb0ff5ef4b267b33",
+  "results/eval_7919/options/b_llm/test_sample5000.csv": "f205c51ce6ca6dc3aaefc9b40c54fc9d11d2855d6e6d84f7ba82bf3163f72557"
+ },
+ "manifest_sha256": "42c4442caa3da3643ad870e9b76f8c7ef3b0e13a2c387e25d4ccf30f94af1e2c"
+}

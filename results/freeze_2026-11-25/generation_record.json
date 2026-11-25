@@ -1,0 +1,10 @@
+{
+ "seed": 7919,
+ "rows": 10000,
+ "csv": "results/eval_7919/orgs_raw.csv",
+ "csv_sha256": "d77e4b780d9512e7ef86f25c68bafccc2f65a1117bbbd39314bc4a5c816e053f",
+ "truth": "results/eval_7919/orgs_raw_truth.csv",
+ "truth_sha256": "4ee4ae1ea39164f94b2dcf43e2dbc0b4fac138c383ee84edb71f3f0166796ecb",
+ "time": "2026-11-25T17:16:06Z",
+ "note": "written at generation; never regenerate this seed"
+}

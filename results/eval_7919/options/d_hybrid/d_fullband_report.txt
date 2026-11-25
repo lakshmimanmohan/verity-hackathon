@@ -1,0 +1,194 @@
+Option D, exact decisions for all 44,022 test band pairs (lo 0.005, hi 0.9), run eval_7919
+routes: {'c_different': 43259, 'llm': 426, 'c_same': 337}; LLM share 0.00968 (426 pairs: 426 with a B answer)
+
+Exact errors: 9 false matches, 1 false non-matches
+
+False matches (different organizations decided same): 9, all shown
+  R0e594681a6 | Rfe7e8b1eb9   decision same, p 1.000, route c_same, tags case+po_box
+      address_line     4059 Mill St.                                | P.O. Box 35032
+      city             Boston                                       | BOSTON
+      company_name     COASTAL HEALTH PARTNERS, COMPANY             | Coastal Beacon Packaging LLC
+      phone            878.318.5708                                 | (missing)
+      postal_code      02162                                        | 02162
+      state            MA                                           | MA
+      website          coastalhealth.com                            | coastalbeacon.com
+  R39ea27a0d4 | Rfa30d8aac2   decision same, p 0.910, route llm, tags acronym+case+missing_phone+typo_address
+      address_line     7022 Main Boulevard                          | 4038 Washington Street
+      city             Sacramento                                   | Sacramento
+      company_name     HERITAGE COASTAL EQUIPMENT RENTAL INC        | H.C.T. Corp.
+      phone            490.712.3071                                 | (missing)
+      postal_code      95851                                        | 95821
+      state            CA                                           | CA
+      website          heritagecoastal.com                          | heritagecoastal.com
+  R3dbc01fce5 | Rfe7e8b1eb9   decision same, p 1.000, route c_same, tags clean+po_box
+      address_line     4059 Mill Street                             | P.O. Box 35032
+      city             Boston                                       | BOSTON
+      company_name     Coastal Health Partners Co                   | Coastal Beacon Packaging LLC
+      phone            8783185708                                   | (missing)
+      postal_code      02162                                        | 02162
+      state            MA                                           | MA
+      website          coastalhealth.com                            | coastalbeacon.com
+  R59218396a4 | Rfe7e8b1eb9   decision same, p 1.000, route c_same, tags po_box+standard
+      address_line     4059 Mill Street                             | P.O. Box 35032
+      city             Boston                                       | BOSTON
+      company_name     Coastal Health Partners Co                   | Coastal Beacon Packaging LLC
+      phone            878.318.5708                                 | (missing)
+      postal_code      02162                                        | 02162
+      state            MA                                           | MA
+      website          coastalhealth.com                            | coastalbeacon.com
+  R5ef23dffe8 | Reccf440a7d   decision same, p 1.000, route c_same, tags clean+po_box
+      address_line     2808 Industrial Way                          | PO Box 18349
+      city             Omaha                                        | Omaha
+      company_name     Tanaka & Barnes Construction LLC             | Tanaka & Thompson Consulting Group Limited
+      phone            559-992-3967                                 | (missing)
+      postal_code      68180                                        | 68180
+      state            NE                                           | NE
+      website          tanakabarnes.com                             | www.tanakathompson.com
+  R6db6959dac | Reccf440a7d   decision same, p 1.000, route c_same, tags po_box+standard
+      address_line     2808 Industrial Way.                         | PO Box 18349
+      city             Omaha                                        | Omaha
+      company_name     Tanaka and Barnes Construction, L.L.C.       | Tanaka & Thompson Consulting Group Limited
+      phone            +1 559 992 3967                              | (missing)
+      postal_code      68180                                        | 68180
+      state            NE                                           | NE
+      website          tanakabarnes.com                             | www.tanakathompson.com
+  R76a3f4a4dc | Rb746bae058   decision same, p 1.000, route c_same, tags missing_phone+standard
+      address_line     7480 Jefferson Ct.                           | 3373 Oak Pkwy. Ste 210
+      city             Minneapolis                                  | Minneapolis
+      company_name     Brooks Software Corp                         | Brightpath Ridge Packaging, Corp
+      phone            (missing)                                    | 755-561-5407
+      postal_code      55423                                        | 55423
+      state            MN                                           | MN
+      website          (missing)                                    | (missing)
+  R76ec325432 | Rfa30d8aac2   decision same, p 0.900, route llm, tags acronym+clean+missing_phone+typo_address
+      address_line     7022 Main Boulevard                          | 4038 Washington Street
+      city             Sacramento                                   | Sacramento
+      company_name     Heritage Coastal Equipment Rental Inc        | H.C.T. Corp.
+      phone            490.712.3071                                 | (missing)
+      postal_code      95851                                        | 95821
+      state            CA                                           | CA
+      website          heritagecoastal.com                          | heritagecoastal.com
+  R8ceffe5e7c | Reccf440a7d   decision same, p 1.000, route c_same, tags po_box+standard
+      address_line     2808 Industrial Way                          | PO Box 18349
+      city             Omaha                                        | Omaha
+      company_name     Tanaka & Barnes Construction, LLC            | Tanaka & Thompson Consulting Group Limited
+      phone            559-992-3967                                 | (missing)
+      postal_code      68180                                        | 68180
+      state            NE                                           | NE
+      website          tanakabarnes.com                             | www.tanakathompson.com
+
+False non-matches (same organization decided different): 1, all shown
+  R96cdf3c908 | Re02270a4f6   decision different, p 0.000, route c_different, tags acronym+po_box
+      address_line     Post Office Box 12050                        | 6749 Center Blvd
+      city             Omaha                                        | Omaha
+      company_name     Barnes Health Partners Incorporated          | B.H.P. INC
+      phone            (missing)                                    | 657.513.4037
+      postal_code      68173-3579                                   | 68173
+      state            NE                                           | NE
+      website          (missing)                                    | barneshealth.com
+
+Sample-based estimate (5,000-pair sample, compare_d_vs_b.txt) against the exact full-band numbers
+                   sample estimate  sample 95% interval      exact   inside?
+  band F1                   0.9730  [0.9363, 1.0000]        0.9862   yes
+  band precision            0.9499  [0.8824, 1.0000]        0.9754   yes
+  band recall               0.9972  [0.9909, 1.0000]        0.9972   yes
+  overall precision: sample 1.0000, exact 0.9972; overall recall: sample 0.5791, exact 0.5713; ECE: sample 0.0002, exact 0.0004
+  why the sample missed the false matches: the 9 exact false matches are 7 sure-same pairs from C (p = 1.0) and 2 the LLM answered same; each non-match has a 1-in-9.56 chance of being sampled, so a handful of false matches can all be missed (the sample's 95% bound allowed up to 29)
+
+Where D and C differ: 20 of 44,022 band pairs (D differs from C only on the LLM-routed pairs)
+  R009d5c8244 R05988575b6   C different (p 0.086) -> D same   truth same
+  R02c9c5b985 Ra48958f497   C different (p 0.136) -> D same   truth same
+  R09635066c4 R7eb98840bd   C different (p 0.504) -> D same   truth same
+  R0cd4ec8224 Re5d4503d4c   C different (p 0.086) -> D same   truth same
+  R2c7e906f7f R730c2668ea   C different (p 0.273) -> D same   truth same
+  R39ea27a0d4 Rfa30d8aac2   C different (p 0.036) -> D same   truth different
+  R40c61aa362 Ra37422e5b5   C different (p 0.273) -> D same   truth same
+  R4bf9a7eb12 Rdcf61806b5   C same (p 0.750) -> D different   truth different
+  R4ebb4bc175 Rcf247febe9   C different (p 0.036) -> D same   truth same
+  R5dd5d9c628 R7b68eb2a93   C different (p 0.273) -> D same   truth same
+  R6cecec4794 R76f406e1ed   C different (p 0.139) -> D same   truth same
+  R730c2668ea R83a6e910bb   C different (p 0.273) -> D same   truth same
+  R76ec325432 Rfa30d8aac2   C different (p 0.036) -> D same   truth different
+  R7c05c481ea R88eadcf555   C different (p 0.086) -> D same   truth same
+  R7d37da1a99 Rd77d35fd08   C different (p 0.036) -> D same   truth same
+  R7d3e1f243d Rfe2b6f312a   C different (p 0.362) -> D same   truth same
+  R838abc80a1 R88eadcf555   C different (p 0.273) -> D same   truth same
+  Rba8aeb774a Rdb4a782ff7   C different (p 0.086) -> D same   truth same
+  Rc861c051f7 Rd4eaf41dcb   C same (p 0.750) -> D different   truth different
+  Rce4941b1ff Rf07104d376   C different (p 0.709) -> D same   truth same
+  of those 20: {'D right': 18, 'D wrong': 2}
+
+Where D and B differ: B has an answer for 5,411 band pairs (the 5,000 sampled, 64 decoy-check and routed pairs); they differ on 3 of them; {'D right, B wrong': 1, 'D wrong, B right': 2}. On the 38,611 band pairs B never saw, the comparison is not possible
+  R096cb866e9 R0e7aa337cd   D same (route c_same, p 1.000)  B different (p_same 0.28)   truth same   po_box+typo
+  R3dbc01fce5 Rfe7e8b1eb9   D same (route c_same, p 1.000)  B different (p_same 0.02)   truth different   clean+po_box
+  R96cdf3c908 Re02270a4f6   D different (route c_different, p 0.000)  B same (p_same 0.88)   truth same   acronym+po_box
+
+D's decision on each of the 66 decoy pairs (different organizations that share a decoy group)
+  pair                      route        D decision      C p  B p_same
+  R03bc32c8e0 R45a6fb66bc   c_different  different     0.000         -
+  R03d27fe020 Rddafd655d3   c_different  different     0.000         -
+  R07607aec34 R4f2888e187   c_different  different     0.000         -
+  R099cb4b31b R330923244b   c_different  different     0.000         -
+  R10fb58cdd3 Rdda1df1191   llm          different     0.005      0.08
+  R11a694006d R1e2d05f9ca   c_different  different     0.000         -
+  R1461917eb8 R90610eb5f4   c_different  different     0.000         -
+  R14fc2eda4a Rc00462be03   c_different  different     0.000         -
+  R17f8dd43fa Rb1a73abba3   c_different  different     0.000         -
+  R1824594972 Rbb9965f7a4   c_different  different     0.000         -
+  R19a6b444bf R1e2d05f9ca   c_different  different     0.000         -
+  R19d754fa77 Re903b57a05   c_different  different     0.000         -
+  R1ab30a36b0 R481410767a   c_different  different     0.000         -
+  R1d80d3312f Rddafd655d3   c_different  different     0.000         -
+  R1e2d05f9ca Ra885703c23   c_different  different     0.000         -
+  R1e7b1a8a43 Rddafd655d3   c_different  different     0.000         -
+  R1fe64a1938 Ra98ef5f248   c_different  different     0.000         -
+  R289cb380c3 R88defba5da   c_different  different     0.000         -
+  R289cb380c3 Rc291597189   c_different  different     0.000         -
+  R289cb380c3 Rd2a2e412bd   c_different  different     0.000         -
+  R289cb380c3 Rf278809b1a   c_different  different     0.000         -
+  R2aca63b8bc Rf073c6b19d   c_different  different     0.000         -
+  R2f46247002 R32862dbf94   c_different  different     0.000         -
+  R30e39a871f Re0d353ee6b   c_different  different     0.000         -
+  R31abcc295d Rcee42d1597   c_different  different     0.000         -
+  R32862dbf94 R63a0301bab   c_different  different     0.000         -
+  R32862dbf94 Rf609a9a9d0   c_different  different     0.000         -
+  R330923244b R8a13720a45   c_different  different     0.000         -
+  R40dc869079 R72f0668be2   c_different  different     0.000         -
+  R40dc869079 Rdd0e56dcff   c_different  different     0.000         -
+  R4196ce5654 R6aed75ffb2   c_different  different     0.001         -
+  R449cad147e Rc5b7406afd   c_different  different     0.001         -
+  R4637ed6c7a Re741ea1056   c_different  different     0.000         -
+  R4e8191eeb9 Rde77f1c371   c_different  different     0.001         -
+  R4f2888e187 R8f048d5dbf   c_different  different     0.000         -
+  R543f479403 Rcee42d1597   c_different  different     0.000         -
+  R54553e2d23 Rb84e9e728d   c_different  different     0.000         -
+  R56abc7d529 Ra1b4b05495   c_different  different     0.000         -
+  R57ca704ad2 Rde77f1c371   llm          different     0.005      0.06
+  R58fe11ca55 Ra96cff8dcc   c_different  different     0.000         -
+  R5dba697e96 Rd61d06a8c9   c_different  different     0.000         -
+  R602a882ebd Ra829dca72f   c_different  different     0.001         -
+  R602a882ebd Reed08ca4dd   c_different  different     0.000         -
+  R60f96ccf22 Rcee42d1597   c_different  different     0.001         -
+  R6aed75ffb2 R79786eb294   c_different  different     0.000         -
+  R730e2ffb28 R993c3bc425   c_different  different     0.000         -
+  R730e2ffb28 Rdc91166c79   c_different  different     0.000         -
+  R79d205d275 R830a41be5d   c_different  different     0.000         -
+  R7c6f0cffc7 R90610eb5f4   c_different  different     0.000         -
+  R7fa1869c6d R8ab0935d05   c_different  different     0.000         -
+  R80a063b9a6 Rbb9965f7a4   c_different  different     0.000         -
+  R824f10b51b Rdda1df1191   c_different  different     0.000         -
+  R830a41be5d R8ed79c1391   c_different  different     0.000         -
+  R8550ae6169 Rde77f1c371   c_different  different     0.000         -
+  R8d6dc7080b Rf073c6b19d   c_different  different     0.000         -
+  R8e9ea05e2d Rbfdeba28de   c_different  different     0.000         -
+  R93b957430c R94e84de7dd   c_different  different     0.000         -
+  R94e84de7dd Rc4cccb0127   c_different  different     0.000         -
+  R9b50742acc Rbb9965f7a4   c_different  different     0.000         -
+  R9e011e28de Rda264ae2a2   c_different  different     0.000         -
+  R9f670801f0 Ra261279590   c_different  different     0.000         -
+  Ra9590a2650 Rcee42d1597   c_different  different     0.000         -
+  Rb695c27c17 Rcee42d1597   c_different  different     0.001         -
+  Rcee42d1597 Re6810a1c2e   c_different  different     0.000         -
+  Rddafd655d3 Rdee5fc3820   c_different  different     0.000         -
+  Rde77f1c371 Re9d8cf80a4   c_different  different     0.000         -
+  summary: {('c_different', 'different'): 64, ('llm', 'different'): 2}; wrongly matched 0 of 66 (B alone: 1 of 68)

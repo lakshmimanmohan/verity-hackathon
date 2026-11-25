@@ -1,0 +1,60 @@
+{
+ "stage": 1,
+ "name": "generate",
+ "mode": "real",
+ "seed": 7919,
+ "ended_utc": "2026-11-25T17:16:06Z",
+ "seconds": 0.4,
+ "ledger_cost_usd": 0.0,
+ "exit": 0,
+ "reads_truth": [
+  "generate (writes the truth file)"
+ ],
+ "guards": [
+  {
+   "time": "2026-11-25T17:16:06Z",
+   "stage": 1,
+   "guard": "frozen files unchanged since the manifest",
+   "fired": false,
+   "detail": "all match"
+  },
+  {
+   "time": "2026-11-25T17:16:06Z",
+   "stage": 1,
+   "guard": "the real run uses the evaluation seed",
+   "fired": false,
+   "detail": "seed 7919"
+  },
+  {
+   "time": "2026-11-25T17:16:06Z",
+   "stage": 1,
+   "guard": "--approve-seed-7919 given",
+   "fired": false,
+   "detail": "seed 7919 is generated once, only with --approve-seed-7919"
+  },
+  {
+   "time": "2026-11-25T17:16:06Z",
+   "stage": 1,
+   "guard": "the run folder does not exist",
+   "fired": false,
+   "detail": "results/eval_7919"
+  },
+  {
+   "time": "2026-11-25T17:16:06Z",
+   "stage": 1,
+   "guard": "no earlier generation record",
+   "fired": false,
+   "detail": "seed 7919 is generated once"
+  }
+ ],
+ "notes": [
+  "10,000 rows, csv sha256 d77e4b780d9512e7..., truth sha256 4ee4ae1ea39164f9..."
+ ],
+ "outputs": {
+  "results/eval_7919/orgs_raw.csv": "d77e4b780d9512e7ef86f25c68bafccc2f65a1117bbbd39314bc4a5c816e053f",
+  "results/eval_7919/orgs_raw_truth.csv": "4ee4ae1ea39164f94b2dcf43e2dbc0b4fac138c383ee84edb71f3f0166796ecb",
+  "results/freeze_2026-11-25/data_manifest.json": "0f6986dd77af41ba52a74e3e2d35b3f017993d4935669b909c646a556bb15b2d",
+  "results/freeze_2026-11-25/generation_record.json": "d489a18d8c1c13ff963927d81ded3c1fe92220fa48ace4afdd0090a42ea8a3b8"
+ },
+ "manifest_sha256": "42c4442caa3da3643ad870e9b76f8c7ef3b0e13a2c387e25d4ccf30f94af1e2c"
+}

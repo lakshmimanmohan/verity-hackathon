@@ -1,0 +1,51 @@
+{
+ "stage": 2,
+ "name": "verity",
+ "mode": "real",
+ "seed": 7919,
+ "ended_utc": "2026-11-25T17:18:53Z",
+ "seconds": 167.2,
+ "ledger_cost_usd": 0.0,
+ "exit": 0,
+ "reads_truth": [],
+ "guards": [
+  {
+   "time": "2026-11-25T17:16:06Z",
+   "stage": 2,
+   "guard": "frozen files unchanged since the manifest",
+   "fired": false,
+   "detail": "all match"
+  },
+  {
+   "time": "2026-11-25T17:18:53Z",
+   "stage": 2,
+   "guard": "exact neighbor search",
+   "fired": false,
+   "detail": "resolved exact"
+  },
+  {
+   "time": "2026-11-25T17:18:53Z",
+   "stage": 2,
+   "guard": "no uncommitted changes in verity/src",
+   "fired": false,
+   "detail": "False"
+  },
+  {
+   "time": "2026-11-25T17:18:53Z",
+   "stage": 2,
+   "guard": "PYTHONHASHSEED=0",
+   "fired": false,
+   "detail": "0"
+  }
+ ],
+ "notes": [
+  "verity.total 165.609971 s; 216092 scored pairs; commit e20fddbea6"
+ ],
+ "outputs": {
+  "results/eval_7919/verity_data/run_info.json": "28b2a6de4e745c47fb726be79faa2a77571ec1fc765e9115a6bc3daf24f38dd7",
+  "results/eval_7919/verity_data/match_candidates.csv": "83b81e5ce6d0217ffb02cb46a8e8fc5aa21e9b6adce3b7adc04a0043f1173eb1",
+  "results/eval_7919/verity_data/scored_pairs.csv": "f1a44e2e3fefff985b1c6d17394acea18fee46220349beee65e93cbe92fb07d7",
+  "results/eval_7919/verity_data/scored_pairs_columns.json": "2423595c7fa36efc35e620cbc48658a9a1158941516de1874d31d860e569265e"
+ },
+ "manifest_sha256": "42c4442caa3da3643ad870e9b76f8c7ef3b0e13a2c387e25d4ccf30f94af1e2c"
+}

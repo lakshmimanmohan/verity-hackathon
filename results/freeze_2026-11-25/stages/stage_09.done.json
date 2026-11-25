@@ -1,0 +1,55 @@
+{
+ "stage": 9,
+ "name": "decoy check",
+ "mode": "real",
+ "seed": 7919,
+ "ended_utc": "2026-11-25T18:26:58Z",
+ "seconds": 54.9,
+ "ledger_cost_usd": 0.0785,
+ "exit": 0,
+ "reads_truth": [
+  "make_decoy_check (selection only)",
+  "decoy_check_report"
+ ],
+ "guards": [
+  {
+   "time": "2026-11-25T18:26:03Z",
+   "stage": 9,
+   "guard": "frozen files unchanged since the manifest",
+   "fired": false,
+   "detail": "all match"
+  },
+  {
+   "time": "2026-11-25T18:26:05Z",
+   "stage": 9,
+   "guard": "decoy pairs at most 300",
+   "fired": false,
+   "detail": "66 pairs"
+  },
+  {
+   "time": "2026-11-25T18:26:05Z",
+   "stage": 9,
+   "guard": "AC power",
+   "fired": false,
+   "detail": "power: ac"
+  },
+  {
+   "time": "2026-11-25T18:26:06Z",
+   "stage": 9,
+   "guard": "B decoycheck: cap covers the stage's gate projection",
+   "fired": false,
+   "detail": "cap $1.00, gate projection $0.10"
+  }
+ ],
+ "notes": [
+  "pairs: 66 (sample file decoy_check_pairs.csv); distinct prompts 66 (0 pairs repeat another pair's exact record content and share its answer); already answered in the local cache: 14; calls to make: 52",
+  "projection: about $0.08 at the pilot's $0.001545 per call; about 1 minutes at 95.3 calls per minute (8 keys x 12 per minute, 2 workers; the pilot measured 95.3); run cap --max-usd $1.00",
+  "cost gate: 52 pairs to call x $0.001545 (pilot cost per call) x 1.3 = $0.10; ledger total $22.0670, remaining under the $45 cap $22.93; platform limit $30 - ledger total = $7.93 -> PASS"
+ ],
+ "outputs": {
+  "results/eval_7919/options/b_llm/decoy_check_pairs.csv": "6621eb4a1951173e831b16be7b21b9f2cef1c5954707009ef26a0739ffdcb8f8",
+  "results/eval_7919/options/b_llm/openai/decoycheck/decisions.csv": "19939bdff47e44f0b8b13f0a8532fb412326caae51e6a0b768ba52c8fa7995a0",
+  "results/eval_7919/options/b_llm/openai/decoycheck/decoy_report.txt": "d5ee5c43745dcb81b8ffb567b1e249f43cebb2f168c24ea02f373815a84286e8"
+ },
+ "manifest_sha256": "42c4442caa3da3643ad870e9b76f8c7ef3b0e13a2c387e25d4ccf30f94af1e2c"
+}
