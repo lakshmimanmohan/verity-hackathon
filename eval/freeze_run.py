@@ -24,7 +24,7 @@ checked; the frozen files are re-hashed against the manifest at every stage star
    5 option A       a_threshold.py; scored on the full band and on the sample                    (scoring reads truth)
    6 option C       c_decision_model.py, the c_v1_lgbm recipe unchanged (train labels only); scored
    7 option B       the frozen prompt assets installed and verified; --final-sample; the run archived (gzipped calls.jsonl)
-   8 option D       frozen lo / hi; routed pairs; B on routed pairs not in the sample; exact full-band decisions; the
+   8 option D       frozen v2 lo / hi (and the original rule as the secondary row); routed pairs; B on routed pairs not in the sample; exact full-band decisions; the
                     fallback-off case (C's cutoff inside or outside [lo, hi)); latency bench (one core)
    9 decoy check    every test band decoy pair (stops if more than 300)
   10 scoring        B on the sample; paired comparisons with B as reference; error reports        (reads truth)
@@ -72,8 +72,12 @@ CHANGE_DATE = "2026-11-25"                       # written into the manifest's n
 # frozen assets: run-relative destination -> repo-relative source (copied into the run folder and verified)
 ASSETS_B = {"options/b_llm/fewshot.json": f"{DEV_RUN_REL}/options/b_llm/fewshot.json",
             "options/b_llm/frozen_prompt.json": f"{DEV_RUN_REL}/options/b_llm/frozen_prompt.json"}
+# D has two frozen settings: v2 (the one that counts) and the original (lo 0.5, hi 0.9, the secondary row "D (original rule)").
+# Both rule files and both settings files are frozen and hashed in the manifest.
 ASSETS_D = {"options/d_hybrid/selection_rule.txt": f"{DEV_RUN_REL}/options/d_hybrid/selection_rule.txt",
-            "options/d_hybrid/frozen_settings.json": f"{DEV_RUN_REL}/options/d_hybrid/frozen_settings.json"}
+            "options/d_hybrid/frozen_settings.json": f"{DEV_RUN_REL}/options/d_hybrid/frozen_settings.json",
+            "options/d_hybrid/selection_rule_v2.txt": f"{DEV_RUN_REL}/options/d_hybrid/selection_rule_v2.txt",
+            "options/d_hybrid/frozen_settings_v2.json": f"{DEV_RUN_REL}/options/d_hybrid/frozen_settings_v2.json"}
 FROZEN_FILES = [
     "protocol.md", "requirements.txt", "verity/requirements.txt", "data/generate_data_org.py",
     "options/b_system_prompt.txt", "options/b_prompt_appendix.txt", "options/prices.json", "options/b_llm_baseline.py",
@@ -202,7 +206,9 @@ class Runner:
                "pip_freeze_sha256": hashlib.sha256(pf.encode()).hexdigest(), "tag": TAG if self.mode == "real" else None,
                "not_frozen": ["cost/effort_log.csv (read as it is by the cost stage; its hash is printed)"],
                "notes": [f"reporting and driver scripts changed on {CHANGE_DATE} to handle an all-cached B stage; no model-side asset changed",
-                         "cost model reads B per-call figures from the dev run when a stage made no live calls"]}
+                         "cost model reads B per-call figures from the dev run when a stage made no live calls",
+                         f"option D routing rule v2 (selection_rule_v2.txt, frozen_settings_v2.json) replaced the original rule as D's setting on {CHANGE_DATE}; "
+                         "the original rule (lo 0.5, hi 0.9) is reported as the secondary row 'D (original rule)'; both rule files and both settings files are hashed here"]}
         self.freeze_dir.mkdir(parents=True, exist_ok=True)
         self.manifest_path.write_text(json.dumps(doc, indent=1) + "\n", encoding="utf-8")
         return doc
@@ -355,10 +361,12 @@ def manifest_params(R: Runner) -> dict:
     try:
         prices = json.loads((R.repo / "options" / "prices.json").read_text(encoding="utf-8"))["models"]
         fz = json.loads((R.repo / ASSETS_B["options/b_llm/frozen_prompt.json"]).read_text(encoding="utf-8"))
-        fs = json.loads((R.repo / ASSETS_D["options/d_hybrid/frozen_settings.json"]).read_text(encoding="utf-8"))
+        fs = json.loads((R.repo / ASSETS_D["options/d_hybrid/frozen_settings_v2.json"]).read_text(encoding="utf-8"))
+        fo = json.loads((R.repo / ASSETS_D["options/d_hybrid/frozen_settings.json"]).read_text(encoding="utf-8"))
         out.update({"model": fz["model"], "reasoning_effort": fz["reasoning_effort"], "max_output_tokens": prices[fz["model"]]["request_settings"]["max_output_tokens"],
                     "system_prompt_sha256": fz["system_prompt_sha256"], "settings_sha256": fz["settings_sha256"], "cache_key_scheme": fz["cache_key_scheme"],
-                    "d_lo": fs["lo"], "d_hi": fs["hi"], "pilot_cost_per_call_usd": 0.001545, "platform_limit_usd": 30.0})
+                    "d_lo": fs["lo"], "d_hi": fs["hi"], "d_rule_v2_sha256_lf": fs["rule_file_sha256_lf"],
+                    "d_original_lo": fo["lo"], "d_original_hi": fo["hi"], "d_original_rule_sha256_lf": fo["rule_file_sha256_lf"], "pilot_cost_per_call_usd": 0.001545, "platform_limit_usd": 30.0})
     except (OSError, KeyError, json.JSONDecodeError):
         pass                                                   # tests without the real assets
     return out
@@ -590,20 +598,22 @@ def s8_d(R: Runner) -> dict:
     run = R.run_dir
     dd = run / "options" / "d_hybrid"
     assets = install_assets(R, 8, ASSETS_D)
-    R.step(8, [PY, "options/d_hybrid.py", "list-routed", run], label="d_hybrid list-routed")
+    R.step(8, [PY, "options/d_hybrid.py", "list-routed", run, "--setting", "original"], label="d_hybrid list-routed (original rule)")
+    n_orig = lines_minus_header(dd / "routed_fullband_pairs_original.csv")
+    R.step(8, [PY, "options/d_hybrid.py", "list-routed", run, "--setting", "v2"], label="d_hybrid list-routed (v2)")
     routed = dd / "routed_fullband_pairs.csv"
     n_routed = lines_minus_header(routed)
-    R.note(f"{n_routed} test band pairs routed to the LLM")
+    R.note(f"{n_routed} test band pairs routed to the LLM by v2; {n_orig} by the original rule")
     if n_routed:
         b_final(R, 8, routed, "dfull")
     else:
         R.note("no routed pairs: the B dfull call is skipped")
-    R.step(8, [PY, "options/d_hybrid.py", "full", run], label="d_hybrid full")
-    fs = json.loads((dd / "frozen_settings.json").read_text(encoding="utf-8"))
+    R.step(8, [PY, "options/d_hybrid.py", "full", run, "--setting", "v2"], label="d_hybrid full (v2)")
+    fs = json.loads((dd / "frozen_settings_v2.json").read_text(encoding="utf-8"))
     lo, hi = fs["lo"], fs["hi"]
     cutoff = float(json.loads((run / "options" / "c_model" / "c_v1_lgbm" / "features.json").read_text(encoding="utf-8"))["cutoff"])
     inside = lo <= cutoff < (hi if hi is not None else float("inf"))
-    R.step(8, [PY, "options/d_hybrid.py", "full", run, "--fallback", "off"], label="d_hybrid full --fallback off")
+    R.step(8, [PY, "options/d_hybrid.py", "full", run, "--setting", "v2", "--fallback", "off"], label="d_hybrid full --fallback off (v2)")
     chk_path = dd / "fallback_off_check.json"
     chk = json.loads(chk_path.read_text(encoding="utf-8"))
     if not inside and not chk.get("scored"):
@@ -618,8 +628,18 @@ def s8_d(R: Runner) -> dict:
     R.step(8, [PY, "options/d_hybrid.py", "route", run, "--lo", lo, "--hi", "none" if hi is None else hi, "--out", dd / "decisions.csv"], label="d_hybrid route (sample)")
     outs = [score(R, 8, dd / "decisions_fullband.csv", "D. hybrid, exact full test band", dd / "score_report_fullband.txt", json_out=dd / "score_fullband.json"),
             score(R, 8, dd / "decisions.csv", "D. hybrid (C + LLM)", dd / "score_report_sample5000.txt", sample=True)]
+    # the secondary row: the original rule, produced and scored the same way (its routed pairs lie inside v2's, so B has answered them all)
+    fo = json.loads((dd / "frozen_settings.json").read_text(encoding="utf-8"))
+    R.step(8, [PY, "options/d_hybrid.py", "full", run, "--setting", "original"], label="d_hybrid full (original rule)")
+    R.step(8, [PY, "options/d_hybrid.py", "route", run, "--lo", fo["lo"], "--hi", "none" if fo["hi"] is None else fo["hi"], "--out", dd / "decisions_original.csv"],
+           label="d_hybrid route (sample, original rule)")
+    outs += [score(R, 8, dd / "decisions_fullband_original.csv", "D (original rule), exact full test band", dd / "score_report_fullband_original.txt",
+                   json_out=dd / "score_fullband_original.json"),
+             score(R, 8, dd / "decisions_original.csv", "D (original rule) (C + LLM)", dd / "score_report_sample5000_original.txt", sample=True)]
+    R.note(f"original rule: lo {fo['lo']}, hi {fo['hi']}: {n_orig} routed pairs; scored as the secondary row")
     R.step(8, [PY, "options/latency_bench.py", run], env={"OMP_NUM_THREADS": "1"}, label="latency_bench (one core)")
-    return {"outputs": assets + [routed, dd / "decisions_fullband.csv", chk_path, dd / "decisions.csv", run / "options" / "latency" / "latency_summary.json"] + outs}
+    return {"outputs": assets + [routed, dd / "routed_fullband_pairs_original.csv", dd / "decisions_fullband.csv", dd / "decisions_fullband_original.csv", chk_path,
+                                 dd / "decisions.csv", dd / "decisions_original.csv", run / "options" / "latency" / "latency_summary.json"] + outs}
 
 
 def s9_decoy(R: Runner) -> dict:
@@ -641,13 +661,16 @@ def s10_scoring(R: Runner) -> dict:
     o = run / "options"
     bdec = o / "b_llm" / "openai" / "sample5000" / "decisions.csv"
     adec, cdec, ddec = o / "a_threshold" / "decisions.csv", o / "c_model" / "c_v1_lgbm" / "decisions.csv", o / "d_hybrid" / "decisions.csv"
+    dodec = o / "d_hybrid" / "decisions_original.csv"
     outs = [score(R, 10, bdec, "B. frontier LLM (frozen prompt)", o / "b_llm" / "openai" / "sample5000" / "score_report_sample5000.txt", sample=True)]
     sample = o / "b_llm" / "test_sample5000.csv"
     for first, second, n1, n2, save in ((bdec, adec, "B (frontier LLM)", "A (threshold only)", o / "compare" / "b_vs_a.txt"),
                                         (bdec, cdec, "B (frontier LLM)", "C v1 LightGBM", o / "compare" / "b_vs_c_v1_lgbm.txt"),
                                         (cdec, bdec, "C v1 LightGBM", "B (frontier LLM)", o / "compare" / "c_v1_lgbm_vs_b.txt"),
                                         (ddec, bdec, "D (hybrid)", "B (frontier LLM)", o / "d_hybrid" / "compare_d_vs_b.txt"),
-                                        (ddec, cdec, "D (hybrid)", "C v1 LightGBM", o / "d_hybrid" / "compare_d_vs_c.txt")):
+                                        (ddec, cdec, "D (hybrid)", "C v1 LightGBM", o / "d_hybrid" / "compare_d_vs_c.txt"),
+                                        (dodec, bdec, "D (original rule)", "B (frontier LLM)", o / "d_hybrid" / "compare_d_original_vs_b.txt"),
+                                        (ddec, dodec, "D (hybrid)", "D (original rule)", o / "d_hybrid" / "compare_d_vs_d_original.txt")):
         R.step(10, [PY, "eval/compare_options.py", run, "--sample", sample, "--first", first, "--second", second, "--first-name", n1, "--second-name", n2],
                truth=True, label=f"compare {n1} vs {n2}", save=save)
         outs.append(save)
@@ -690,7 +713,8 @@ def write_freeze_report(R: Runner) -> Path:
     L = [f"Freeze report ({R.mode}, seed {R.seed}), written {utc()}",
          f"  run folder {R.rel(R.run_dir)}; freeze folder {R.rel(R.freeze_dir)}; manifest sha256 {sha256_file(R.manifest_path)[:16]}...; git commit {m.get('git_commit')}",
          f"  frozen files: {len(m['files'])}; model {m['params'].get('model')}, reasoning effort {m['params'].get('reasoning_effort')}, "
-         f"prompt {str(m['params'].get('system_prompt_sha256'))[:12]}, D lo {m['params'].get('d_lo')} hi {m['params'].get('d_hi')}",
+         f"prompt {str(m['params'].get('system_prompt_sha256'))[:12]}, D lo {m['params'].get('d_lo')} hi {m['params'].get('d_hi')} "
+         f"(original rule: lo {m['params'].get('d_original_lo')} hi {m['params'].get('d_original_hi')})",
          "", f"  {'stage':<20}{'seconds':>9}{'ledger $':>10}  exit  reads truth"]
     tot_s = tot_c = 0.0
     for n, name, _ in STAGES:

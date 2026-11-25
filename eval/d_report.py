@@ -4,7 +4,7 @@ records after the run; no API call).
 
   python eval/d_report.py results/<run>
 
-Reads <run>/options/d_hybrid/frozen_settings.json (the chosen lo and hi), builds D's decisions the same way as
+Reads <run>/options/d_hybrid/frozen_settings_v2.json (the chosen lo and hi), builds D's decisions the same way as
 options/d_hybrid.py and writes <run>/options/d_hybrid/d_report.txt:
   - routes: sampled and weighted pairs per route, the weighted LLM share, projected calls and cost per 1,000 band
     pairs at $0.001527 per call (option B's measured cost per call)
@@ -38,10 +38,7 @@ def main() -> int:
     args = ap.parse_args()
     run = args.run
     P = D.paths(run)
-    fz = json.loads((P["dir"] / "frozen_settings.json").read_text(encoding="utf-8"))
-    if not fz["selected"]:
-        raise SystemExit("no setting was selected")
-    lo, hi = fz["lo"], fz["hi"]
+    lo, hi = D.frozen_lo_hi(P)                    # the v2 setting (frozen_settings_v2.json)
     c, b, sample = D.load_c(P["c"]), D.load_b(P["b"]), D.load_sample(P["sample"])
     rows = D.build(c, b, sample, lo, hi)
     side = {r["record_id"]: r["side"] for r in D.read_csv(run / "split_records.csv")}
@@ -68,7 +65,7 @@ def main() -> int:
     L: list[str] = []
     say = L.append
     say(f"Option D (hybrid) on the 5,000-pair test band sample, run {run.name}: lo {lo:g}, hi {D.fmt_hi(hi)} "
-        f"(chosen by selection_rule.txt, frozen_settings.json)")
+        f"(chosen by selection_rule_v2.txt, frozen_settings_v2.json)")
     say(f"\nRoutes (C's calibrated p: p >= hi decided same, lo <= p < hi the LLM, p < lo decided different)")
     say(f"  {'route':<12}{'sampled':>9}{'weighted (test band)':>22}{'share':>9}")
     for rt in ("c_different", "llm", "c_same"):

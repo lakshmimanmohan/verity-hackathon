@@ -62,6 +62,8 @@ LABEL_SCENARIOS = (500, 1000, 2000, 63665)
 BASE_LABELS = 2000
 BASE_RATE = 100.0
 BASE_VOLUME = 1_000_000
+# D's routed share of band pairs, as a sensitivity: 0.1%, 0.3%, 0.6% and 1% (development seeds: pooled 0.26%, per seed 0.09% to 0.52%)
+D_SHARE_SENSITIVITY = (0.001, 0.003, 0.006, 0.01)
 
 
 # ---------------------------------------------------------------------------------------------- parameters
@@ -349,6 +351,13 @@ def parse_f1_diff(text: str) -> tuple[float, float, float]:
     return float(m.group(1)), float(m.group(2)), float(m.group(3))
 
 
+def routed_share_of(run: Path, routed_file: str = "routed_fullband_pairs.csv") -> float:
+    """Routed pairs over test band pairs, exact, from a routed-pairs list in the run's D folder."""
+    routed = sum(1 for _ in (run / "options" / "d_hybrid" / routed_file).open(encoding="utf-8")) - 1
+    n_band = sum(1 for _ in (run / "options" / "c_model" / "c_v1_lgbm" / "decisions.csv").open(encoding="utf-8")) - 1
+    return routed / n_band
+
+
 def load_bar_inputs(run: Path, p: Params, latency: dict | None) -> dict:
     """Per option: the numbers each protocol bar needs, read from the committed score and comparison reports."""
     o = run / "options"
@@ -377,6 +386,14 @@ def load_bar_inputs(run: Path, p: Params, latency: dict | None) -> dict:
     }
     if latency and "D" in latency:
         out["D"]["latency_p95_ms"] = latency["D"]["median_of_repeats"]["p95_ms"]
+    orig = o / "d_hybrid" / "score_report_fullband_original.txt"
+    if orig.exists():                                     # the secondary row: D with the original routing rule (lo 0.5, hi 0.9)
+        d_orig = rd(orig)
+        out["D_original"] = {"band_f1": parse_band_f1(d_orig), "f1_diff": parse_f1_diff(rd(o / "d_hybrid" / "compare_d_original_vs_b.txt")),
+                             "overall": parse_overall(d_orig), "ece": parse_ece(d_orig), "llm_share": routed_share_of(run, "routed_fullband_pairs_original.csv"),
+                             "basis": "exact full band; F1 difference on the sample; original routing rule"}
+        if "latency_p95_ms" in out["D"]:
+            out["D_original"]["latency_p95_ms"] = out["D"]["latency_p95_ms"]
     return out
 
 
@@ -574,7 +591,11 @@ def load_inputs(repo: Path, run: Path, out_rows: list, productization_hours: flo
     routed = sum(1 for _ in (run / "options" / "d_hybrid" / "routed_fullband_pairs.csv").open(encoding="utf-8")) - 1
     p.routed_share = routed / n_band
     add("D routed share (exact, full test band)", round(p.routed_share, 6), "ratio", "measured",
-        "results/.../options/d_hybrid/routed_fullband_pairs.csv and c_v1_lgbm/decisions.csv", f"{routed} of {n_band:,} band pairs; sensitivity 0.001, 0.01, 0.05, 0.20")
+        "results/.../options/d_hybrid/routed_fullband_pairs.csv and c_v1_lgbm/decisions.csv", f"{routed} of {n_band:,} band pairs (D with routing rule v2); sensitivity {', '.join(f'{v:g}' for v in D_SHARE_SENSITIVITY)}")
+    orig_file = run / "options" / "d_hybrid" / "routed_fullband_pairs_original.csv"
+    if orig_file.exists():
+        add("D (original rule) routed share (exact, full test band)", round(routed_share_of(run, orig_file.name), 6), "ratio", "measured",
+            "results/.../options/d_hybrid/routed_fullband_pairs_original.csv", "secondary row; routing lo 0.5, hi 0.9")
     dev = dev_run or run
     bs = run / "band_summary.json"
     if bs.exists():
@@ -1053,8 +1074,27 @@ def main() -> int:
                          "" if d["f1_diff"] is None else f"{d['f1_diff'][2]:.4f}", v["f1"], d["overall"][0], v["precision"], d["overall"][1], v["recall"],
                          "" if d["ece"] is None else d["ece"], v["ece"], d.get("latency_p95_ms", ""), v["latency"], d.get("llm_share", ""), v["llm_share"], v["every"],
                          f"{m['total_month']:.2f}", f"{m['total_horizon']:.2f}", LABEL_SCENARIOS[-1] if opt in "CD" else 0])
+    if "D_original" in bar_in:
+        d = bar_in["D_original"]
+        v = bars_row("D", d, a_recall)
+        m = monthly(replace(p, routed_share=d["llm_share"]), "D", BASE_VOLUME, BASE_RATE, LABEL_SCENARIOS[-1])
+        diff = f"{d['f1_diff'][0]:+.4f} [{d['f1_diff'][1]:+.4f}, {d['f1_diff'][2]:+.4f}]"
+        say(f"  {'D orig':<8}{diff:<30}{v['f1'][:12]:<14}{d['overall'][0]:>7.4f}{v['precision']:>6}{d['overall'][1]:>8.4f}{v['recall'][:5]:>6}{v['ece'][:4]:>9}{v['latency'][:4]:>9}{v['llm_share'][:4]:>10}"
+            f"  {v['every']:<18}{m['total_month']:>12,.0f}{m['total_horizon']:>16,.0f}   (D with the original routing rule, secondary row)")
+        bar_rows.append(["D_original", d["basis"], d["band_f1"], f"{d['f1_diff'][0]:.4f}", f"{d['f1_diff'][1]:.4f}", f"{d['f1_diff'][2]:.4f}", v["f1"], d["overall"][0],
+                         v["precision"], d["overall"][1], v["recall"], "" if d["ece"] is None else d["ece"], v["ece"], d.get("latency_p95_ms", ""), v["latency"],
+                         d["llm_share"], v["llm_share"], v["every"], f"{m['total_month']:.2f}", f"{m['total_horizon']:.2f}", LABEL_SCENARIOS[-1]])
     say(f"  {'E':<8}not run (no results; no numbers)")
     bar_rows.append(["E", "not run"] + [""] * 19)
+    say(f"\nOption D at {BASE_VOLUME:,} records per day, ${BASE_RATE:g}/h, {LABEL_SCENARIOS[-1]:,} labels: monthly cost by routed share of band pairs "
+        f"(this run's measured v2 share first; then the sensitivity shares; the development seeds' pooled share is 0.26%, per seed 0.09% to 0.52%)")
+    say(f"  {'routed share':<16}{'LLM / month':>14}{'running / month':>17}{'total / month':>15}")
+    d_share_rows = []
+    for label, sh in [("measured (this run)", p.routed_share)] + [(f"{v * 100:g}%", v) for v in D_SHARE_SENSITIVITY]:
+        m = monthly(replace(p, routed_share=sh), "D", BASE_VOLUME, BASE_RATE, LABEL_SCENARIOS[-1])
+        say(f"  {label + f' ({sh * 100:.3f}%)' if label.startswith('measured') else label:<22}{m['llm']:>14,.0f}{m['running']:>17,.0f}{m['total_month']:>15,.0f}")
+        d_share_rows.append([label, f"{sh:.6f}", f"{m['llm']:.2f}", f"{m['running']:.2f}", f"{m['total_month']:.2f}"])
+    write_csv(out / "d_share_monthly.csv", ["share_label", "routed_share", "llm_usd_month", "running_usd_month", "total_usd_month"], d_share_rows, draft)
     say("  B's overall figures are sample estimates; A, C and D are exact on the full test band. A is the reference for the recall bar and fails the F1 bar; "
         "C's F1 bar is inconclusive at this sample size (its interval straddles -0.02).")
     c2 = monthly(p, "C", BASE_VOLUME, BASE_RATE, 2000)
@@ -1243,7 +1283,7 @@ def main() -> int:
         sens_rows("hourly rate", r, p, rate=r)
     for v in (5, 10, 20, round(p.band_pairs_per_record, 2)):
         sens_rows("band pairs per record", v, replace(p, band_pairs_per_record=v))
-    for v in (0.001, 0.01, 0.05, 0.20):
+    for v in D_SHARE_SENSITIVITY:
         sens_rows("D routed share", v, replace(p, routed_share=v))
     for v in (0.5, 1.0, 1.5):
         sens_rows("LLM price factor", v, replace(p, llm_price_factor=v))

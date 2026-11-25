@@ -492,5 +492,37 @@ def replace_factor(p: M.Params, f: float) -> M.Params:
     return replace(p, llm_price_factor=f)
 
 
+class DRoutingV2Tests(unittest.TestCase):
+    """D's setting is routing rule v2; the original rule is the secondary row. Reads the committed development run."""
+    RUN = M.REPO / "results" / "dev_2026_run11"
+
+    def test_share_sensitivity_values(self):
+        self.assertEqual(M.D_SHARE_SENSITIVITY, (0.001, 0.003, 0.006, 0.01))
+
+    def test_routed_share_of_reads_the_named_list(self):
+        v2 = M.routed_share_of(self.RUN)
+        orig = M.routed_share_of(self.RUN, "routed_fullband_pairs_original.csv")
+        self.assertAlmostEqual(v2, 51 / 44882, places=9)           # lo 0.005, hi 0.9
+        self.assertAlmostEqual(orig, 38 / 44882, places=9)         # lo 0.5, hi 0.9
+
+    def test_bar_inputs_have_a_secondary_original_rule_row(self):
+        p = M.Params(routed_share=M.routed_share_of(self.RUN))
+        inp = M.load_bar_inputs(self.RUN, p, None)
+        self.assertIn("D_original", inp)
+        self.assertAlmostEqual(inp["D"]["llm_share"], 51 / 44882, places=9)
+        self.assertAlmostEqual(inp["D_original"]["llm_share"], 38 / 44882, places=9)
+        self.assertNotEqual(inp["D"]["band_f1"], inp["D_original"]["band_f1"])
+        a_recall = inp["A"]["overall"][1]
+        self.assertEqual(M.bars_row("D", inp["D_original"], a_recall)["llm_share"], "pass")
+
+    def test_monthly_d_cost_grows_with_the_share_and_b_does_not_change(self):
+        p = M.Params()
+        costs = [M.monthly(replace(p, routed_share=v), "D", 1_000_000, 100.0, 63665)["total_month"] for v in M.D_SHARE_SENSITIVITY]
+        self.assertEqual(costs, sorted(costs))
+        self.assertLess(costs[0], costs[-1])
+        b = [M.monthly(replace(p, routed_share=v), "B", 1_000_000, 100.0, 0)["total_month"] for v in M.D_SHARE_SENSITIVITY]
+        self.assertEqual(len(set(b)), 1)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

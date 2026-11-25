@@ -7,6 +7,7 @@ Tests for option D's routing and selection (options/d_hybrid.py): no API, no tru
 from __future__ import annotations
 
 import csv
+import json
 import shutil
 import sys
 import tempfile
@@ -164,6 +165,100 @@ class SelectionTests(unittest.TestCase):
             self.assertEqual(D.rule_hash(tmp / "a.txt"), D.rule_hash(tmp / "b.txt"))
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
+
+
+class SettingTests(unittest.TestCase):
+    """Two frozen settings: v2 (plain file names) and the original rule (suffix _original)."""
+
+    def make_run(self, root: Path) -> Path:
+        run = root / "run"
+        d = run / "options" / "d_hybrid"
+        d.mkdir(parents=True)
+        cdir = run / "options" / "c_model" / "c_v1_lgbm"
+        cdir.mkdir(parents=True)
+        # C: five pairs with calibrated p 0.001 (below both), 0.01 (v2 only), 0.3 (v2 only), 0.6 (both), 0.95 (neither)
+        with (cdir / "decisions.csv").open("w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            w.writerow(["record_a", "record_b", "decision", "confidence"])
+            for i, (dec, p) in enumerate([("different", 0.001), ("different", 0.01), ("different", 0.3), ("same", 0.6), ("same", 0.95)]):
+                w.writerow([f"a{i}", f"b{i}", dec, p])
+        b = run / "options" / "b_llm" / "openai" / "sample5000"
+        b.mkdir(parents=True)
+        with (b / "decisions.csv").open("w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            w.writerow(["record_a", "record_b", "decision", "confidence"])
+            for i in (1, 2, 3):
+                w.writerow([f"a{i}", f"b{i}", "same" if i == 3 else "different", 0.9 if i == 3 else 0.1])
+        (d / "frozen_settings.json").write_text(json.dumps({"selected": True, "lo": 0.5, "hi": 0.9}), encoding="utf-8")
+        (d / "frozen_settings_v2.json").write_text(json.dumps({"selected": True, "lo": 0.005, "hi": 0.9}), encoding="utf-8")
+        return run
+
+    def test_file_names(self):
+        self.assertEqual(D.setting_file("decisions_fullband.csv", "v2"), "decisions_fullband.csv")
+        self.assertEqual(D.setting_file("decisions_fullband.csv", "original"), "decisions_fullband_original.csv")
+        self.assertEqual(D.setting_file("fallback_off_check.json", "original"), "fallback_off_check_original.json")
+
+    def test_each_setting_reads_its_own_settings_file(self):
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            P = D.paths(self.make_run(tmp))
+            self.assertEqual(D.frozen_lo_hi(P), (0.005, 0.9))                 # the default is v2
+            self.assertEqual(D.frozen_lo_hi(P, "v2"), (0.005, 0.9))
+            self.assertEqual(D.frozen_lo_hi(P, "original"), (0.5, 0.9))
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_routed_lists_and_full_band_decisions_per_setting(self):
+        import argparse
+        import contextlib
+        import io
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            run = self.make_run(tmp)
+            d = run / "options" / "d_hybrid"
+            with contextlib.redirect_stdout(io.StringIO()):
+                for setting in ("v2", "original"):
+                    self.assertEqual(D.cmd_list_routed(argparse.Namespace(run=run, setting=setting)), 0)
+                    self.assertEqual(D.cmd_full(argparse.Namespace(run=run, setting=setting)), 0)
+            v2 = {(r["record_a"], r["record_b"]) for r in D.read_csv(d / "routed_fullband_pairs.csv")}
+            orig = {(r["record_a"], r["record_b"]) for r in D.read_csv(d / "routed_fullband_pairs_original.csv")}
+            self.assertEqual(v2, {("a1", "b1"), ("a2", "b2"), ("a3", "b3")})  # p 0.01, 0.3, 0.6 (0.001 is below lo 0.005)
+            self.assertEqual(orig, {("a3", "b3")})                            # p 0.6 only
+            self.assertTrue(orig <= v2)                                       # the original rule's pairs are inside v2's: no new B call for the secondary row
+            full_v2 = {(r["record_a"], r["record_b"]): r["route"] for r in D.read_csv(d / "decisions_fullband.csv")}
+            full_orig = {(r["record_a"], r["record_b"]): r["route"] for r in D.read_csv(d / "decisions_fullband_original.csv")}
+            self.assertEqual(sorted(k for k, r in full_v2.items() if r == "llm"), sorted(v2))
+            self.assertEqual(full_orig[("a1", "b1")], "c_different")
+            self.assertEqual(full_v2[("a1", "b1")], "llm")
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_fallback_off_check_per_setting_uses_its_own_files(self):
+        import argparse
+        import contextlib
+        import io
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            run = self.make_run(tmp)
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(D.cmd_full_off(argparse.Namespace(run=run, setting="v2")), 0)
+            d = run / "options" / "d_hybrid"
+            self.assertTrue((d / "fallback_off_check.json").exists())
+            self.assertFalse((d / "fallback_off_check_original.json").exists())
+            chk = json.loads((d / "fallback_off_check.json").read_text(encoding="utf-8"))
+            self.assertEqual((chk["lo"], chk["hi"]), (0.005, 0.9))
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_committed_v2_settings_match_the_committed_rule_file(self):
+        dev = HERE.parent / "results" / "dev_2026_run11" / "options" / "d_hybrid"
+        fz = json.loads((dev / "frozen_settings_v2.json").read_text(encoding="utf-8"))
+        self.assertEqual((fz["lo"], fz["hi"]), (0.005, 0.9))
+        self.assertEqual(fz["rule_file"], "selection_rule_v2.txt")
+        self.assertEqual(fz["rule_file_sha256_lf"], D.rule_hash(dev / "selection_rule_v2.txt"))
+        orig = json.loads((dev / "frozen_settings.json").read_text(encoding="utf-8"))
+        self.assertEqual((orig["lo"], orig["hi"]), (0.5, 0.9))
+        self.assertEqual(orig["rule_file_sha256_lf"], D.rule_hash(dev / "selection_rule.txt"))
 
 
 if __name__ == "__main__":

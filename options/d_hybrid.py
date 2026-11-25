@@ -6,12 +6,14 @@ decides the ones in between. Routing, with C's calibrated probability p of "same
     lo <= p < hi     the LLM's recorded answer is used   route llm
     p <  lo          decided different by C, no LLM      route c_different
 
-The rule that picks lo and hi is in results/<run>/options/d_hybrid/selection_rule.txt (written before any sweep).
+Two frozen settings exist. "v2" (the setting that counts: selection_rule_v2.txt, frozen_settings_v2.json) is the default;
+"original" (selection_rule.txt, frozen_settings.json, lo 0.5, hi 0.9) is the secondary row. The v2 outputs keep the plain
+names below; the outputs of the original setting get the suffix _original (decisions_fullband_original.csv, ...).
 
   python options/d_hybrid.py route results/<run> --lo 0.05 --hi 0.9 [--out decisions.csv]
   python options/d_hybrid.py sweep results/<run>
-  python options/d_hybrid.py list-routed results/<run>     # the full test band's pairs that go to the LLM (no truth)
-  python options/d_hybrid.py full results/<run>            # exact D decisions for every test band pair (no sampling)
+  python options/d_hybrid.py list-routed results/<run> [--setting v2|original]   # the full test band's pairs that go to the LLM (no truth)
+  python options/d_hybrid.py full results/<run> [--setting v2|original]          # exact D decisions for every test band pair (no sampling)
   python options/d_hybrid.py full results/<run> --fallback off   # every LLM-routed pair takes C's own decision; compared with C
 
 Inputs (all under results/<run>/options/):
@@ -142,6 +144,17 @@ def rule_hash(path: Path) -> str:
     return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
 
 
+SETTINGS = {"v2": {"settings": "frozen_settings_v2.json", "rule": "selection_rule_v2.txt", "suffix": ""},
+            "original": {"settings": "frozen_settings.json", "rule": "selection_rule.txt", "suffix": "_original"}}
+
+
+def setting_file(name: str, setting: str) -> str:
+    """Name of a D output for a setting: v2 keeps the plain name, the original setting gets _original before the extension."""
+    suffix = SETTINGS[setting]["suffix"]
+    stem, dot, ext = name.rpartition(".")
+    return f"{stem}{suffix}{dot}{ext}" if suffix else name
+
+
 def paths(run: Path) -> dict:
     o = run / "options"
     return {"c": o / "c_model" / "c_v1_lgbm" / "decisions.csv",
@@ -186,11 +199,12 @@ def routed_pairs(c_rows: list[dict], lo: float, hi: float | None) -> list[tuple[
 
 def b_paths(run: Path) -> list[Path]:
     base = run / "options" / "b_llm" / "openai"
-    return [base / "sample5000" / "decisions.csv", base / "decoycheck" / "decisions.csv", base / "dfull" / "decisions.csv"]
+    return [base / "sample5000" / "decisions.csv", base / "decoycheck" / "decisions.csv", base / "dfull" / "decisions.csv",
+            base / "dfull_v2" / "decisions.csv"]    # dfull_v2: the dev run's answers for the v2 routed pairs (all from the cache)
 
 
-def frozen_lo_hi(P: dict) -> tuple[float, float | None]:
-    fz = json.loads((P["dir"] / "frozen_settings.json").read_text(encoding="utf-8"))
+def frozen_lo_hi(P: dict, setting: str = "v2") -> tuple[float, float | None]:
+    fz = json.loads((P["dir"] / SETTINGS[setting]["settings"]).read_text(encoding="utf-8"))
     if not fz["selected"]:
         raise SystemExit("no frozen setting")
     return fz["lo"], fz["hi"]
@@ -198,10 +212,10 @@ def frozen_lo_hi(P: dict) -> tuple[float, float | None]:
 
 def cmd_list_routed(args) -> int:
     P = paths(args.run)
-    lo, hi = frozen_lo_hi(P)
+    lo, hi = frozen_lo_hi(P, args.setting)
     c_rows = read_csv(P["c"])
     pairs = routed_pairs(c_rows, lo, hi)
-    out = P["dir"] / "routed_fullband_pairs.csv"
+    out = P["dir"] / setting_file("routed_fullband_pairs.csv", args.setting)
     with out.open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow(["record_a", "record_b", "weight"])
@@ -210,7 +224,7 @@ def cmd_list_routed(args) -> int:
     answered = merge_b(b_paths(args.run))
     have = sum(key(a, b) in answered for a, b, _ in pairs)
     p_range = f"C's p from {min(p for *_, p in pairs):.3f} to {max(p for *_, p in pairs):.3f}" if pairs else "none routed"
-    print(f"frozen setting lo {lo:g}, hi {fmt_hi(hi)}: {len(pairs)} of {len(c_rows):,} test band pairs are routed to the LLM "
+    print(f"frozen setting {args.setting}: lo {lo:g}, hi {fmt_hi(hi)}: {len(pairs)} of {len(c_rows):,} test band pairs are routed to the LLM "
           f"({p_range}); {have} already have a recorded B answer in "
           f"the sample / decoy-check / earlier D runs; {len(pairs) - have} do not (the local cache is checked by the B run itself)")
     print(f"written: {out}")
@@ -219,14 +233,14 @@ def cmd_list_routed(args) -> int:
 
 def cmd_full(args) -> int:
     P = paths(args.run)
-    lo, hi = frozen_lo_hi(P)
+    lo, hi = frozen_lo_hi(P, args.setting)
     c = load_c(P["c"])
     b = merge_b(b_paths(args.run))
     rows = build(c, b, [(k, 1.0) for k in sorted(c)], lo, hi)
-    out = P["dir"] / "decisions_fullband.csv"
+    out = P["dir"] / setting_file("decisions_fullband.csv", args.setting)
     write_decisions(out, rows)
     n_llm = sum(r["route"] == "llm" for r in rows)
-    print(f"exact D decisions for all {len(rows):,} test band pairs (lo {lo:g}, hi {fmt_hi(hi)}): "
+    print(f"exact D decisions ({args.setting}) for all {len(rows):,} test band pairs (lo {lo:g}, hi {fmt_hi(hi)}): "
           f"{ {k: sum(r['route'] == k for r in rows) for k in ('c_different', 'llm', 'c_same')} }; LLM share {n_llm / len(rows):.5f} -> {out}")
     return 0
 
@@ -245,10 +259,10 @@ def build_fallback_off(c: dict, lo: float, hi: float | None) -> list[dict]:
 
 def cmd_full_off(args) -> int:
     P = paths(args.run)
-    lo, hi = frozen_lo_hi(P)
+    lo, hi = frozen_lo_hi(P, args.setting)
     c = load_c(P["c"])
     rows = build_fallback_off(c, lo, hi)
-    out = P["dir"] / "decisions_fullband_fallback_off.csv"
+    out = P["dir"] / setting_file("decisions_fullband_fallback_off.csv", args.setting)
     write_decisions(out, rows)
     differing = [(r["record_a"], r["record_b"]) for r in rows if r["decision"] != c[(r["record_a"], r["record_b"])][0]]
     routed = sum(r["route"] == "llm" for r in rows)
@@ -256,12 +270,12 @@ def cmd_full_off(args) -> int:
            "lo": lo, "hi": hi, "compared_with": "options/c_model/c_v1_lgbm/decisions.csv (C's calibrated cutoff)",
            "differing_examples": [list(x) for x in differing[:5]]}
     if differing:
-        score_out = P["dir"] / "score_report_fallback_off.txt"
+        score_out = P["dir"] / setting_file("score_report_fallback_off.txt", args.setting)
         r = subprocess.run([sys.executable, str(REPO / "eval" / "score_option.py"), str(args.run), "--decisions", str(out), "--name",
-                            "D, LLM fallback off (full band)", "--json-out", str(P["dir"] / "score_fallback_off.json")], capture_output=True, text=True, encoding="utf-8")
+                            "D, LLM fallback off (full band)", "--json-out", str(P["dir"] / setting_file("score_fallback_off.json", args.setting))], capture_output=True, text=True, encoding="utf-8")
         score_out.write_text(r.stdout, encoding="utf-8")
         doc["scored"] = score_out.name
-    (P["dir"] / "fallback_off_check.json").write_text(json.dumps(doc, indent=1) + "\n", encoding="utf-8")
+    (P["dir"] / setting_file("fallback_off_check.json", args.setting)).write_text(json.dumps(doc, indent=1) + "\n", encoding="utf-8")
     print(f"D with the LLM fallback off, {len(rows):,} test band pairs: {routed} LLM-routed pairs take C's own decision; "
           f"{len(differing)} pairs differ from C v1 LightGBM's decisions ({'identical' if not differing else 'NOT identical: scored with score_option.py'}) -> {out}")
     return 0
@@ -365,6 +379,7 @@ def main() -> int:
     for name in ("list-routed", "full"):
         sp = sub.add_parser(name)
         sp.add_argument("run", type=Path)
+        sp.add_argument("--setting", choices=tuple(SETTINGS), default="v2")
         if name == "full":
             sp.add_argument("--fallback", choices=("on", "off"), default="on")
     args = ap.parse_args()

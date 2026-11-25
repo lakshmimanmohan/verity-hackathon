@@ -46,6 +46,32 @@ class Base(unittest.TestCase):
         return [g for g in map(json.loads, p.read_text(encoding="utf-8").splitlines()) if g["fired"]] if p.exists() else []
 
 
+class DSettingsV2(Base):
+    """The manifest hashes both D rule files and both settings files; v2 is D's setting, the original rule the secondary row."""
+
+    def test_asset_list_has_both_rules_and_both_settings(self):
+        self.assertEqual(sorted(Path(k).name for k in F.ASSETS_D),
+                         ["frozen_settings.json", "frozen_settings_v2.json", "selection_rule.txt", "selection_rule_v2.txt"])
+        for src in F.ASSETS_D.values():
+            self.assertIn(src, F.FROZEN_FILES)
+            self.assertTrue((F.REPO / src).exists(), src)
+
+    def test_manifest_hashes_all_four_files_and_records_both_settings(self):
+        R = F.Runner("rehearsal", 42, self.repo / "run", self.repo / "run" / "_freeze", allow_battery=True, repo=F.REPO, frozen=F.FROZEN_FILES,
+                     stages=[(0, "zero", lambda R: {})], call=no_call, log=self.logs.append, ledger_path=self.repo / "ledger.jsonl")
+        R.pip_freeze = False
+        doc = R.write_manifest()
+        for src in F.ASSETS_D.values():
+            self.assertEqual(doc["files"][src], F.sha256_file(F.REPO / src))
+        p = doc["params"]
+        self.assertEqual((p["d_lo"], p["d_hi"]), (0.005, 0.9))                   # v2
+        self.assertEqual((p["d_original_lo"], p["d_original_hi"]), (0.5, 0.9))   # the secondary row
+        import hashlib
+        rule = (F.REPO / F.ASSETS_D["options/d_hybrid/selection_rule_v2.txt"]).read_bytes().replace(bytes([13, 10]), bytes([10]))
+        self.assertEqual(p["d_rule_v2_sha256_lf"], hashlib.sha256(rule).hexdigest())
+        self.assertTrue(any("routing rule v2" in n for n in doc["notes"]))
+
+
 class SeedRefusals(Base):
     def real(self, approve):
         return self.runner(mode="real", seed=F.EVAL_SEED, approve=approve, run_dir=self.repo / "results" / "eval_7919",
