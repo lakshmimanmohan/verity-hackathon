@@ -31,6 +31,7 @@ Cost to build the evidence (the PoC's own spend; NOT charged to any option or sc
     tune1                        $  1.5304  B development
     tune2                        $  1.5454  B development
   evidence total (hours x rate + API spend)            874       1,736       3,461
+  Reconciliation of the effort hours: effort_log.csv has 26 rows (26 with hours) and sums to 17.25 h (7 h production needed, 10.25 h not); the loader's total is 17.25 h (7 h production needed); evidence_cost.csv has 17.25 h. They agree.
 
 Labeling for C and D, next to B's zero labels (hours at 5 h per 1,000 pairs, measured from the hand check; sensitivity 2 and 10)
     labels  mean band F1   hours       $50/h      $100/h      $200/h
@@ -51,9 +52,10 @@ Deployment scenarios (assumed; who pays is a commercial decision this PoC can in
     hosting (the matcher or model, and the shared Verity pipeline)Precisely   Precisely   customer
     operations (monitoring, retraining, LLM upkeep)               Precisely   Precisely   customer
     development (Verity build and productization, amortized)      Precisely   Precisely   Precisely (not modeled)
-    labeling for C and D (amortized)                              Precisely   Precisely   customer
-    Labeling is assumed to be done by Precisely when it hosts the matcher and by the customer when the matcher runs in their environment.
-  S3 feasibility when data cannot leave the environment: A yes, B no, C yes, D yes with the LLM fallback off (its quality in that case is not measured).
+    labeling for C and D (amortized)                              customer    customer    customer
+    Labeling is paid by the customer in all three scenarios (assumed: the customer's data stewards hold the knowledge about which records are the same entity). Sensitivity: Precisely pays for labeling (a services engagement) at the same hourly rates; both are shown below for C and D.
+    n/m = not modeled: in S3 Precisely's development and support are not modeled, so the S3 total is the customer's cost only; in S1 the price passed through to the customer is not modeled.
+  S3 feasibility when data cannot leave the environment: A yes, B no, C yes, D yes with the LLM fallback off (its quality in that case is C's, measured: identical to C by construction, verified; see the S3 D row below).
 
 Monthly cost by component at the base case (hourly rate $100, labels 2,000, standard prices with cache, hit ratio 0.849), USD per month, all parties together
    records/day option         LLM   hosting  operations  one-time/12       total
@@ -74,59 +76,83 @@ Monthly cost by component at the base case (hourly rate $100, labels 2,000, stan
     10,000,000      E  not run
   (hosting is the cheaper of always-on and serverless; shared Verity pipeline per record is in every row: 18.1 ms of one core per record; one-time = the Verity build and productization shared by every option, plus labeling for C and D)
 
-Who pays at 1,000,000 records per day, USD per month (hourly rate $100; C and D with 63,665 labels, as evaluated; development and labeling amortized over 12 months)
-  option                  scen.     Precisely     customer        total   feasible if data cannot leave (S3)  quality
-  A                       S1            1,618            0        1,618                                       
-  A                       S2            1,618            0        1,618                                       
-  A                       S3               0*          118          118   yes                                 
-  B                       S1          934,293            0      934,293                                       
-  B                       S2            2,118      932,175      934,293                                       
-  B (own key connected)   S3               0*      932,793      932,793   no                                  
-  C                       S1            4,772            0        4,772                                       
-  C                       S2            4,772            0        4,772                                       
-  C                       S3               0*        3,272        3,272   yes                                 
-  D                       S1            5,961            0        5,961                                       
-  D                       S2            5,172          789        5,961                                       
-  D (LLM fallback off)    S3               0*        3,672        3,672   yes, with the LLM fallback off      not measured
-  D (own key connected)   S3               0*        4,461        4,461   yes, with the LLM fallback off      as evaluated
-  E                             not run (no results; no numbers)
-  * S3: Precisely's development and support are not modeled (shown as 0); S1: the price passed through to the customer is not modeled. B in S3 is costed with the customer's own key and is not feasible when data cannot leave the environment.
+Who pays at 100,000 records per day, USD per month (hourly rate $100; C and D with 63,665 labels, as evaluated, labeling paid by the customer; development and labeling amortized over 12 months)
+  option                                                          scen.   Precisely    customer       total   feasible if data cannot leave (S3)quality
+  A                                                               S1          1,602           0       1,602                                   
+  A                                                               S2          1,602           0       1,602                                   
+  A                                                               S3            n/m         102         102   yes                             
+  B                                                               S1         95,319           0      95,319                                   
+  B                                                               S2          2,102      93,217      95,319                                   
+  B (own key connected)                                           S3            n/m      93,819      93,819   no                              
+  C                                                               S1          2,102       2,653       4,755                                   
+  C                                                               S2          2,102       2,653       4,755                                   
+  C                                                               S3            n/m       3,255       3,255   yes                             
+  D                                                               S1          2,581       2,653       5,234                                   
+  D                                                               S2          2,502       2,732       5,234                                   
+  D (LLM fallback off)                                            S3            n/m       3,655       3,655   yes, with the LLM fallback off  measured: identical to C by construction, verified (0 of 44,882 pairs differ)
+  D (own key connected)                                           S3            n/m       3,734       3,734   yes, with the LLM fallback off  
+  E                                                               not run (no results; no numbers)
+  n/m = not modeled: in S3 Precisely's development and support are not modeled, so the S3 total is the customer's cost only ('+ n/m': Precisely pays for labeling in the services sensitivity and its development and support are still n/m). S1: the price passed through to the customer is not modeled. B in S3 is costed with the customer's own key and is not feasible when data cannot leave the environment.
 
-Who pays at 100,000 records per day, USD per month (hourly rate $100; C and D with 63,665 labels, as evaluated; development and labeling amortized over 12 months)
-  option                  scen.     Precisely     customer        total   feasible if data cannot leave (S3)  quality
-  A                       S1            1,602            0        1,602                                       
-  A                       S2            1,602            0        1,602                                       
-  A                       S3               0*          102          102   yes                                 
-  B                       S1           95,319            0       95,319                                       
-  B                       S2            2,102       93,217       95,319                                       
-  B (own key connected)   S3               0*       93,819       93,819   no                                  
-  C                       S1            4,755            0        4,755                                       
-  C                       S2            4,755            0        4,755                                       
-  C                       S3               0*        3,255        3,255   yes                                 
-  D                       S1            5,234            0        5,234                                       
-  D                       S2            5,155           79        5,234                                       
-  D (LLM fallback off)    S3               0*        3,655        3,655   yes, with the LLM fallback off      not measured
-  D (own key connected)   S3               0*        3,734        3,734   yes, with the LLM fallback off      as evaluated
-  E                             not run (no results; no numbers)
-  * S3: Precisely's development and support are not modeled (shown as 0); S1: the price passed through to the customer is not modeled. B in S3 is costed with the customer's own key and is not feasible when data cannot leave the environment.
+Who pays at 10,000,000 records per day, USD per month (hourly rate $100; C and D with 63,665 labels, as evaluated, labeling paid by the customer; development and labeling amortized over 12 months)
+  option                                                          scen.   Precisely    customer       total   feasible if data cannot leave (S3)quality
+  A                                                               S1          1,782           0       1,782                                   
+  A                                                               S2          1,782           0       1,782                                   
+  A                                                               S3            n/m         282         282   yes                             
+  B                                                               S1      9,324,029           0   9,324,029                                   
+  B                                                               S2          2,282   9,321,746   9,324,029                                   
+  B (own key connected)                                           S3            n/m   9,322,529   9,322,529   no                              
+  C                                                               S1          2,295       2,653       4,947                                   
+  C                                                               S2          2,295       2,653       4,947                                   
+  C                                                               S3            n/m       3,447       3,447   yes                             
+  D                                                               S1         10,587       2,653      13,240                                   
+  D                                                               S2          2,695      10,545      13,240                                   
+  D (LLM fallback off)                                            S3            n/m       3,847       3,847   yes, with the LLM fallback off  measured: identical to C by construction, verified (0 of 44,882 pairs differ)
+  D (own key connected)                                           S3            n/m      11,740      11,740   yes, with the LLM fallback off  
+  E                                                               not run (no results; no numbers)
+  n/m = not modeled: in S3 Precisely's development and support are not modeled, so the S3 total is the customer's cost only ('+ n/m': Precisely pays for labeling in the services sensitivity and its development and support are still n/m). S1: the price passed through to the customer is not modeled. B in S3 is costed with the customer's own key and is not feasible when data cannot leave the environment.
 
-Who pays at 10,000,000 records per day, USD per month (hourly rate $100; C and D with 63,665 labels, as evaluated; development and labeling amortized over 12 months)
-  option                  scen.     Precisely     customer        total   feasible if data cannot leave (S3)  quality
-  A                       S1            1,782            0        1,782                                       
-  A                       S2            1,782            0        1,782                                       
-  A                       S3               0*          282          282   yes                                 
-  B                       S1        9,324,029            0    9,324,029                                       
-  B                       S2            2,282    9,321,746    9,324,029                                       
-  B (own key connected)   S3               0*    9,322,529    9,322,529   no                                  
-  C                       S1            4,947            0        4,947                                       
-  C                       S2            4,947            0        4,947                                       
-  C                       S3               0*        3,447        3,447   yes                                 
-  D                       S1           13,240            0       13,240                                       
-  D                       S2            5,347        7,892       13,240                                       
-  D (LLM fallback off)    S3               0*        3,847        3,847   yes, with the LLM fallback off      not measured
-  D (own key connected)   S3               0*       11,740       11,740   yes, with the LLM fallback off      as evaluated
-  E                             not run (no results; no numbers)
-  * S3: Precisely's development and support are not modeled (shown as 0); S1: the price passed through to the customer is not modeled. B in S3 is costed with the customer's own key and is not feasible when data cannot leave the environment.
+Who pays at 1,000,000 records per day, USD per month (hourly rate $100; development and labeling amortized over 12 months). For C and D at 2,000 and at 63,665 labels, with labeling paid by the customer (the assumed default) and, as a sensitivity, by Precisely (a services engagement, same hourly rate)
+  option                                                          scen.   Precisely    customer       total   feasible if data cannot leave (S3)quality
+  A                                                               S1          1,618           0       1,618                                   
+  A                                                               S2          1,618           0       1,618                                   
+  A                                                               S3            n/m         118         118   yes                             
+  B                                                               S1        934,293           0     934,293                                   
+  B                                                               S2          2,118     932,175     934,293                                   
+  B (own key connected)                                           S3            n/m     932,793     932,793   no                              
+  C [2,000 labels, lab. by customer (default)]                    S1          2,120          83       2,203                                   
+  C [2,000 labels, lab. by customer (default)]                    S2          2,120          83       2,203                                   
+  C [2,000 labels, lab. by customer (default)]                    S3            n/m         703         703   yes                             
+  C [2,000 labels, lab. by Precisely (sens.)]                     S1          2,203           0       2,203                                   
+  C [2,000 labels, lab. by Precisely (sens.)]                     S2          2,203           0       2,203                                   
+  C [2,000 labels, lab. by Precisely (sens.)]                     S3       83 + n/m         620         703   yes                             
+  C [63,665 labels, lab. by customer (default)]                   S1          2,120       2,653       4,772                                   
+  C [63,665 labels, lab. by customer (default)]                   S2          2,120       2,653       4,772                                   
+  C [63,665 labels, lab. by customer (default)]                   S3            n/m       3,272       3,272   yes                             
+  C [63,665 labels, lab. by Precisely (sens.)]                    S1          4,772           0       4,772                                   
+  C [63,665 labels, lab. by Precisely (sens.)]                    S2          4,772           0       4,772                                   
+  C [63,665 labels, lab. by Precisely (sens.)]                    S3    2,653 + n/m         620       3,272   yes                             
+  D [2,000 labels, lab. by customer (default)]                    S1          3,309          83       3,392                                   
+  D [2,000 labels, lab. by customer (default)]                    S2          2,520         873       3,392                                   
+  D (LLM fallback off) [2,000 labels, lab. by customer (default)] S3            n/m       1,103       1,103   yes, with the LLM fallback off  measured: identical to C by construction, verified (0 of 44,882 pairs differ)
+  D (own key connected) [2,000 labels, lab. by customer (default)]S3            n/m       1,892       1,892   yes, with the LLM fallback off  
+  D [2,000 labels, lab. by Precisely (sens.)]                     S1          3,392           0       3,392                                   
+  D [2,000 labels, lab. by Precisely (sens.)]                     S2          2,603         789       3,392                                   
+  D (LLM fallback off) [2,000 labels, lab. by Precisely (sens.)]  S3       83 + n/m       1,020       1,103   yes, with the LLM fallback off  measured: identical to C by construction, verified (0 of 44,882 pairs differ)
+  D (own key connected) [2,000 labels, lab. by Precisely (sens.)] S3       83 + n/m       1,809       1,892   yes, with the LLM fallback off  
+  D [63,665 labels, lab. by customer (default)]                   S1          3,309       2,653       5,961                                   
+  D [63,665 labels, lab. by customer (default)]                   S2          2,520       3,442       5,961                                   
+  D (LLM fallback off) [63,665 labels, lab. by customer (default)]S3            n/m       3,672       3,672   yes, with the LLM fallback off  measured: identical to C by construction, verified (0 of 44,882 pairs differ)
+  D (own key connected) [63,665 labels, lab. by customer (default)]S3            n/m       4,461       4,461   yes, with the LLM fallback off  
+  D [63,665 labels, lab. by Precisely (sens.)]                    S1          5,961           0       5,961                                   
+  D [63,665 labels, lab. by Precisely (sens.)]                    S2          5,172         789       5,961                                   
+  D (LLM fallback off) [63,665 labels, lab. by Precisely (sens.)] S3    2,653 + n/m       1,020       3,672   yes, with the LLM fallback off  measured: identical to C by construction, verified (0 of 44,882 pairs differ)
+  D (own key connected) [63,665 labels, lab. by Precisely (sens.)]S3    2,653 + n/m       1,809       4,461   yes, with the LLM fallback off  
+  E                                                               not run (no results; no numbers)
+  lab. = labeling: by customer is the assumed default; by Precisely is the sensitivity (a services engagement, same hourly rate).
+  n/m = not modeled: in S3 Precisely's development and support are not modeled, so the S3 total is the customer's cost only ('+ n/m': Precisely pays for labeling in the services sensitivity and its development and support are still n/m). S1: the price passed through to the customer is not modeled. B in S3 is costed with the customer's own key and is not feasible when data cannot leave the environment.
+  S3 'D (LLM fallback off)' quality: measured: identical to C by construction, verified (0 of 44,882 pairs differ); band F1 0.9653, band precision 0.9489, band recall 0.9824, overall precision 0.9944, overall recall 0.5793, ECE 0.0004 (full test band).
+  38 LLM-routed pairs take C's own decision; 0 of 44,882 pairs differ from C v1 LightGBM's decisions (identical by construction, verified).
 
 Throughput: B at 100K records/day needs 2,008,540 calls a day = 1,395 calls per minute (23.2 per second; about 22 requests in flight at the measured p50 latency of 0.95 s). 1M and 10M records/day need 10x and 100x that. D needs 118 calls per minute at 10M records/day.
 

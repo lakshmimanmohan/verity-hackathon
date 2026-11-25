@@ -1,0 +1,10 @@
+{
+ "pairs": 44882,
+ "llm_routed_pairs": 38,
+ "differing_from_c": 0,
+ "identical_to_c": true,
+ "lo": 0.5,
+ "hi": 0.9,
+ "compared_with": "options/c_model/c_v1_lgbm/decisions.csv (C's calibrated cutoff)",
+ "differing_examples": []
+}
