@@ -1,0 +1,44 @@
+Run: C:\verity-hackathon\results\eval_7919
+
+  stratum                  pairs labelled  agree agreement unsure blank
+  ALL                        100      100     97     97.0%      0     0
+  band_true                   25       25     25    100.0%      0     0
+  band_false                  25       25     25    100.0%      0     0
+  decoy                       15       15     14     93.3%      0     0
+  above_true_acronym           5        5      4     80.0%      0     0
+  above_true_truncation        5        5      5    100.0%      0     0
+  above_true_po_box            5        5      5    100.0%      0     0
+  above_false                 10       10      9     90.0%      0     0
+  random_true                 10       10     10    100.0%      0     0
+
+Disagreements: 3
+
+pair 49  you: different  generator: same  stratum above_true_acronym  entities E00240 / E00240  tags acronym / acronym  score 1.000000  match_type full_signal
+    field            record A (Rf1b7e1b9ae)                       record B (Rc3910ca745)
+    address_line     8775 Oak Way                                 8775 Oak Way
+    city             Sacramento                                   Sacramento
+    company_name     C.K.C. Co.                                   C.K.C. Co
+    phone            (507) 637-6758                               507-637-6758
+    postal_code      95831                                        95831
+    state            CA                                           CA
+    website          collinskim.com                               collinskim.com
+
+pair 50  you: same  generator: different  stratum above_false  entities E00757 / E00648  tags clean / case  score 0.875544  match_type insufficient_evidence
+    field            record A (R305dd78a0d)                       record B (R7e043ecd40)
+    address_line     4032 Center Avenue                           8803 Center Avenue
+    city             Charlotte                                    Nashville
+    company_name     Morgan & Price Freight Lines                 MORGAN FREIGHT LINES, INC
+    phone            409.983.3268                                 5069800090
+    postal_code      28223                                        37253
+    state            NC                                           TN
+    website          morganprice.com                              morganfreight.com
+
+pair 69  you: same  generator: different  stratum decoy  entities E00408 / E03875  tags clean / clean  score 0.845852  match_type insufficient_evidence
+    field            record A (Rda264ae2a2)                       record B (R9e011e28de)
+    address_line     9878 Commerce Lane                           856 Maple Avenue
+    city             Richmond                                     Phoenix
+    company_name     Evergreen Data Systems LLC                   Evergreen Data Systems LLC
+    phone            4456441213                                   (496) 438-5360
+    postal_code      23283                                        85084
+    state            VA                                           AZ
+    website          evergreendata.com                            evergreendata.com
