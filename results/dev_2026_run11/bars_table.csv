@@ -4,4 +4,5 @@ B,sample estimate (weighted); B is the baseline of the F1 bar,0.9971,0.9923,1.0,
 C,full band; F1 difference on the sample,0.9653,0.951,0.978,0.9489,0.9824,-0.0464,-0.0936,-0.0045,inconclusive,0.9944,pass,0.5793,pass,0.0004,pass,0.1057,pass,,n/a (bar is for D),not shown (inconclusive)
 D,exact full band; F1 difference on the sample,0.9853,0.9759,0.9932,0.9882,0.9824,-0.006,-0.0135,0.0,pass,0.9988,pass,0.5793,pass,0.0002,pass,0.1063,n/a (bar is for C),0.0011363129985294772,pass,yes
 D (orig),exact full band; F1 difference on the sample; original routing rule,0.9838,0.9736,0.9924,0.9881,0.9794,-0.0075,-0.0154,0.0,pass,0.9988,pass,0.5791,pass,0.0002,pass,0.1063,n/a (bar is for C),0.0008466645871396105,pass,yes
+D (forced),exact full band; F1 difference on the sample; forced reading (diagnostic),0.9853,0.9759,0.9932,0.9882,0.9824,-0.006,-0.0135,0.0,pass,0.9988,pass,0.5793,pass,0.0002,pass,0.1063,n/a (bar is for C),0.0011363129985294772,pass,yes
 E,not run,,,,,,,,,,,,,,,,,,,,not run

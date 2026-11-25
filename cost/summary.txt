@@ -169,6 +169,7 @@ Options against the protocol bars (protocol.md), with cost at 1,000,000 records 
   C       -0.0464 [-0.0936, -0.0045]    inconclusive   0.9944  pass  0.5793  pass     pass     pass      n/a   not shown (inconclusive)       4,806          57,667
   D       -0.0060 [-0.0135, +0.0000]    pass           0.9988  pass  0.5793  pass     pass     n/a       pass  yes                      6,282          75,381
   D orig  -0.0075 [-0.0154, +0.0000]    pass           0.9988  pass  0.5791  pass     pass     n/a       pass  yes                      6,012          72,141   (D with the original routing rule, secondary row)
+  D forced-0.0060 [-0.0135, +0.0000]    pass           0.9988  pass  0.5793  pass     pass     n/a       pass  yes                      6,282          75,381   (diagnostic: v2 routing, forced reading outside [lo, hi))
   E       not run (no results; no numbers)
 
 Option D at 1,000,000 records per day, $100/h, 63,665 labels: monthly cost by routed share of band pairs (this run's measured v2 share first; then the sensitivity shares; the development seeds' pooled share is 0.26%, per seed 0.09% to 0.52%)

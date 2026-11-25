@@ -1,0 +1,14 @@
+Primary D decisions (literal reading) against the decisions the v2 selection measured (eval/d_select_lo.py literal_decisions)
+  run             setting       lo   pairs  routed  decisions differ  band F1  committed F1  F1 equal  readings differ
+  dstudy_11       v2         0.005  45,676     238                 0   0.9948        0.9948       yes                0
+  dstudy_11       original     0.5  45,676      70                 0   0.9855        0.9855       yes                0
+  dstudy_12       v2         0.005  42,153     193                 0   0.9928        0.9928       yes                0
+  dstudy_12       original     0.5  42,153      39                 0   0.9612        0.9612       yes               25
+  dstudy_13       v2         0.005  44,265      54                 0   0.9873        0.9873       yes                0
+  dstudy_13       original     0.5  44,265       8                 0   0.9729        0.9729       yes                0
+  rehearsal_42    v2         0.005  44,985      40                 0   0.9881        0.9881       yes                0
+  rehearsal_42    original     0.5  44,985       0                 0   0.9727        0.9727       yes                0
+  rehearsal_2026  v2         0.005  44,882      51                 0   0.9853        0.9853       yes                0
+  rehearsal_2026  original     0.5  44,882      38                 0   0.9838        0.9838       yes                0
+
+result: primary D decisions equal the committed d_select_lo results on all 5 seeds, for both settings

@@ -1,0 +1,9 @@
+{
+ "setting": "original",
+ "lo": 0.5,
+ "hi": 0.9,
+ "pairs": 44882,
+ "pairs_where_readings_differ": 0,
+ "c_same_below_lo": 0,
+ "c_different_at_or_above_hi": 0
+}
