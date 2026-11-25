@@ -1,0 +1,52 @@
+stage  0 preflight: done earlier, outputs verified, skipped
+stage  1 generate: done earlier, outputs verified, skipped
+stage  2 verity: done earlier, outputs verified, skipped
+stage  3 data profile: done earlier, outputs verified, skipped
+stage  4 checks: done earlier, outputs verified, skipped
+stage  5 option A: done earlier, outputs verified, skipped
+stage  6 option C: done earlier, outputs verified, skipped
+stage  7 option B: start 06:29:49
+    $ C:\verity-hackathon\.venv\Scripts\python.exe b_llm_baseline.py C:\verity-hackathon\results\rehearsal_2026 --provider openai --final-sample C:\verity-hackathon\results\rehearsal_2026\options\b_llm\test_sample5000.csv --label sample5000 --max-usd 0.75 --estimate-only
+    pairs: 400 (sample file test_sample5000.csv); distinct prompts 394 (6 pairs repeat another pair's exact record content and share its answer); already answered in the local cache: 394; calls to make: 0
+    projection: about $0.00 at the pilot's $0.001545 per call; about 0 minutes at 95.3 calls per minute (8 keys x 12 per minute, 2 workers; the pilot measured 95.3); run cap --max-usd $0.75
+    cost gate: 0 pairs to call x $0.001545 (pilot cost per call) x 1.3 = $0.00; ledger total $12.1909, remaining under the $45 cap $32.81; platform limit $30 - ledger total = $17.81 -> PASS
+    $ C:\verity-hackathon\.venv\Scripts\python.exe b_llm_baseline.py C:\verity-hackathon\results\rehearsal_2026 --provider openai --final-sample C:\verity-hackathon\results\rehearsal_2026\options\b_llm\test_sample5000.csv --label sample5000 --max-usd 0.75 --approve-final-run
+    B archive skipped: no calls.jsonl (0 live calls, every answer from the cache)
+stage  7 option B: done in 5 s, ledger cost $0.0000, 5 outputs
+stage  8 option D: start 06:29:55
+    $ C:\verity-hackathon\.venv\Scripts\python.exe d_hybrid.py list-routed C:\verity-hackathon\results\rehearsal_2026
+    38 test band pairs routed to the LLM
+    $ C:\verity-hackathon\.venv\Scripts\python.exe b_llm_baseline.py C:\verity-hackathon\results\rehearsal_2026 --provider openai --final-sample C:\verity-hackathon\results\rehearsal_2026\options\d_hybrid\routed_fullband_pairs.csv --label dfull --max-usd 0.1 --estimate-only
+    pairs: 38 (sample file routed_fullband_pairs.csv); distinct prompts 38 (0 pairs repeat another pair's exact record content and share its answer); already answered in the local cache: 38; calls to make: 0
+    projection: about $0.00 at the pilot's $0.001545 per call; about 0 minutes at 95.3 calls per minute (8 keys x 12 per minute, 2 workers; the pilot measured 95.3); run cap --max-usd $0.10
+    cost gate: 0 pairs to call x $0.001545 (pilot cost per call) x 1.3 = $0.00; ledger total $12.1909, remaining under the $45 cap $32.81; platform limit $30 - ledger total = $17.81 -> PASS
+    $ C:\verity-hackathon\.venv\Scripts\python.exe b_llm_baseline.py C:\verity-hackathon\results\rehearsal_2026 --provider openai --final-sample C:\verity-hackathon\results\rehearsal_2026\options\d_hybrid\routed_fullband_pairs.csv --label dfull --max-usd 0.1 --approve-final-run
+    $ C:\verity-hackathon\.venv\Scripts\python.exe d_hybrid.py full C:\verity-hackathon\results\rehearsal_2026
+    $ C:\verity-hackathon\.venv\Scripts\python.exe d_hybrid.py full C:\verity-hackathon\results\rehearsal_2026 --fallback off
+    fallback off: C's cutoff 0.8014, [lo, hi) = [0.5, 0.9): inside [lo, hi): identity with C verified; 0 pairs differ from C
+    $ C:\verity-hackathon\.venv\Scripts\python.exe d_hybrid.py route C:\verity-hackathon\results\rehearsal_2026 --lo 0.5 --hi 0.9 --out C:\verity-hackathon\results\rehearsal_2026\options\d_hybrid\decisions.csv
+    $ C:\verity-hackathon\.venv\Scripts\python.exe score_option.py C:\verity-hackathon\results\rehearsal_2026 --decisions C:\verity-hackathon\results\rehearsal_2026\options\d_hybrid\decisions_fullband.csv --name D. hybrid, exact full test band --json-out C:\verity-hackathon\results\rehearsal_2026\options\d_hybrid\score_fullband.json   (reads truth)
+    $ C:\verity-hackathon\.venv\Scripts\python.exe score_option.py C:\verity-hackathon\results\rehearsal_2026 --decisions C:\verity-hackathon\results\rehearsal_2026\options\d_hybrid\decisions.csv --name D. hybrid (C + LLM) --sample C:\verity-hackathon\results\rehearsal_2026\options\b_llm\test_sample5000.csv   (reads truth)
+    $ C:\verity-hackathon\.venv\Scripts\python.exe latency_bench.py C:\verity-hackathon\results\rehearsal_2026
+stage  8 option D: done in 63 s, ledger cost $0.0000, 9 outputs
+stage  9 decoy check: start 06:30:58
+    $ C:\verity-hackathon\.venv\Scripts\python.exe make_decoy_check.py C:\verity-hackathon\results\rehearsal_2026   (reads truth)
+    $ C:\verity-hackathon\.venv\Scripts\python.exe b_llm_baseline.py C:\verity-hackathon\results\rehearsal_2026 --provider openai --final-sample C:\verity-hackathon\results\rehearsal_2026\options\b_llm\decoy_check_pairs.csv --label decoycheck --max-usd 0.15 --estimate-only
+    pairs: 68 (sample file decoy_check_pairs.csv); distinct prompts 68 (0 pairs repeat another pair's exact record content and share its answer); already answered in the local cache: 68; calls to make: 0
+    projection: about $0.00 at the pilot's $0.001545 per call; about 0 minutes at 95.3 calls per minute (8 keys x 12 per minute, 2 workers; the pilot measured 95.3); run cap --max-usd $0.15
+    cost gate: 0 pairs to call x $0.001545 (pilot cost per call) x 1.3 = $0.00; ledger total $12.1909, remaining under the $45 cap $32.81; platform limit $30 - ledger total = $17.81 -> PASS
+    $ C:\verity-hackathon\.venv\Scripts\python.exe b_llm_baseline.py C:\verity-hackathon\results\rehearsal_2026 --provider openai --final-sample C:\verity-hackathon\results\rehearsal_2026\options\b_llm\decoy_check_pairs.csv --label decoycheck --max-usd 0.15 --approve-final-run
+    $ C:\verity-hackathon\.venv\Scripts\python.exe decoy_check_report.py C:\verity-hackathon\results\rehearsal_2026 --label decoycheck   (reads truth)
+Traceback (most recent call last):
+  File "C:\Users\LAKSHM~1.MAN\AppData\Local\Temp\claude\92614665fd0b7096\033979cb-3362-45e3-9936-c405dfdbc91d\scratchpad\finish_rehearsal.py", line 22, in <module>
+    R.run(resume=True)
+    ~~~~~^^^^^^^^^^^^^
+  File "C:\verity-hackathon\eval\freeze_run.py", line 322, in run
+    res = fn(self) or {}
+          ~~^^^^^^
+  File "C:\verity-hackathon\eval\freeze_run.py", line 598, in s9_decoy
+    R.step(9, [PY, "eval/decoy_check_report.py", run, "--label", "decoycheck"], truth=True, label="decoy_check_report")
+    ~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\verity-hackathon\eval\freeze_run.py", line 259, in step
+    raise StageFailed(f"{label or Path(args[1]).name} exited {rc}; see {self.rel(log_file)}")
+freeze_run.StageFailed: decoy_check_report exited 1; see results/rehearsal_2026/_freeze/logs/stage_09.log

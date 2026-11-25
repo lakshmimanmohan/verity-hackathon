@@ -1,0 +1,26 @@
+{
+  "threshold": 0.458687,
+  "columns_excluded_from_learning": [
+    "record_id",
+    "source_system"
+  ],
+  "n_pairs": 1000,
+  "similarity_statistics": {
+    "min": 0.17527235491571838,
+    "max": 0.6367311589550737,
+    "mean": 0.42456500188199275,
+    "std": 0.07404259953252564
+  },
+  "plot_path": "C:\\verity-hackathon\\results\\dstudy_12\\verity_data\\threshold_similarity_distribution.png",
+  "n_rows": 10000,
+  "threshold_method": "low_cluster_mean_plus_k_sd",
+  "sd_multiplier": 2.0,
+  "low_cluster_n": 470,
+  "low_cluster_mean": 0.3627881356781531,
+  "low_cluster_std": 0.047949431955340835,
+  "kmeans_midpoint": 0.42083423051569296,
+  "cluster_center_low": 0.362540927917259,
+  "cluster_center_high": 0.4791275331141269,
+  "inertia": 2.0980230464700194,
+  "method": "KMeans (k=2) on 1D similarity scores of random row pairs; threshold = mean of the lower cluster + 2 x its standard deviation (population sd). The centroid midpoint is kept as kmeans_midpoint for reference."
+}

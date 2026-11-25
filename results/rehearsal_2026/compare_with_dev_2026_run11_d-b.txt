@@ -1,0 +1,8 @@
+Rehearsal rehearsal_2026 vs dev_2026_run11
+c. D routed set: rehearsal 38, dev run 38; only in the rehearsal 0, only in the dev run 0
+   D full-band decisions: 44,882 vs 44,882 pairs; only in the rehearsal 0, only in the dev run 0; decision or route differs 0; confidence differs 0
+   B for routed pairs not in the rehearsal sample: 16 pairs; dfull run: 0 calls, cache hits 38, spent $0.0000
+   B sample5000: 400 answers; 400 answered before in the dev run; differ 0; new (never answered in the dev run) 0
+   B dfull: 38 answers; 38 answered before in the dev run; differ 0; new (never answered in the dev run) 0
+   B decoycheck: 68 answers; 68 answered before in the dev run; differ 0; new (never answered in the dev run) 0
+result: no differences

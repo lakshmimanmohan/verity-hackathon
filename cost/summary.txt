@@ -1,30 +1,30 @@
 DRAFT: effort log incomplete, one-time costs for B and D undercounted
 
-Effort log: 26 rows with hours, 2026-11-23 to 2026-11-24
+Effort log: 29 rows with hours, 2026-11-23 to 2026-11-25
 Hours by bucket: total / production_needed yes / no, and where they go (charged to options, or the evidence block):
   A            1 /     1 /     0      charged to options     1, evidence     0
   B         3.75 /   1.5 /  2.25      charged to options   1.5, evidence  2.25
   C          1.5 /   0.5 /     1      charged to options   0.5, evidence     1
   D          0.5 /   0.5 /     0      charged to options   0.5, evidence     0
-  eval       6.5 /     0 /   6.5      charged to options     0, evidence   6.5
+  eval      7.75 /     0 /  7.75      charged to options     0, evidence  7.75
   verity       4 /   3.5 /   0.5      charged to options   3.5, evidence   0.5
-  total    17.25 /     7 / 10.25      charged to options     7, evidence 10.25
+  total     18.5 /     7 /  11.5      charged to options     7, evidence  11.5
   One-time build cost of an option = its own bucket's 'yes' hours + the shared verity 'yes' hours (carried by A, B, C and D) + the Verity pre-existing build (80 h) + productization (100 h); D also inherits the 'yes' hours of B and C and B's development API spend. Hours marked 'no', all eval hours and the evaluation API spend are the block 'cost to build the evidence', charged to no option or scenario. B and D are only partly in the log (logged 'yes' hours: B 1.5, D 0.5), so their build cost is undercounted until the log is completed (use --effort-log-complete once it is).
 
 Cost to build the evidence (hours marked 'no', all eval hours, and the evaluation API spend; NOT charged to any option or scenario)
   effort-log hours                 hours       $50/h      $100/h      $200/h
   bucket B                          2.25         112         225         450
   bucket C                             1          50         100         200
-  bucket eval                        6.5         325         650       1,300
+  bucket eval                       7.75         388         775       1,550
   bucket verity                      0.5          25          50         100
-  evidence hours total             10.25         512       1,025       2,050
-  API spend, evaluation runs (counted once): $7.7704
-    decoycheck                   $  0.1168
+  evidence hours total              11.5         575       1,150       2,300
+  API spend, evaluation runs (counted once): $8.4788
+    decoycheck                   $  0.1999
     dfull                        $  0.0316
-    sample5000                   $  7.6220
-  evidence total (hours x rate + API spend)            520       1,033       2,058
+    sample5000                   $  8.2473
+  evidence total (hours x rate + API spend)            583       1,158       2,308
   For reference, charged to options instead: 7 production-needed hours, and B's development API spend $3.7121 (a one-time cost of B and D).
-  Reconciliation of the effort hours: effort_log.csv has 26 rows (26 with hours) and sums to 17.25 h = 7 h charged to options + 10.25 h evidence; the loader's total is 17.25 h (7 + 10.25); evidence_cost.csv has 10.25 evidence hours. They agree.
+  Reconciliation of the effort hours: effort_log.csv has 29 rows (29 with hours) and sums to 18.5 h = 7 h charged to options + 11.5 h evidence; the loader's total is 18.5 h (7 + 11.5); evidence_cost.csv has 11.5 evidence hours. They agree.
 
 One-time cost to build, before and after the rule change (USD; labeling shown separately), next to the monthly running cost at 1,000,000 records/day (LLM + hosting + operations, $50 / $100 / $200 per hour)
   before = the previous rule: the Verity pre-existing build (80 h) and productization (100 h) only, the same for every option. after = those plus the option's own 'yes' hours, the shared verity 'yes' hours, (D) B's and C's 'yes' hours, and B's development API spend (B, D).
@@ -44,7 +44,7 @@ Labeling for C and D, next to B's zero labels (hours at 5 h per 1,000 pairs, mea
      2,000        0.8999    10.0         500       1,000       2,000
     63,665        0.9653   318.3      15,916      31,832      63,665
       B: 0                     0           0           0           0   (B needs no labeled training pairs to run)
-  The 63,665 row is what the dev result for C used (every train band pair, F1 0.9653); it is not a recommended budget. On the dev data the labels came free from the generator. The 500 to 2,000 rows are the mean band F1 over 5 sampling seeds of the learning curve (lc_v2); the spread between seeds is large (see learning_curve.csv). B's development also used labeled train pairs (8 few-shot examples and 2,000 tuning pairs, free from the generator); that is not charged as labeling here.
+  The 63,665 row is what the result for C used (every train band pair, F1 0.9653); it is not a recommended budget. On the dev data the labels came free from the generator. The 500 to 2,000 rows are the mean band F1 over 5 sampling seeds of the learning curve (lc_v2); the spread between seeds is large (see learning_curve.csv). B's development also used labeled train pairs (8 few-shot examples and 2,000 tuning pairs, free from the generator); that is not charged as labeling here.
 
 Deployment scenarios (assumed; who pays is a commercial decision this PoC can inform but not settle)
   S1: Precisely-hosted: Precisely pays hosting, operations and LLM tokens; the customer pays the price passed through (not modeled)

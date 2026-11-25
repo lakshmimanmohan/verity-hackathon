@@ -1,0 +1,38 @@
+stage  0 preflight: done earlier, outputs verified, skipped
+stage  1 generate: done earlier, outputs verified, skipped
+stage  2 verity: done earlier, outputs verified, skipped
+stage  3 data profile: done earlier, outputs verified, skipped
+stage  4 checks: done earlier, outputs verified, skipped
+stage  5 option A: done earlier, outputs verified, skipped
+stage  6 option C: done earlier, outputs verified, skipped
+stage  7 option B: done earlier, outputs verified, skipped
+stage  8 option D: done earlier, outputs verified, skipped
+stage  9 decoy check: start 06:31:18
+    $ C:\verity-hackathon\.venv\Scripts\python.exe make_decoy_check.py C:\verity-hackathon\results\rehearsal_2026   (reads truth)
+    $ C:\verity-hackathon\.venv\Scripts\python.exe b_llm_baseline.py C:\verity-hackathon\results\rehearsal_2026 --provider openai --final-sample C:\verity-hackathon\results\rehearsal_2026\options\b_llm\decoy_check_pairs.csv --label decoycheck --max-usd 0.15 --estimate-only
+    pairs: 68 (sample file decoy_check_pairs.csv); distinct prompts 68 (0 pairs repeat another pair's exact record content and share its answer); already answered in the local cache: 68; calls to make: 0
+    projection: about $0.00 at the pilot's $0.001545 per call; about 0 minutes at 95.3 calls per minute (8 keys x 12 per minute, 2 workers; the pilot measured 95.3); run cap --max-usd $0.15
+    cost gate: 0 pairs to call x $0.001545 (pilot cost per call) x 1.3 = $0.00; ledger total $12.1909, remaining under the $45 cap $32.81; platform limit $30 - ledger total = $17.81 -> PASS
+    $ C:\verity-hackathon\.venv\Scripts\python.exe b_llm_baseline.py C:\verity-hackathon\results\rehearsal_2026 --provider openai --final-sample C:\verity-hackathon\results\rehearsal_2026\options\b_llm\decoy_check_pairs.csv --label decoycheck --max-usd 0.15 --approve-final-run
+stage  9 decoy check: done in 6 s, ledger cost $0.0000, 2 outputs
+stage 10 scoring: start 06:31:23
+    $ C:\verity-hackathon\.venv\Scripts\python.exe score_option.py C:\verity-hackathon\results\rehearsal_2026 --decisions C:\verity-hackathon\results\rehearsal_2026\options\b_llm\openai\sample5000\decisions.csv --name B. frontier LLM (frozen prompt) --sample C:\verity-hackathon\results\rehearsal_2026\options\b_llm\test_sample5000.csv   (reads truth)
+    $ C:\verity-hackathon\.venv\Scripts\python.exe compare_options.py C:\verity-hackathon\results\rehearsal_2026 --sample C:\verity-hackathon\results\rehearsal_2026\options\b_llm\test_sample5000.csv --first C:\verity-hackathon\results\rehearsal_2026\options\b_llm\openai\sample5000\decisions.csv --second C:\verity-hackathon\results\rehearsal_2026\options\a_threshold\decisions.csv --first-name B (frontier LLM) --second-name A (threshold only)   (reads truth)
+    $ C:\verity-hackathon\.venv\Scripts\python.exe compare_options.py C:\verity-hackathon\results\rehearsal_2026 --sample C:\verity-hackathon\results\rehearsal_2026\options\b_llm\test_sample5000.csv --first C:\verity-hackathon\results\rehearsal_2026\options\b_llm\openai\sample5000\decisions.csv --second C:\verity-hackathon\results\rehearsal_2026\options\c_model\c_v1_lgbm\decisions.csv --first-name B (frontier LLM) --second-name C v1 LightGBM   (reads truth)
+    $ C:\verity-hackathon\.venv\Scripts\python.exe compare_options.py C:\verity-hackathon\results\rehearsal_2026 --sample C:\verity-hackathon\results\rehearsal_2026\options\b_llm\test_sample5000.csv --first C:\verity-hackathon\results\rehearsal_2026\options\c_model\c_v1_lgbm\decisions.csv --second C:\verity-hackathon\results\rehearsal_2026\options\b_llm\openai\sample5000\decisions.csv --first-name C v1 LightGBM --second-name B (frontier LLM)   (reads truth)
+    $ C:\verity-hackathon\.venv\Scripts\python.exe compare_options.py C:\verity-hackathon\results\rehearsal_2026 --sample C:\verity-hackathon\results\rehearsal_2026\options\b_llm\test_sample5000.csv --first C:\verity-hackathon\results\rehearsal_2026\options\d_hybrid\decisions.csv --second C:\verity-hackathon\results\rehearsal_2026\options\b_llm\openai\sample5000\decisions.csv --first-name D (hybrid) --second-name B (frontier LLM)   (reads truth)
+    $ C:\verity-hackathon\.venv\Scripts\python.exe compare_options.py C:\verity-hackathon\results\rehearsal_2026 --sample C:\verity-hackathon\results\rehearsal_2026\options\b_llm\test_sample5000.csv --first C:\verity-hackathon\results\rehearsal_2026\options\d_hybrid\decisions.csv --second C:\verity-hackathon\results\rehearsal_2026\options\c_model\c_v1_lgbm\decisions.csv --first-name D (hybrid) --second-name C v1 LightGBM   (reads truth)
+    $ C:\verity-hackathon\.venv\Scripts\python.exe b_sample_report.py C:\verity-hackathon\results\rehearsal_2026 --label sample5000   (reads truth)
+Traceback (most recent call last):
+  File "C:\Users\LAKSHM~1.MAN\AppData\Local\Temp\claude\92614665fd0b7096\033979cb-3362-45e3-9936-c405dfdbc91d\scratchpad\finish_rehearsal.py", line 32, in <module>
+    R.run(resume=True)
+    ~~~~~^^^^^^^^^^^^^
+  File "C:\verity-hackathon\eval\freeze_run.py", line 322, in run
+    res = fn(self) or {}
+          ~~^^^^^^
+  File "C:\verity-hackathon\eval\freeze_run.py", line 617, in s10_scoring
+    R.step(10, [PY, "eval/b_sample_report.py", run, "--label", "sample5000"], truth=True, label="b_sample_report")
+    ~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\verity-hackathon\eval\freeze_run.py", line 259, in step
+    raise StageFailed(f"{label or Path(args[1]).name} exited {rc}; see {self.rel(log_file)}")
+freeze_run.StageFailed: b_sample_report exited 1; see results/rehearsal_2026/_freeze/logs/stage_10.log

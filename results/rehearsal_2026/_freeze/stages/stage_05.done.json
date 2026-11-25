@@ -1,0 +1,30 @@
+{
+ "stage": 5,
+ "name": "option A",
+ "mode": "rehearsal",
+ "seed": 2026,
+ "ended_utc": "2026-11-25T12:16:16Z",
+ "seconds": 6.8,
+ "ledger_cost_usd": 0.0,
+ "exit": 0,
+ "reads_truth": [
+  "score A. threshold only",
+  "score A. threshold only (sample)"
+ ],
+ "guards": [
+  {
+   "time": "2026-11-25T12:16:09Z",
+   "stage": 5,
+   "guard": "frozen files unchanged since the manifest",
+   "fired": false,
+   "detail": "all match"
+  }
+ ],
+ "notes": [],
+ "outputs": {
+  "results/rehearsal_2026/options/a_threshold/decisions.csv": "67dedeea4be165bc5207ed6ac1d1baa6e68b6b4d92a831ab4cc5432258ed403f",
+  "results/rehearsal_2026/options/a_threshold/score_report.txt": "e453c97c1a96ad8fe629ba69832e04f98949a6ee8754f8949af542c95e981323",
+  "results/rehearsal_2026/options/a_threshold/score_report_sample5000.txt": "fd1b73330ea314447142b6424342344f024637d90a664fa81c4fa5cceee6583f"
+ },
+ "manifest_sha256": "a8fbbc273df9bef774111189a4b868ceab000591fc2cb8c07eee5c549fa9835e"
+}

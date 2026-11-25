@@ -1,0 +1,36 @@
+{
+  "content_columns": [
+    "address_line",
+    "city",
+    "company_name",
+    "phone",
+    "postal_code",
+    "state",
+    "website"
+  ],
+  "metadata_columns": [
+    "record_id",
+    "source_system"
+  ],
+  "record_id_column": "record_id",
+  "reasoning": {
+    "address_line": "included: 71.9% unique, 7189 distinct; human-readable text signal",
+    "city": "included: 0.3% unique, 26 distinct; human-readable text signal",
+    "company_name": "included: 79.5% unique, 7947 distinct; human-readable text signal",
+    "phone": "included: 74.8% unique, 7476 distinct; no metadata rule matched (entity-describing field)",
+    "postal_code": "included: 32.4% unique, 3239 distinct; no metadata rule matched (entity-describing field)",
+    "record_id": "excluded: [primary_key] primary key (uniqueness ratio 100.00% ≥ 99%) | [system_process_field] system process field (name contains: id; only flagged because values are 100% unique)",
+    "source_system": "excluded: [near_constant_field] near-constant field, 4 distinct values (<5) — system label / category regardless of dataset size",
+    "state": "included: 0.2% unique, 22 distinct; human-readable text signal",
+    "website": "included: 33.8% unique, 3380 distinct; human-readable text signal"
+  },
+  "semantic_types": {
+    "company_name": "NAME",
+    "address_line": "STREET_ADDRESS",
+    "city": "DESCRIPTIVE",
+    "state": "DESCRIPTIVE",
+    "postal_code": "DESCRIPTIVE",
+    "phone": "QUASI_IDENTIFIER",
+    "website": "DESCRIPTIVE"
+  }
+}

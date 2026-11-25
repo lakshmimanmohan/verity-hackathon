@@ -1,0 +1,17 @@
+Run: C:\verity-hackathon\results\dstudy_12
+
+PASS  one row per unordered pair  (216310 rows, 0 duplicates)
+PASS  record_a < record_b in every row
+PASS  run_info.json has the scored-pair and skip counts  (skipped_missing_store_context=0, skipped_missing_embeddings=0, skipped_no_semantic_field=0, skipped_single_token_semantic_fields=0)
+PASS  row count equals run_info scored_pairs_rows  (216310 vs 216310)
+PASS  row count equals scored_neighbor_pairs + exact_only_pairs  (216310 vs 216310 + 0)
+PASS  written-type rows equal match_candidates.csv (pairs, score, match_type)  (6482 vs 6482 rows; pairs in only one: 0; value mismatches: 0)
+PASS  rebuilt score_uncapped within 1e-05  (216310 rows, max abs error 1.25e-06)
+PASS  min(rebuilt, 1) equals score within 1e-05 (pair_source neighbor)  (max abs error 1.25e-06)
+
+Information
+  rows by pair_source: {'both': 742, 'neighbor': 215568}
+  rows by match_type:  {'below_threshold': 33175, 'full_signal': 4779, 'insufficient_evidence': 176653, 'weak_signal': 1703}
+  rows with score_uncapped > 1 (score capped): 0 of 216310
+
+RESULT: all checks passed

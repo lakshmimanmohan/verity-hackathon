@@ -1,0 +1,25 @@
+Option: A. threshold only
+Run: C:\verity-hackathon\results\dstudy_11
+Decisions: C:\verity-hackathon\results\dstudy_11\options\a_threshold\decisions.csv  (45676 test band pairs; confidence given for 0)
+Test group: 4494 records, 52496 scored pairs, 5965 true pairs
+
+Band (test band pairs, same-entity = positive)
+  pairs 45676  (true 383, 0.84%)
+  F1 0.1453  95% CI [0.0968, 0.1961]  (bootstrap, 1000 resamples, seed 0)
+  zero-error bounds (exact one-sided 95% Clopper-Pearson; the bootstrap interval is degenerate when an error count is 0):
+    false matches: 0 of 45,293 false pairs; false-match rate <= 0.00007 (up to 3 false matches on 45,293 false pairs)
+    implied worst case on a band of 383 true and 45,293 false pairs: precision >= 0.9092, recall = 0.0783, F1 >= 0.1442
+  accuracy 0.9923  precision 1.0000  recall 0.0783
+  TP 30  FP 0  FN 353  TN 45293
+
+Overall (test group; outside the band Verity's decision_status)
+  precision 1.0000  recall 0.5168  F1 0.6815
+  TP 3083  FP 0  FN 2882
+
+Recall by hard-case slice (test group; pairs where either record carries the tag)
+  acronym           418 / 929      recall 0.4499
+  truncation        541 / 1030     recall 0.5252
+  po_box            179 / 849      recall 0.2108
+  easy             2006 / 3382     recall 0.5931
+
+Decoy pairs in the test group: 111, wrongly matched 0 (0.00%)

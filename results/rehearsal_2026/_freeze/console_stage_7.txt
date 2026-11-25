@@ -1,0 +1,23 @@
+stage  7 option B: start 06:17:52
+    $ C:\verity-hackathon\.venv\Scripts\python.exe b_llm_baseline.py C:\verity-hackathon\results\rehearsal_2026 --provider openai --final-sample C:\verity-hackathon\results\rehearsal_2026\options\b_llm\test_sample5000.csv --label sample5000 --max-usd 0.75 --estimate-only
+    pairs: 400 (sample file test_sample5000.csv); distinct prompts 394 (6 pairs repeat another pair's exact record content and share its answer); already answered in the local cache: 394; calls to make: 0
+    projection: about $0.00 at the pilot's $0.001545 per call; about 0 minutes at 95.3 calls per minute (8 keys x 12 per minute, 2 workers; the pilot measured 95.3); run cap --max-usd $0.75
+    cost gate: 0 pairs to call x $0.001545 (pilot cost per call) x 1.3 = $0.00; ledger total $12.1909, remaining under the $45 cap $32.81; platform limit $30 - ledger total = $17.81 -> PASS
+    $ C:\verity-hackathon\.venv\Scripts\python.exe b_llm_baseline.py C:\verity-hackathon\results\rehearsal_2026 --provider openai --final-sample C:\verity-hackathon\results\rehearsal_2026\options\b_llm\test_sample5000.csv --label sample5000 --max-usd 0.75 --approve-final-run
+Traceback (most recent call last):
+  File "c:\verity-hackathon\eval\freeze_run.py", line 787, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "c:\verity-hackathon\eval\freeze_run.py", line 779, in main
+    R.run(only=args.stage, resume=args.resume)
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\verity-hackathon\eval\freeze_run.py", line 322, in run
+    res = fn(self) or {}
+          ~~^^^^^^
+  File "c:\verity-hackathon\eval\freeze_run.py", line 539, in s7_b
+    with (bdir / "calls.jsonl").open("rb") as src, gzip.open(arch / "calls.jsonl.gz", "wb") as dst:
+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\lakshmi.manmohan\AppData\Local\Programs\Python\Python313\Lib\pathlib\_local.py", line 537, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\verity-hackathon\\results\\rehearsal_2026\\options\\b_llm\\openai\\sample5000\\calls.jsonl'

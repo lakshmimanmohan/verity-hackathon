@@ -1,0 +1,123 @@
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe options/c_decision_model.py C:\verity-hackathon\results\rehearsal_2026 --model lgbm --version c_v1_lgbm   [reads truth; 2026-11-25T12:16:16Z]
+Option C cv_report: c_v1_lgbm
+Model: c_v1_lgbm (LightGBM, lightgbm 4.6.0)
+Run: C:\verity-hackathon\results\rehearsal_2026
+
+Train band pairs: 63665 (418 true, 63247 false)
+Training set: 63665 pairs (418 true, 63247 false); all train band pairs
+Test band pairs scored: 44882 (no test labels read)
+
+Grouped CV: 5 folds over 1825 train-side split components (seed 0, balanced by records)
+  fold  eval pairs  eval true  train pairs  train true
+     0        4909         73        41099         317
+     1        3122         49        41649         339
+     2        3746         79        41488         311
+     3        2882         67        42347         307
+     4        3033         59        42104         307
+  OOF coverage: 17692 of 63665 pairs (27.8%); true 327 of 418, false 17365 of 63247
+  OOF weights per pair: true 1.2783, false 3.6422 (coverage x population)
+
+Model selection (weighted average precision on OOF)
+  {"num_leaves": 15, "min_child_samples": 20, "scale_pos_weight": "1"}  AP 0.9964
+  {"num_leaves": 15, "min_child_samples": 20, "scale_pos_weight": "sqrt"}  AP 0.9960
+  {"num_leaves": 15, "min_child_samples": 50, "scale_pos_weight": "1"}  AP 0.9955
+  {"num_leaves": 15, "min_child_samples": 50, "scale_pos_weight": "sqrt"}  AP 0.9965
+  {"num_leaves": 31, "min_child_samples": 20, "scale_pos_weight": "1"}  AP 0.9956
+  {"num_leaves": 31, "min_child_samples": 20, "scale_pos_weight": "sqrt"}  AP 0.9959
+  {"num_leaves": 31, "min_child_samples": 50, "scale_pos_weight": "1"}  AP 0.9957
+  {"num_leaves": 31, "min_child_samples": 50, "scale_pos_weight": "sqrt"}  AP 0.9967   <- chosen
+
+Calibration: isotonic regression on OOF predictions (weighted)
+  OOF ECE (10 equal-width bins, weighted): 0.0000
+  bin          weighted n      n   mean p   frac true
+  [0.0, 0.1)      63226.4  17360   0.0000   0.0000
+  [0.1, 0.2)         17.1      6   0.1493   0.1493
+  [0.8, 0.9)         36.7     25   0.8014   0.8014
+  [0.9, 1.0]        384.8    301   1.0000   1.0000
+
+Cutoff rule
+  candidates t: the distinct calibrated OOF probabilities; predicted same when p >= t
+  band F1(t): weighted OOF band F1
+  P(t) = (TP_out + TPw(t)) / (M_out + PREDw(t)), train group: M_out = 3400 Verity matches outside the band, TP_out = 3400
+  t* = argmax band F1(t) subject to P(t) >= 0.98; ties to the larger t; none -> all different
+  result: t* = 0.801433 (max OOF band F1 with estimated overall precision >= 0.98)
+  at t*: OOF band F1 0.9868, precision 0.9827, recall 0.9908; estimated overall train precision 0.9981
+
+Test band: 352 of 44882 predicted same
+Wall time: 30.9s
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe eval/score_option.py C:\verity-hackathon\results\rehearsal_2026 --decisions C:\verity-hackathon\results\rehearsal_2026\options\c_model\c_v1_lgbm\decisions.csv --name C v1 LightGBM   [reads truth; 2026-11-25T12:16:48Z]
+Option: C v1 LightGBM
+Run: C:\verity-hackathon\results\rehearsal_2026
+Decisions: C:\verity-hackathon\results\rehearsal_2026\options\c_model\c_v1_lgbm\decisions.csv  (44882 test band pairs; confidence given for 44882)
+Test group: 4500 records, 51309 scored pairs, 5541 true pairs
+
+Band (test band pairs, same-entity = positive)
+  pairs 44882  (true 340, 0.76%)
+  F1 0.9653  95% CI [0.9510, 0.9780]  (bootstrap, 1000 resamples, seed 0)
+  accuracy 0.9995  precision 0.9489  recall 0.9824
+  TP 334  FP 18  FN 6  TN 44524
+
+Overall (test group; outside the band Verity's decision_status)
+  precision 0.9944  recall 0.5793  F1 0.7321
+  TP 3210  FP 18  FN 2331
+
+Recall by hard-case slice (test group; pairs where either record carries the tag)
+  acronym           503 / 811      recall 0.6202
+  truncation        608 / 1043     recall 0.5829
+  po_box            372 / 765      recall 0.4863
+  easy             1844 / 3101     recall 0.5946
+
+Decoy pairs in the test group: 147, wrongly matched 0 (0.00%)
+
+Band average precision (cutoff-free, ranked by confidence): 0.9799
+
+Calibration (test band, 10 equal-width bins)
+  ECE 0.0004   (bar: <= 0.05)
+  ECE among pairs with confidence >= 0.05: 0.0358  (366 pairs)
+  bin           pairs     mean conf   frac true
+  [0.0, 0.1)      44516   0.0000      0.0001
+  [0.1, 0.2)         11   0.1495      0.0000
+  [0.3, 0.4)          2   0.3689      0.5000
+  [0.7, 0.8)          1   0.7001      0.0000
+  [0.8, 0.9)         37   0.8024      0.5946
+  [0.9, 1.0]        315   0.9994      0.9905
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe eval/score_option.py C:\verity-hackathon\results\rehearsal_2026 --decisions C:\verity-hackathon\results\rehearsal_2026\options\c_model\c_v1_lgbm\decisions.csv --name C v1 LightGBM --sample C:\verity-hackathon\results\rehearsal_2026\options\b_llm\test_sample5000.csv   [reads truth; 2026-11-25T12:16:53Z]
+Option: C v1 LightGBM
+Run: C:\verity-hackathon\results\rehearsal_2026
+Decisions: C:\verity-hackathon\results\rehearsal_2026\options\c_model\c_v1_lgbm\decisions.csv  (400 test band pairs sampled of 44882, weights sum 44882.0 [--sample test_sample5000.csv; 44482 other decisions ignored]; confidence given for 400)
+Test group: 4500 records, 51309 scored pairs, 5541 true pairs
+
+Band (test band pairs, same-entity = positive) (weighted estimate)
+  pairs 44882.0  (true 340.0, 0.76%)
+  F1 0.9911  95% CI [0.9836, 0.9971]  (bootstrap, 1000 resamples, seed 0)
+  zero-error bounds (exact one-sided 95% Clopper-Pearson; the bootstrap interval is degenerate when an error count is 0):
+    false matches: 0 of 60 false pairs; false-match rate <= 0.04870 (up to 2169 false matches on 44,542 false pairs)
+    implied worst case on a band of 340 true and 44,542 false pairs: precision >= 0.1334, recall = 0.9824, F1 >= 0.2349
+  accuracy 0.9999  precision 1.0000  recall 0.9824
+  TP 334.0  FP 0.0  FN 6.0  TN 44542.0
+
+Overall (test group; outside the band Verity's decision_status) (weighted estimate)
+  precision 1.0000  recall 0.5793  F1 0.7336
+  TP 3210.0  FP 0.0  FN 2331.0
+
+Recall by hard-case slice (test group; pairs where either record carries the tag) (weighted estimate)
+  acronym         503.0 / 811.0    recall 0.6202
+  truncation      608.0 / 1043.0   recall 0.5829
+  po_box          372.0 / 765.0    recall 0.4863
+  easy           1844.0 / 3101.0   recall 0.5946
+
+Decoy pairs in the test group: 79.0, wrongly matched 0.0 (0.00%) (weighted estimate)
+
+Band average precision (cutoff-free, ranked by confidence) (weighted estimate): 1.0000
+
+Calibration (test band, 10 equal-width bins) (weighted estimate)
+  ECE 0.0002   (bar: <= 0.05)
+  ECE among pairs with confidence >= 0.05: 0.0154  (335.0 pairs)
+  bin           pairs     mean conf   frac true
+  [0.0, 0.1)    44547.0   0.0000      0.0001
+  [0.3, 0.4)        1.0   0.3555      1.0000
+  [0.8, 0.9)       22.0   0.8030      1.0000
+  [0.9, 1.0]      312.0   0.9994      1.0000
