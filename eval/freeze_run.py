@@ -66,8 +66,27 @@ REAL_FREEZE_REL = f"results/freeze_{FREEZE_DATE}"
 SAMPLE_SIZE = 5000
 REHEARSAL_NONMATCHES = 60
 DECOY_MAX = 300
+# Per-run caps of the B stages (--max-usd). Real run: absolute caps. Rehearsal: an ALLOWANCE on top of what the ledger already holds for the
+# stage's run id (the ledger's per-run total is cumulative over reruns of the same run id), so a rerun is not refused for earlier spend.
 B_CAPS = {"real": {"sample5000": 10.0, "dfull": 0.30, "decoycheck": 0.50},
-          "rehearsal": {"sample5000": 0.75, "dfull": 0.10, "decoycheck": 0.15}}       # rehearsal total: $1.00
+          "rehearsal": {"sample5000": 0.80, "dfull": 0.20, "decoycheck": 0.20}}       # rehearsal allowances: $1.20 of new spend in total
+
+
+def b_run_id(R: "Runner", label: str) -> str:
+    """The ledger run id options/b_llm_baseline.py --final-sample uses for a stage."""
+    return f"{R.run_dir.name}/b_llm/openai/{label}"
+
+
+def stage_cap(R: "Runner", label: str) -> tuple[float, float]:
+    """(per-run cap for --max-usd, spend the ledger already holds for this run id). Real run: the absolute cap, prior spend ignored.
+    Rehearsal: prior spend + the allowance (a fresh run id has no prior spend, so the cap is the allowance)."""
+    base = B_CAPS[R.mode][label]
+    if R.mode == "real":
+        return base, 0.0
+    sys.path.insert(0, str(REPO / "options"))
+    from llm_ledger import DEFAULT_LEDGER, Ledger
+    prior = Ledger(R.ledger_path or DEFAULT_LEDGER).state().by_run_micro.get(b_run_id(R, label), 0) / 1e6
+    return round(prior + base, 6), prior
 ARCHIVE_COMMIT_MAX_BYTES = 1_000_000
 CHANGE_DATE = "2026-11-25"                       # written into the manifest's notes (all-cached B stage fix)
 # frozen assets: run-relative destination -> repo-relative source (copied into the run folder and verified)
@@ -427,7 +446,9 @@ def b_final(R: Runner, stage: int, pairs_file: Path, label: str) -> Path:
     from b_llm_baseline import power_status  # noqa: E402
     if not R.allow_battery:
         R.guard(stage, "AC power", power_status() != "battery", f"power: {power_status()}")
-    cap = B_CAPS[R.mode][label]
+    cap, prior = stage_cap(R, label)
+    if R.mode != "real":
+        R.note(f"B {label}: per-run cap ${cap:.4f} = ledger spend already held for run id {b_run_id(R, label)} (${prior:.4f}) + allowance ${B_CAPS[R.mode][label]:.2f}")
     base = [PY, "options/b_llm_baseline.py", R.run_dir, "--provider", "openai", "--final-sample", pairs_file, "--label", label, "--max-usd", cap]
     est = R.step(stage, base + ["--estimate-only"], label=f"B {label} estimate")
     for line in est.splitlines():

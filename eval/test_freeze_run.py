@@ -120,6 +120,52 @@ class ManifestNoteAndReport(Base):
         self.assertIn("compare_d_forced_vs_b.txt", inspect.getsource(F.s10_scoring))
 
 
+class B_StageCaps(Base):
+    """Per-run caps of the B stages: a rehearsal gets prior ledger spend for the run id + an allowance; the real run keeps absolute caps."""
+
+    def spend(self, run_id: str, usd: float) -> None:
+        import sys
+        sys.path.insert(0, str(F.REPO / "options"))
+        from llm_ledger import Ledger
+        led = Ledger(self.repo / "ledger.jsonl", lifetime_cap_usd=45.0)
+        rid = led.reserve(usd, run=run_id, provider="openai", model="m", run_cap_usd=10.0)
+        led.settle(rid, usd)
+
+    def test_rehearsal_cap_is_prior_spend_plus_the_allowance(self):
+        R = self.runner()                                                  # rehearsal, run folder name "run"
+        self.spend("run/b_llm/openai/sample5000", 0.74)
+        self.spend("run/b_llm/openai/dfull", 0.03)
+        self.assertEqual(F.b_run_id(R, "sample5000"), "run/b_llm/openai/sample5000")
+        cap, prior = F.stage_cap(R, "sample5000")
+        self.assertAlmostEqual(prior, 0.74)
+        self.assertAlmostEqual(cap, 0.74 + 0.80)
+        self.assertAlmostEqual(F.stage_cap(R, "dfull")[0], 0.03 + 0.20)
+
+    def test_a_fresh_run_id_gets_exactly_the_allowance(self):
+        R = self.runner()
+        self.spend("another_run/b_llm/openai/sample5000", 0.9)                # spend under a different run id does not count
+        for label, allowance in (("sample5000", 0.80), ("dfull", 0.20), ("decoycheck", 0.20)):
+            self.assertEqual(F.stage_cap(R, label), (allowance, 0.0))
+
+    def test_open_reservations_count_as_prior_spend(self):
+        import sys
+        sys.path.insert(0, str(F.REPO / "options"))
+        from llm_ledger import Ledger
+        Ledger(self.repo / "ledger.jsonl", lifetime_cap_usd=45.0).reserve(0.10, run="run/b_llm/openai/decoycheck", provider="openai", model="m", run_cap_usd=1.0)
+        self.assertAlmostEqual(F.stage_cap(self.runner(), "decoycheck")[0], 0.30)
+
+    def test_real_run_caps_are_absolute_and_unchanged(self):
+        R = self.runner(mode="real", seed=F.EVAL_SEED, run_dir=self.repo / "results" / "eval_7919", freeze_dir=self.repo / "f")
+        self.spend("eval_7919/b_llm/openai/sample5000", 3.0)                   # prior spend is ignored in the real run
+        self.assertEqual(F.stage_cap(R, "sample5000"), (10.0, 0.0))
+        self.assertEqual(F.stage_cap(R, "dfull"), (0.30, 0.0))
+        self.assertEqual(F.stage_cap(R, "decoycheck"), (0.50, 0.0))
+        self.assertEqual(F.B_CAPS["real"], {"sample5000": 10.0, "dfull": 0.30, "decoycheck": 0.50})
+
+    def test_rehearsal_allowances_total_the_new_spend_cap(self):
+        self.assertAlmostEqual(sum(F.B_CAPS["rehearsal"].values()), 1.20)
+
+
 class SeedRefusals(Base):
     def real(self, approve):
         return self.runner(mode="real", seed=F.EVAL_SEED, approve=approve, run_dir=self.repo / "results" / "eval_7919",
