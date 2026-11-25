@@ -1,0 +1,13 @@
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe cost/cost_model.py --run C:\verity-hackathon\results\rehearsal_2026 --out C:\verity-hackathon\results\rehearsal_2026\cost --dev-run C:\verity-hackathon\results\dev_2026_run11   [truth sealed; 2026-11-25T12:59:05Z]
+Traceback (most recent call last):
+  File "C:\verity-hackathon\cost\cost_model.py", line 1348, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "C:\verity-hackathon\cost\cost_model.py", line 785, in main
+    p, ctx = load_inputs(REPO, args.run, rows_a, args.productization_hours, args.effort_log, args.dev_run)
+             ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\verity-hackathon\cost\cost_model.py", line 529, in load_inputs
+    p.in_tokens = int(m.group(1).replace(",", "")) / n_calls
+                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~
+ZeroDivisionError: division by zero

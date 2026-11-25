@@ -1,0 +1,28 @@
+Split of rehearsal_2026 (protocol.md, Amendments, Nov 24, 2026). No ground-truth labels used.
+
+Method
+  Groups: connected components over all records of the input CSV; edges are Verity's
+  matched pairs plus all pairs scoring above the band (score > effective_threshold + 0.05).
+  Components ordered by smallest record id, shuffled with seed 0, assigned to train
+  until train holds 55% of records. A pair is kept only if both records are on the
+  same side; crossing pairs are excluded from training and scoring.
+
+Inputs (sha256)
+  orgs_raw.csv           1ea60a3e9554dfd12b1f415078f93998490bd4101a891f02b36d5c7364f68f99
+  match_candidates.csv   972bf6010fd1f0f9146430932d35271a6459ffe9e3c698f66f2fa30807d5f36d
+  scored_pairs.csv       982e6161b39cfef0292ce5f6923b2b4cfb4108bce8147e0123b5ae6523dde322
+
+Graph: 10000 records, 12856 edges (6334 matched, 12798 above-band),
+  3226 components, largest 456 records
+
+Records:    train 5500, test 4500 (55.00% train)
+Components: train 1819, test 1407
+
+Pairs by side (crossing = records on different sides; excluded)
+                            train     test  crossing
+  band pairs                63665    44882     92307
+  all scored pairs          71351    51309     93798
+  matched pairs              3426     2908         0
+  train share of kept band pairs: 58.7%
+
+Records appearing in kept pairs on both sides: 0

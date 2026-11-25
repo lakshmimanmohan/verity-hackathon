@@ -1,0 +1,204 @@
+Option D, exact decisions for all 44,882 test band pairs (lo 0.5, hi 0.9), run rehearsal_2026
+routes: {'c_different': 44529, 'llm': 38, 'c_same': 315}; LLM share 0.00085 (38 pairs: 38 with a B answer)
+
+Exact errors: 4 false matches, 7 false non-matches
+
+False matches (different organizations decided same): 4, all shown
+  R0c00b9da4c | Rca78c8d029   decision same, p 1.000, route c_same, tags po_box
+      address_line     PO Box 53799                                 | PO Box 29391
+      city             Houston                                      | Houston
+      company_name     Brooks Pharmacy                              | Atlantic Health Partners L.L.C.
+      phone            9774161309                                   | (missing)
+      postal_code      77088                                        | 77088
+      state            TX                                           | TX
+      website          (missing)                                    | (missing)
+  R266c182205 | R560d5c1cba   decision same, p 0.930, route llm, tags po_box+truncation
+      address_line     1493 Corporate Boulevard                     | Post Office Box 25222
+      city             Milwaukee                                    | Milwaukee
+      company_name     Anderson & Morea                             | Anderson and Moreau Construction
+      phone            2497165234                                   | (missing)
+      postal_code      53212                                        | 53252-8183
+      state            WI                                           | WI
+      website          andersonmoreau.com                           | andersonmoreau.com
+  R6f5d3c09db | Rc121b9230b   decision same, p 1.000, route c_same, tags acronym+missing_phone+standard
+      address_line     100 Washington St.                           | 150 Washington Ct.
+      city             Denver                                       | Denver
+      company_name     Beacon Pacific Capital Management, Corp.     | BCG
+      phone            980.697.4114                                 | (missing)
+      postal_code      80249-7198                                   | 80210-6668
+      state            CO                                           | CO
+      website          (missing)                                    | beaconconsulting.com
+  R8d643e5dd9 | Rf50501eb5c   decision same, p 1.000, route c_same, tags acronym+missing_phone+po_box
+      address_line     P.O. Box 14972                               | 7793 Market Court
+      city             Albany                                       | Albany
+      company_name     Sunrise Medical Supply Corporation           | GHFS Co
+      phone            (missing)                                    | (missing)
+      postal_code      12272                                        | 12272
+      state            NY                                           | NY
+      website          (missing)                                    | (missing)
+
+False non-matches (same organization decided different): 7, all shown
+  R00e1fda85b | R9ac1336475   decision different, p 0.002, route c_different, tags acronym+po_box
+      address_line     1310 Main Way Fl 2                           | P.O. Box 99016
+      city             Boston                                       | Boston
+      company_name     CST Incorporated                             | Coastal Silverline Technologies Incorporated
+      phone            488-413-4644                                 | (missing)
+      postal_code      02169-4387                                   | 02169
+      state            MA                                           | MA
+      website          coastalsilverline.com                        | (missing)
+  R06038804e4 | R46b5065817   decision different, p 0.002, route c_different, tags po_box+truncation+typo
+      address_line     8015 Washington Drive                        | POB 90065
+      city             Phoenix                                      | Phoenix
+      company_name     Tanaka Technolog                             | Tanaka Technoogies Corp
+      phone            +1 258 530 8056                              | (missing)
+      postal_code      85059                                        | 85059-6407
+      state            AZ                                           | AZ
+      website          www.tanakatechnologies.com                   | (missing)
+  R1201db1fc5 | Rb3f1ba6816   decision different, p 0.002, route c_different, tags po_box+standard+typo
+      address_line     PO Box 4668                                  | 4380 Market Ln.
+      city             Sacramento                                   | Sacramento
+      company_name     Pioneer Software Incorporated                | Pioneer Software Inc
+      phone            (missing)                                    | +1 710 416 5871
+      postal_code      95891                                        | 95891-7358
+      state            CA                                           | CA
+      website          pioneersoftware.com                          | (missing)
+  R26d9e258da | R7d9b66f0ab   decision different, p 0.220, route llm, tags acronym+standard+typo_address
+      address_line     1636 Oak Ln.                                 | 1366 Oak Lane Suite 100
+      city             Albany                                       | Albany
+      company_name     R.B.E.S. Inc                                 | Rivera & Brooks Environmental Services Inc
+      phone            (233) 427-1421                               | 2334271421
+      postal_code      12280                                        | 12280-6981
+      state            NY                                           | NY
+      website          riverabrooks.com                             | (missing)
+  R28962deef0 | R366b3ef3c7   decision different, p 0.355, route c_different, tags acronym+case+missing_phone
+      address_line     2304 Park Way                                | 2304 Park Way. Ste 210
+      city             Tampa                                        | Tampa
+      company_name     RPES                                         | REED & PRICE ENERGY SOLUTIONS CO.
+      phone            8074705562                                   | (missing)
+      postal_code      33692-9781                                   | 33692
+      state            FL                                           | FL
+      website          reedprice.com                                | (missing)
+  R45d7fc9b8c | Rfda06ecad4   decision different, p 0.002, route c_different, tags po_box+truncation
+      address_line     Post Office Box 31275                        | 583 Market St.
+      city             Richmond                                     | Richmond
+      company_name     Reed and Morgan Insurance Agency, L.L.C.     | Reed & Morgan Insura
+      phone            (missing)                                    | 9472174352
+      postal_code      23267                                        | 23267-6532
+      state            VA                                           | VA
+      website          reedmorgan.com                               | (missing)
+  R90c47540d7 | Red42a19bb4   decision different, p 0.002, route c_different, tags case+missing_phone+truncation
+      address_line     6604 River Road                              | 6604 River Rd. Ste 210
+      city             Minneapolis                                  | Minneapolis
+      company_name     HAYES & HUGHES FINANCIAL SERVICES CO         | Hayes & Hughes F
+      phone            9347013343                                   | (missing)
+      postal_code      55414                                        | 55414-3971
+      state            MN                                           | MN
+      website          (missing)                                    | hayeshughes.com
+
+Sample-based estimate (5,000-pair sample, compare_d_vs_b.txt) against the exact full-band numbers
+                   sample estimate  sample 95% interval      exact   inside?
+  band F1                   0.9896  [0.9817, 0.9970]        0.9838   yes
+  band precision            1.0000  [1.0000, 1.0000]        0.9881   NO: the interval is degenerate [1.0000, 1.0000] (0 false matches sampled); the zero-error bound (worst-case precision >= 0.9208) contains the exact value
+  band recall               0.9794  [0.9641, 0.9940]        0.9794   yes
+  overall precision: sample 1.0000, exact 0.9988; overall recall: sample 0.5791, exact 0.5791; ECE: sample 0.0002, exact 0.0002
+  why the sample missed the false matches: the 4 exact false matches are 3 sure-same pairs from C (p = 1.0) and 1 the LLM answered same; each non-match has a 1-in-9.56 chance of being sampled, so a handful of false matches can all be missed (the sample's 95% bound allowed up to 29)
+
+Where D and C differ: 15 of 44,882 band pairs (D differs from C only on the LLM-routed pairs)
+  R04cc0c5b9d R47be2b4ec3   C same (p 0.801) -> D different   truth different
+  R04cc0c5b9d R6a1b2515f9   C same (p 0.801) -> D different   truth different
+  R04cc0c5b9d R88620d9b06   C same (p 0.801) -> D different   truth different
+  R0abbc2bc1f R3203b1ab35   C same (p 0.801) -> D different   truth different
+  R0db0d40928 Raa31f5193e   C same (p 0.801) -> D different   truth different
+  R14ced1e882 R3203b1ab35   C same (p 0.801) -> D different   truth different
+  R171901aef3 R46b5065817   C same (p 0.801) -> D different   truth different
+  R2698b13b2b R976f49627b   C same (p 0.801) -> D different   truth different
+  R26d9e258da R7d9b66f0ab   C same (p 0.801) -> D different   truth same
+  R536d5f80dc Re7f93a5b75   C same (p 0.801) -> D different   truth different
+  R6eafbc6c9b Rc98a5407a0   C same (p 0.801) -> D different   truth different
+  R7917e06d36 Raa5110878e   C same (p 0.801) -> D different   truth different
+  R7917e06d36 Rca7c1b9821   C same (p 0.801) -> D different   truth different
+  R976f49627b Red3db1ec19   C same (p 0.801) -> D different   truth different
+  R9cc6618d74 Ra9fedabfef   C same (p 0.801) -> D different   truth different
+  of those 15: {'D right': 14, 'D wrong': 1}
+
+Where D and B differ: B has an answer for 484 band pairs (the 5,000 sampled, 64 decoy-check and routed pairs); they differ on 8 of them; {'D wrong, B right': 6, 'D right, B wrong': 2}. On the 44,398 band pairs B never saw, the comparison is not possible
+  R00e1fda85b R9ac1336475   D different (route c_different, p 0.002)  B same (p_same 0.92)   truth same   acronym+po_box
+  R06038804e4 R46b5065817   D different (route c_different, p 0.002)  B same (p_same 0.93)   truth same   po_box+truncation+typo
+  R1201db1fc5 Rb3f1ba6816   D different (route c_different, p 0.002)  B same (p_same 0.95)   truth same   po_box+standard+typo
+  R22fa661a73 R557e2011f9   D different (route c_different, p 0.000)  B same (p_same 0.88)   truth different   acronym+clean+missing_phone
+  R28962deef0 R366b3ef3c7   D different (route c_different, p 0.355)  B same (p_same 0.97)   truth same   acronym+case+missing_phone
+  R45d7fc9b8c Rfda06ecad4   D different (route c_different, p 0.002)  B same (p_same 0.92)   truth same   po_box+truncation
+  R90c47540d7 Red42a19bb4   D different (route c_different, p 0.002)  B same (p_same 0.97)   truth same   case+missing_phone+truncation
+  Ra4031214fc Rd26638834d   D same (route c_same, p 1.000)  B different (p_same 0.35)   truth same   po_box+typo
+
+D's decision on each of the 68 decoy pairs (different organizations that share a decoy group)
+  pair                      route        D decision      C p  B p_same
+  R00139403af Ra55d7dfe6f   c_different  different     0.000         -
+  R00139403af Rbbc8e4ea5b   c_different  different     0.000         -
+  R00139403af Rcd29170c86   c_different  different     0.000         -
+  R00a4436e6e R7211dd83f5   c_different  different     0.000         -
+  R03a9e55b30 R486129f8a8   c_different  different     0.000         -
+  R05ff5b1314 R5108c01e9d   c_different  different     0.000         -
+  R0812e8c45f R230a42dbc2   c_different  different     0.000         -
+  R0812e8c45f Redd3996e9c   c_different  different     0.000         -
+  R0b7371d4a7 R1cbc8b5579   c_different  different     0.000         -
+  R0d37270add R26b2c3622b   c_different  different     0.000         -
+  R0d37270add R53b8772126   c_different  different     0.000         -
+  R0f279cc63d R758a823177   c_different  different     0.002         -
+  R103c340b69 R4470e264d1   c_different  different     0.002         -
+  R10a317531a R2129f52eb7   c_different  different     0.000         -
+  R126ed39d4a R486129f8a8   c_different  different     0.000         -
+  R141ae00138 R8cf0fcc3d7   c_different  different     0.000         -
+  R185cbcb6fb R4470e264d1   c_different  different     0.000         -
+  R1a01e369c2 R1cbc8b5579   c_different  different     0.002         -
+  R1a4beae05d Rd4ebb5225e   c_different  different     0.000         -
+  R1c447d71b4 Red1472f47e   c_different  different     0.000         -
+  R1cbc8b5579 R204877caeb   c_different  different     0.000         -
+  R1cbc8b5579 Radd470f878   c_different  different     0.000         -
+  R1cbc8b5579 Rfa7c1db13d   c_different  different     0.000         -
+  R1e742efbd9 R1ebed56ad0   c_different  different     0.000         -
+  R203103030a Rce4d21544d   c_different  different     0.000         -
+  R22fa661a73 R557e2011f9   c_different  different     0.000         -
+  R22fa661a73 Rca31666437   c_different  different     0.002         -
+  R23167be825 Rdfda0717eb   c_different  different     0.000         -
+  R26ccabd24a R2e8a0c988b   c_different  different     0.000         -
+  R26f6c00f0f Rb0d1bfc492   c_different  different     0.000         -
+  R2e8a0c988b R51c4b258fe   c_different  different     0.000         -
+  R3490427c56 Red1472f47e   c_different  different     0.002         -
+  R39dc79a220 Rbb546895d3   c_different  different     0.000         -
+  R3a5d2db4c3 R45399c3261   c_different  different     0.000         -
+  R3e1a6b4758 R94b3cb36ca   c_different  different     0.000         -
+  R3e935a6887 R758a823177   c_different  different     0.000         -
+  R4470e264d1 R83bbb0c602   c_different  different     0.002         -
+  R4470e264d1 R8b78f4c389   c_different  different     0.000         -
+  R4470e264d1 R9b1103c8f2   c_different  different     0.002         -
+  R45399c3261 Rc4a1c8bf9b   c_different  different     0.002         -
+  R456fa72550 Rb672ba2294   c_different  different     0.000         -
+  R4b214884c1 Raa0f79bdbc   c_different  different     0.000         -
+  R5108c01e9d Ra6a42fb87e   c_different  different     0.002         -
+  R5385f53bb4 Rc506cd91ee   c_different  different     0.002         -
+  R61b46f0f34 R6a3ed71aa9   c_different  different     0.000         -
+  R6426088109 Red1472f47e   c_different  different     0.000         -
+  R68f79dbc44 Ra853d8b5bb   c_different  different     0.002         -
+  R6acf5eb3aa Radc7ccd072   c_different  different     0.000         -
+  R6fcb0030d8 R8ff74b49c8   c_different  different     0.000         -
+  R7211dd83f5 R8ca271b36b   c_different  different     0.000         -
+  R75d42386b1 Red1472f47e   c_different  different     0.002         -
+  R801081bb2f Rd238da7734   c_different  different     0.002         -
+  R8d5e03fe14 Rbb546895d3   c_different  different     0.000         -
+  R92a70856db Rb64b8ca80e   c_different  different     0.002         -
+  R9393e0cda7 Re5d6823161   c_different  different     0.000         -
+  R95956338ce Rce4d21544d   c_different  different     0.000         -
+  R96dea397bb Re54a997704   c_different  different     0.000         -
+  R9c38b51fe1 Ra853d8b5bb   c_different  different     0.000         -
+  Ra411df606a Rb672ba2294   c_different  different     0.000         -
+  Raa0f79bdbc Raa7e12a6a9   c_different  different     0.000         -
+  Raa0f79bdbc Rf31525d7f2   c_different  different     0.000         -
+  Rac4cfa66af Rbb546895d3   c_different  different     0.000         -
+  Rb672ba2294 Rb88ba554ee   c_different  different     0.000         -
+  Rb686bc3c58 Rc7e8223b79   c_different  different     0.002         -
+  Rb8754e51fe Rbb546895d3   c_different  different     0.000         -
+  Rc1aea35625 Rcaa5fc2cdd   c_different  different     0.002         -
+  Rd703490f19 Re54a997704   c_different  different     0.000         -
+  Reae29c858a Red1472f47e   c_different  different     0.000         -
+  summary: {('c_different', 'different'): 68}; wrongly matched 0 of 68 (B alone: 1 of 68)

@@ -1,0 +1,42 @@
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe eval/data_profile.py C:\verity-hackathon\results\rehearsal_2026   [reads truth; 2026-11-25T12:56:44Z]
+Data profile of rehearsal_2026 (orgs_raw.csv and its truth sidecar)
+  records                                                                   10000
+  entities                                                                  4105
+  entities with 1 record                                                    1603
+  entities with 2 records                                                   947
+  entities with 3 records                                                   591
+  entities with 4 records                                                   438
+  entities with 5 records                                                   216
+  entities with 6 records                                                   272
+  entities with 7 records                                                   38
+  mean records per entity                                                   2.4361
+  duplicate records (beyond the first of each entity)                       5895
+  share of duplicates with at least one defect beyond a legal-suffix change 0.542
+  share of duplicates with two or more defects                              0.1262
+  records tagged truncation                                                 707
+  records tagged acronym                                                    646
+  records tagged po_box                                                     601
+  records tagged case                                                       598
+  records tagged missing_phone                                              584
+  records tagged typo                                                       573
+  records tagged typo_address                                               318
+  records tagged standard (duplicates with formatting noise only)           2700
+  decoy records                                                             677
+  decoy groups                                                              195
+  blank share: company_name                                                 0.0
+  blank share: address_line                                                 0.0
+  blank share: city                                                         0.0
+  blank share: state                                                        0.0
+  blank share: postal_code                                                  0.0
+  blank share: phone                                                        0.0834
+  blank share: website                                                      0.1884
+  blank share: source_system                                                0.0
+  phone format 999-999-9999                                                 1901
+  phone format +9 999 999 9999                                              1837
+  phone format 999.999.9999                                                 1834
+  phone format 9999999999                                                   1814
+  phone format (999) 999-9999                                               1780
+  phone format (blank)                                                      834
+  ZIP+4 share (of non-blank postal codes)                                   0.1183
+

@@ -1,0 +1,49 @@
+Option B (frozen prompt, gpt-5.4) on every test band pair whose records share a decoy group but have different entities, run rehearsal_2026: 68 pairs (supplementary check, no bar)
+every pair is a different-organization pair: false matches 1 of 68
+  false-match rate 0.015; exact one-sided 95% upper bound 0.0679
+
+p_same distribution (all pairs are truly different)
+  [0.0, 0.2)    67   decided same 0
+  [0.2, 0.4)     0   decided same 0
+  [0.4, 0.6)     0   decided same 0
+  [0.6, 0.8)     0   decided same 0
+  [0.8, 1.0]     1   decided same 1
+  highest p_same 0.88, mean 0.083
+
+False matches (decided same): 1, all shown
+  R22fa661a73 | R557e2011f9   decision same, p_same 0.88
+      address_line     3144 Highland Drive                          | 7167 Industrial Blvd.
+      city             Denver                                       | Columbus
+      company_name     Northgate Copper Staffing Solutions Ltd      | N.C.S.S. Ltd.
+      phone            (622) 779-3034                               | (missing)
+      postal_code      80248                                        | 43276
+      state            CO                                           | OH
+      website          northgatecopper.com                          | northgatecopper.com
+
+The 3 highest-p_same pairs that were decided different (closest calls), both records side by side
+  R22fa661a73 | Rca31666437   decision different, p_same 0.18
+      address_line     3144 Highland Drive                          | 7167 Industrial Blvd
+      city             Denver                                       | Columbus
+      company_name     Northgate Copper Staffing Solutions Ltd      | NORTHGATE COPPER STAFFING SOLUTIONS, LIMITED
+      phone            (622) 779-3034                               | 570-261-8393
+      postal_code      80248                                        | 43276-2564
+      state            CO                                           | OH
+      website          northgatecopper.com                          | northgatecopper.com
+  R456fa72550 | Rb672ba2294   decision different, p_same 0.16
+      address_line     4279 Pine Parkway                            | 4009 Airport Street
+      city             Pittsburgh                                   | Austin
+      company_name     Ironwood Brightpath Log                      | Ironwood Brightpath Logistics Inc
+      phone            +1 315 633 3742                              | +1 900 944 9760
+      postal_code      15250                                        | 78780
+      state            PA                                           | TX
+      website          ironwoodbrightpath.com                       | ironwoodbrightpath.com
+  R1cbc8b5579 | Rfa7c1db13d   decision different, p_same 0.15
+      address_line     6546 Commerce Boulevard                      | 7311 Washington Court
+      city             Milwaukee                                    | ATLANTA
+      company_name     Moreau Dental Group LLC                      | MOREAU DENTAL GROUP LLC
+      phone            (613) 478-8572                               | 4433868402
+      postal_code      53240                                        | 30390
+      state            WI                                           | GA
+      website          moreaudental.com                             | moreaudental.com
+
+Run: calls 0, cache hits 68 (pairs already answered in the sample run), spent $0.0000; hit ratio excluding each key's first call n/a (no live calls); refusals 0, parse failures 0, API errors 0; run time 0.0 minutes

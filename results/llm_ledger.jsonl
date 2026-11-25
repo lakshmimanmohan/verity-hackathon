@@ -15706,3 +15706,6 @@
 {"t":"2026-11-25T12:29:58.870277Z","type":"cache_hits","n":38,"run":"rehearsal_2026/b_llm/openai/dfull","provider":"openai","model":"gpt-5.4-2026-03-05","usd":0.0}
 {"t":"2026-11-25T12:31:02.786638Z","type":"cache_hits","n":68,"run":"rehearsal_2026/b_llm/openai/decoycheck","provider":"openai","model":"gpt-5.4-2026-03-05","usd":0.0}
 {"t":"2026-11-25T12:31:21.971989Z","type":"cache_hits","n":68,"run":"rehearsal_2026/b_llm/openai/decoycheck","provider":"openai","model":"gpt-5.4-2026-03-05","usd":0.0}
+{"t":"2026-11-25T12:57:39.443133Z","type":"cache_hits","n":394,"run":"rehearsal_2026/b_llm/openai/sample5000","provider":"openai","model":"gpt-5.4-2026-03-05","usd":0.0}
+{"t":"2026-11-25T12:57:45.379328Z","type":"cache_hits","n":38,"run":"rehearsal_2026/b_llm/openai/dfull","provider":"openai","model":"gpt-5.4-2026-03-05","usd":0.0}
+{"t":"2026-11-25T12:58:43.208808Z","type":"cache_hits","n":68,"run":"rehearsal_2026/b_llm/openai/decoycheck","provider":"openai","model":"gpt-5.4-2026-03-05","usd":0.0}

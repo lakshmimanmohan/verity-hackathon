@@ -1,0 +1,15 @@
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe data/generate_data_org.py --seed 2026 --output C:\verity-hackathon\results\rehearsal_2026\orgs_raw.csv   [reads truth; 2026-11-25T12:54:12Z]
+10000 records, 4105 entities (seed 2026)
+  records -> C:\verity-hackathon\results\rehearsal_2026\orgs_raw.csv
+  truth   -> C:\verity-hackathon\results\rehearsal_2026\orgs_raw_truth.csv
+  acronym          646
+  case             598
+  clean           4105
+  missing_phone    584
+  po_box           601
+  standard        2700
+  truncation       707
+  typo             573
+  typo_address     318
+  decoy groups     195

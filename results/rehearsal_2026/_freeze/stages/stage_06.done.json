@@ -1,0 +1,35 @@
+{
+ "stage": 6,
+ "name": "option C",
+ "mode": "rehearsal",
+ "seed": 2026,
+ "ended_utc": "2026-11-25T12:57:36Z",
+ "seconds": 33.4,
+ "ledger_cost_usd": 0.0,
+ "exit": 0,
+ "reads_truth": [
+  "c_decision_model (train labels only)",
+  "score C v1 LightGBM",
+  "score C v1 LightGBM (sample)"
+ ],
+ "guards": [
+  {
+   "time": "2026-11-25T12:57:02Z",
+   "stage": 6,
+   "guard": "frozen files unchanged since the manifest",
+   "fired": false,
+   "detail": "all match"
+  }
+ ],
+ "notes": [],
+ "outputs": {
+  "results/rehearsal_2026/options/c_model/c_v1_lgbm/decisions.csv": "d040ed588aad1a8aa3768037313b3b2d10caa9e752e93deceda7e4a1a8db4369",
+  "results/rehearsal_2026/options/c_model/c_v1_lgbm/cv_report.txt": "f7cbc5c15cb8d3cba1e0360a0f4f7483b07de1071f9993e9a523239946a6a511",
+  "results/rehearsal_2026/options/c_model/c_v1_lgbm/features.json": "8e14eeb2a14c63e136f5e9898a58f9c8317bc87874e6f1b635a95a1e07b6c213",
+  "results/rehearsal_2026/options/c_model/c_v1_lgbm/model.txt": "ca3073f25ae34727575d023584ee411c4c1ff21308d75f93bfdccd11775ec7b2",
+  "results/rehearsal_2026/options/c_model/c_v1_lgbm/calibrator.json": "f65b754ff6f9e7b6eaaf9f0b76124b8907891e69a8764e8ffb35cfa0f827dc76",
+  "results/rehearsal_2026/options/c_model/c_v1_lgbm/score_report.txt": "cea6cbc5ba8d5657dc9738188fea0b91e2adf6ddb1ef481fca0c453cc66a8677",
+  "results/rehearsal_2026/options/c_model/c_v1_lgbm/score_report_sample5000.txt": "b4dce8bb2de623930f4340afd7e2d915445a5232795e4119c9ba5860d0e4902f"
+ },
+ "manifest_sha256": "0423cb9d1ea9f258f4df3b8ff522a8f57e877c2d9a77d90200f70de2a05644b6"
+}

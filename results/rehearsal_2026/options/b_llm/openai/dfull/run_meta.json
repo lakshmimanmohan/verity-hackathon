@@ -1,0 +1,53 @@
+{
+ "provider": "openai",
+ "requested_model": "gpt-5.4-2026-03-05",
+ "models_reported": {
+  "gpt-5.4-2026-03-05": 38
+ },
+ "settings": "max_output_tokens=64;reasoning_effort=none",
+ "system_prompt_sha256": "857de291325e9b49d7878eb34d180c180e716c99da5a96b60a5aaf747fd5ac94",
+ "answer_settings": {
+  "max_output_tokens": 64,
+  "reasoning_effort": "none"
+ },
+ "mode": "live",
+ "pairs": 38,
+ "distinct_prompts": 38,
+ "cache_hits": 38,
+ "calls": 0,
+ "spent_usd": 0.0,
+ "pending": 0,
+ "stopped": null,
+ "refusals": 0,
+ "api_errors": 0,
+ "unusable_answers": 0,
+ "prefix_check": {
+  "predicted_tokens": 1910,
+  "predicted_status": "ok",
+  "first_call": {}
+ },
+ "prompt_cache_keys": 8,
+ "key_rpm": 12.0,
+ "concurrency": 2,
+ "prompt_cache": {
+  "calls": 0,
+  "input_tokens": 0,
+  "cached_tokens": 0,
+  "hit_ratio": null,
+  "calls_excl_first_per_key": 0,
+  "input_tokens_excl_first": 0,
+  "cached_tokens_excl_first": 0,
+  "hit_ratio_excl_first": null,
+  "keys_used": 0,
+  "per_key": {}
+ },
+ "hit_log": [],
+ "final_sample": "C:\\verity-hackathon\\results\\rehearsal_2026\\options\\d_hybrid\\routed_fullband_pairs.csv",
+ "frozen_prompt": "C:\\verity-hackathon\\results\\rehearsal_2026\\options\\b_llm\\frozen_prompt.json",
+ "gate": "cost gate: 0 pairs to call x $0.001545 (pilot cost per call) x 1.3 = $0.00; ledger total $12.1909, remaining under the $45 cap $32.81; platform limit $30 - ledger total = $17.81 -> PASS",
+ "power": "ac",
+ "started_utc": "2026-11-25T12:57:45Z",
+ "ended_utc": "2026-11-25T12:57:45Z",
+ "run_time_minutes": 0.0,
+ "test_pairs": 38
+}

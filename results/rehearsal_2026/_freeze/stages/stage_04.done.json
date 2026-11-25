@@ -1,0 +1,40 @@
+{
+ "stage": 4,
+ "name": "checks",
+ "mode": "rehearsal",
+ "seed": 2026,
+ "ended_utc": "2026-11-25T12:56:55Z",
+ "seconds": 10.5,
+ "ledger_cost_usd": 0.0,
+ "exit": 0,
+ "reads_truth": [
+  "band.py",
+  "evaluate_matches",
+  "make_sample (selection only)"
+ ],
+ "guards": [
+  {
+   "time": "2026-11-25T12:56:45Z",
+   "stage": 4,
+   "guard": "frozen files unchanged since the manifest",
+   "fired": false,
+   "detail": "all match"
+  }
+ ],
+ "notes": [
+  "band: 200,854 review pairs over 10,000 records (20.09 per record)",
+  "test band pairs 44,882: 340 same-entity, 44,542 non-matches",
+  "sample (seed 0): 400 pairs = 340 same-entity (weight 1) + 60 non-matches (weight 742.366667 each)",
+  "weights sum to 44,882.0000; test band has 44,882 pairs",
+  "rehearsal: the sample keeps the standard file name test_sample5000.csv and holds 400 pairs"
+ ],
+ "outputs": {
+  "results/rehearsal_2026/check_scored_pairs.txt": "f351aa7fe7af1b49dd365905aca63bf4a0774476e7d2f714da0d1ec403826a70",
+  "results/rehearsal_2026/band_report.txt": "ed9da7512f7c8df76c059553ecc612ed7eb62ac1e245c942345c54da92f79827",
+  "results/rehearsal_2026/evaluator_output.txt": "0594244448f484860194434876f0e63393ca7c745a1d712f4686c812d909b90e",
+  "results/rehearsal_2026/split_records.csv": "8bd76449eca52552e74952c1ff7ee9968fac8d9f42ffb402dafe859546cae82b",
+  "results/rehearsal_2026/band_summary.json": "8f4206a04f0f47ecb203fd7a5915e8f0fd9bdffd3db3ffe7f12bb60346b3adea",
+  "results/rehearsal_2026/options/b_llm/test_sample5000.csv": "a58b8b5345cd519f0d006b01bb99f7a8bce4adba062acda2ec24f602ba821b9d"
+ },
+ "manifest_sha256": "0423cb9d1ea9f258f4df3b8ff522a8f57e877c2d9a77d90200f70de2a05644b6"
+}

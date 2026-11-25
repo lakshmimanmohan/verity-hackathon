@@ -1,0 +1,117 @@
+Finer error table: C's calibrated p on the test band (no LLM calls, no rule change). Error = C's band decision against the truth sidecar;
+FP = decided same, different entities; FN = decided different, same entity. Reads each run's C decisions and truth sidecar only.
+
+1. Pairs, C band FP and FN by calibrated p
+  dstudy_11  (45,676 test band pairs, 30 errors)
+    p bin                 pairs   FP   FN
+    [0, 0.001)           45,112    0    1
+    [0.001, 0.005)            1    0    0
+    [0.005, 0.01)           115    0    2
+    [0.01, 0.05)             47    0    4
+    [0.05, 0.1)               0    0    0
+    [0.1, 0.5)                6    0    2
+    [0.5, 0.9)               70   20    0
+    [0.9, 0.99)               0    0    0
+    [0.99, 1)                 0    0    0
+    p = 1.0                 325    1    0
+  dstudy_12  (42,153 test band pairs, 27 errors)
+    p bin                 pairs   FP   FN
+    [0, 0.001)           41,675    0    1
+    [0.001, 0.005)            0    0    0
+    [0.005, 0.01)            83    0    1
+    [0.01, 0.05)             24    0    6
+    [0.05, 0.1)              21    0    5
+    [0.1, 0.5)               26   11    1
+    [0.5, 0.9)               39    2    0
+    [0.9, 0.99)               1    0    0
+    [0.99, 1)                 0    0    0
+    p = 1.0                 284    0    0
+  dstudy_13  (44,265 test band pairs, 23 errors)
+    p bin                 pairs   FP   FN
+    [0, 0.001)           43,870    0    5
+    [0.001, 0.005)            0    0    0
+    [0.005, 0.01)             0    0    0
+    [0.01, 0.05)              0    0    0
+    [0.05, 0.1)              32    0    7
+    [0.1, 0.5)               14    0    3
+    [0.5, 0.9)                8    4    0
+    [0.9, 0.99)              38    4    0
+    [0.99, 1)                 0    0    0
+    p = 1.0                 303    0    0
+  rehearsal_42  (44,985 test band pairs, 18 errors)
+    p bin                 pairs   FP   FN
+    [0, 0.001)           44,328    0    1
+    [0.001, 0.005)          290    0    1
+    [0.005, 0.01)             0    0    0
+    [0.01, 0.05)              0    0    0
+    [0.05, 0.1)               0    0    0
+    [0.1, 0.5)               40    0   10
+    [0.5, 0.9)                0    0    0
+    [0.9, 0.99)               0    0    0
+    [0.99, 1)                 0    0    0
+    p = 1.0                 327    6    0
+  rehearsal_2026  (44,882 test band pairs, 24 errors)
+    p bin                 pairs   FP   FN
+    [0, 0.001)           44,132    0    0
+    [0.001, 0.005)          384    0    5
+    [0.005, 0.01)             0    0    0
+    [0.01, 0.05)              0    0    0
+    [0.05, 0.1)               0    0    0
+    [0.1, 0.5)               13    0    1
+    [0.5, 0.9)               38   15    0
+    [0.9, 0.99)               3    0    0
+    [0.99, 1)                 1    0    0
+    p = 1.0                 311    3    0
+
+2. Per seed and setting: pairs routed (lo <= p < hi; hi none = no upper limit), share of the test band, C band errors inside the routed range
+      lo    hi               dstudy_11             dstudy_12             dstudy_13          rehearsal_42        rehearsal_2026
+                    routed (share) err    routed (share) err    routed (share) err    routed (share) err    routed (share) err
+   0.005   0.9        238 ( 0.52%)  28      193 ( 0.46%)  26       54 ( 0.12%)  14       40 ( 0.09%)  10       51 ( 0.11%)  16
+   0.005  0.99        238 ( 0.52%)  28      194 ( 0.46%)  26       92 ( 0.21%)  18       40 ( 0.09%)  10       54 ( 0.12%)  16
+   0.005  none        563 ( 1.23%)  29      478 ( 1.13%)  26      395 ( 0.89%)  18      367 ( 0.82%)  16      366 ( 0.82%)  19
+    0.01   0.9        123 ( 0.27%)  26      110 ( 0.26%)  25       54 ( 0.12%)  14       40 ( 0.09%)  10       51 ( 0.11%)  16
+    0.01  0.99        123 ( 0.27%)  26      111 ( 0.26%)  25       92 ( 0.21%)  18       40 ( 0.09%)  10       54 ( 0.12%)  16
+    0.01  none        448 ( 0.98%)  27      395 ( 0.94%)  25      395 ( 0.89%)  18      367 ( 0.82%)  16      366 ( 0.82%)  19
+    0.05   0.9         76 ( 0.17%)  22       86 ( 0.20%)  19       54 ( 0.12%)  14       40 ( 0.09%)  10       51 ( 0.11%)  16
+    0.05  0.99         76 ( 0.17%)  22       87 ( 0.21%)  19       92 ( 0.21%)  18       40 ( 0.09%)  10       54 ( 0.12%)  16
+    0.05  none        401 ( 0.88%)  23      371 ( 0.88%)  19      395 ( 0.89%)  18      367 ( 0.82%)  16      366 ( 0.82%)  19
+     0.1   0.9         76 ( 0.17%)  22       65 ( 0.15%)  14       22 ( 0.05%)   7       40 ( 0.09%)  10       51 ( 0.11%)  16
+     0.1  0.99         76 ( 0.17%)  22       66 ( 0.16%)  14       60 ( 0.14%)  11       40 ( 0.09%)  10       54 ( 0.12%)  16
+     0.1  none        401 ( 0.88%)  23      350 ( 0.83%)  14      363 ( 0.82%)  11      367 ( 0.82%)  16      366 ( 0.82%)  19
+     0.5   0.9         70 ( 0.15%)  20       39 ( 0.09%)   2        8 ( 0.02%)   4        0 ( 0.00%)   0       38 ( 0.08%)  15
+     0.5  0.99         70 ( 0.15%)  20       40 ( 0.09%)   2       46 ( 0.10%)   8        0 ( 0.00%)   0       41 ( 0.09%)  15
+     0.5  none        395 ( 0.86%)  21      324 ( 0.77%)   2      349 ( 0.79%)   8      327 ( 0.73%)   6      353 ( 0.79%)  18
+
+3. Totals over the 5 seeds (221,961 test band pairs, 122 C band errors)
+      lo    hi   routed  share of band  errors in range  share of all errors   errors per routed pair
+   0.005   0.9      576         0.260%               94                77.0%                   0.1632
+   0.005  0.99      618         0.278%               98                80.3%                   0.1586
+   0.005  none    2,169         0.977%              108                88.5%                   0.0498
+    0.01   0.9      378         0.170%               91                74.6%                   0.2407
+    0.01  0.99      420         0.189%               95                77.9%                   0.2262
+    0.01  none    1,971         0.888%              105                86.1%                   0.0533
+    0.05   0.9      307         0.138%               81                66.4%                   0.2638
+    0.05  0.99      349         0.157%               85                69.7%                   0.2436
+    0.05  none    1,900         0.856%               95                77.9%                   0.0500
+     0.1   0.9      254         0.114%               69                56.6%                   0.2717
+     0.1  0.99      296         0.133%               73                59.8%                   0.2466
+     0.1  none    1,847         0.832%               83                68.0%                   0.0449
+     0.5   0.9      155         0.070%               41                33.6%                   0.2645
+     0.5  0.99      197         0.089%               45                36.9%                   0.2284
+     0.5  none    1,748         0.788%               55                45.1%                   0.0315
+
+4. Reading (descriptive; no change to the rule is recommended)
+  Most errors caught per routed pair: lo 0.1, hi 0.9 with 69 errors in 254 routed pairs (0.2717 per pair).
+  Most errors caught in total: lo 0.005, hi none with 108 of 122 errors (88.5%) in 2,169 routed pairs (0.0498 per pair).
+  Lowering lo from 0.5 to 0.005 (hi 0.9) adds errors in range on 5 of 5 seeds: dstudy_11 +8, dstudy_12 +24, dstudy_13 +10, rehearsal_42 +10, rehearsal_2026 +1; total 94 vs 41 at lo 0.5, routed 576 vs 155.
+  Lowering lo from 0.5 to 0.01 (hi 0.9) adds errors in range on 5 of 5 seeds: dstudy_11 +6, dstudy_12 +23, dstudy_13 +10, rehearsal_42 +10, rehearsal_2026 +1; total 91 vs 41 at lo 0.5, routed 378 vs 155.
+  Lowering lo from 0.5 to 0.05 (hi 0.9) adds errors in range on 5 of 5 seeds: dstudy_11 +2, dstudy_12 +17, dstudy_13 +10, rehearsal_42 +10, rehearsal_2026 +1; total 81 vs 41 at lo 0.5, routed 307 vs 155.
+  Lowering lo from 0.5 to 0.1 (hi 0.9) adds errors in range on 5 of 5 seeds: dstudy_11 +2, dstudy_12 +12, dstudy_13 +3, rehearsal_42 +10, rehearsal_2026 +1; total 69 vs 41 at lo 0.5, routed 254 vs 155.
+  Lowering lo from 0.5 to 0.005 (hi 0.99) adds errors in range on 5 of 5 seeds: dstudy_11 +8, dstudy_12 +24, dstudy_13 +10, rehearsal_42 +10, rehearsal_2026 +1; total 98 vs 45 at lo 0.5, routed 618 vs 197.
+  Lowering lo from 0.5 to 0.01 (hi 0.99) adds errors in range on 5 of 5 seeds: dstudy_11 +6, dstudy_12 +23, dstudy_13 +10, rehearsal_42 +10, rehearsal_2026 +1; total 95 vs 45 at lo 0.5, routed 420 vs 197.
+  Lowering lo from 0.5 to 0.05 (hi 0.99) adds errors in range on 5 of 5 seeds: dstudy_11 +2, dstudy_12 +17, dstudy_13 +10, rehearsal_42 +10, rehearsal_2026 +1; total 85 vs 45 at lo 0.5, routed 349 vs 197.
+  Lowering lo from 0.5 to 0.1 (hi 0.99) adds errors in range on 5 of 5 seeds: dstudy_11 +2, dstudy_12 +12, dstudy_13 +3, rehearsal_42 +10, rehearsal_2026 +1; total 73 vs 45 at lo 0.5, routed 296 vs 197.
+  Lowering lo from 0.5 to 0.005 (hi none) adds errors in range on 5 of 5 seeds: dstudy_11 +8, dstudy_12 +24, dstudy_13 +10, rehearsal_42 +10, rehearsal_2026 +1; total 108 vs 55 at lo 0.5, routed 2,169 vs 1,748.
+  Lowering lo from 0.5 to 0.01 (hi none) adds errors in range on 5 of 5 seeds: dstudy_11 +6, dstudy_12 +23, dstudy_13 +10, rehearsal_42 +10, rehearsal_2026 +1; total 105 vs 55 at lo 0.5, routed 1,971 vs 1,748.
+  Lowering lo from 0.5 to 0.05 (hi none) adds errors in range on 5 of 5 seeds: dstudy_11 +2, dstudy_12 +17, dstudy_13 +10, rehearsal_42 +10, rehearsal_2026 +1; total 95 vs 55 at lo 0.5, routed 1,900 vs 1,748.
+  Lowering lo from 0.5 to 0.1 (hi none) adds errors in range on 5 of 5 seeds: dstudy_11 +2, dstudy_12 +12, dstudy_13 +3, rehearsal_42 +10, rehearsal_2026 +1; total 83 vs 55 at lo 0.5, routed 1,847 vs 1,748.

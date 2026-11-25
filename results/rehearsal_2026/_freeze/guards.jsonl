@@ -1,0 +1,33 @@
+{"time": "2026-11-25T12:54:12Z", "stage": 0, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T12:54:12Z", "stage": 0, "guard": "rehearsal never uses the evaluation seed", "fired": false, "detail": "seed 2026"}
+{"time": "2026-11-25T12:54:12Z", "stage": 0, "guard": "rehearsal seed is a development seed", "fired": false, "detail": "seed 2026; allowed (42, 2026)"}
+{"time": "2026-11-25T12:54:12Z", "stage": 0, "guard": "HEAD is the commit the rehearsal manifest recorded", "fired": false, "detail": "manifest 8ab9f84bc4a388abcd8847ddc17838d7cff58ac5, HEAD 8ab9f84bc4a388abcd8847ddc17838d7cff58ac5"}
+{"time": "2026-11-25T12:54:12Z", "stage": 0, "guard": "clean tree (no modified tracked files, no untracked files outside .gitignore)", "fired": false, "detail": "clean"}
+{"time": "2026-11-25T12:54:12Z", "stage": 0, "guard": "AC power", "fired": false, "detail": "power: ac"}
+{"time": "2026-11-25T12:54:12Z", "stage": 0, "guard": "OPENAI_API_KEY is set (value never read out)", "fired": false, "detail": "set"}
+{"time": "2026-11-25T12:54:12Z", "stage": 1, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T12:54:12Z", "stage": 1, "guard": "rehearsal never uses the evaluation seed", "fired": false, "detail": "seed 2026"}
+{"time": "2026-11-25T12:54:12Z", "stage": 1, "guard": "rehearsal seed is a development seed", "fired": false, "detail": "seed 2026; allowed (42, 2026)"}
+{"time": "2026-11-25T12:54:12Z", "stage": 1, "guard": "the run folder holds no data", "fired": false, "detail": "results/rehearsal_2026"}
+{"time": "2026-11-25T12:54:13Z", "stage": 2, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T12:56:44Z", "stage": 2, "guard": "exact neighbor search", "fired": false, "detail": "resolved exact"}
+{"time": "2026-11-25T12:56:44Z", "stage": 2, "guard": "no uncommitted changes in verity/src", "fired": false, "detail": "False"}
+{"time": "2026-11-25T12:56:44Z", "stage": 2, "guard": "PYTHONHASHSEED=0", "fired": false, "detail": "0"}
+{"time": "2026-11-25T12:56:44Z", "stage": 3, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T12:56:45Z", "stage": 4, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T12:56:55Z", "stage": 5, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T12:57:02Z", "stage": 6, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T12:57:36Z", "stage": 7, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T12:57:36Z", "stage": 7, "guard": "frozen asset fewshot.json matches the manifest", "fired": false, "detail": "results/dev_2026_run11/options/b_llm/fewshot.json -> results/rehearsal_2026/options/b_llm/fewshot.json"}
+{"time": "2026-11-25T12:57:36Z", "stage": 7, "guard": "frozen asset frozen_prompt.json matches the manifest", "fired": false, "detail": "results/dev_2026_run11/options/b_llm/frozen_prompt.json -> results/rehearsal_2026/options/b_llm/frozen_prompt.json"}
+{"time": "2026-11-25T12:57:36Z", "stage": 7, "guard": "AC power", "fired": false, "detail": "power: ac"}
+{"time": "2026-11-25T12:57:42Z", "stage": 8, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T12:57:42Z", "stage": 8, "guard": "frozen asset selection_rule.txt matches the manifest", "fired": false, "detail": "results/dev_2026_run11/options/d_hybrid/selection_rule.txt -> results/rehearsal_2026/options/d_hybrid/selection_rule.txt"}
+{"time": "2026-11-25T12:57:42Z", "stage": 8, "guard": "frozen asset frozen_settings.json matches the manifest", "fired": false, "detail": "results/dev_2026_run11/options/d_hybrid/frozen_settings.json -> results/rehearsal_2026/options/d_hybrid/frozen_settings.json"}
+{"time": "2026-11-25T12:57:42Z", "stage": 8, "guard": "AC power", "fired": false, "detail": "power: ac"}
+{"time": "2026-11-25T12:58:39Z", "stage": 9, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T12:58:40Z", "stage": 9, "guard": "decoy pairs at most 300", "fired": false, "detail": "68 pairs"}
+{"time": "2026-11-25T12:58:40Z", "stage": 9, "guard": "AC power", "fired": false, "detail": "power: ac"}
+{"time": "2026-11-25T12:58:46Z", "stage": 10, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T12:59:04Z", "stage": 11, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T12:59:05Z", "stage": 12, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}

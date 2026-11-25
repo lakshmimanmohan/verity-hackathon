@@ -1,0 +1,10 @@
+Protocol bars, run rehearsal_2026 (verdicts computed by the protocol rules, cost/cost_model.py bars_row)
+  F1: band F1 within 2 points of B on the paired sample (pass: interval lower end > -0.02; fail: upper end < -0.02; else inconclusive).
+  Precision >= 0.98; recall at least 5 points above A; ECE <= 0.05 (C, D); C latency p95 <= 20 ms; D LLM share <= 20%.
+  option band F1 [95% CI]          F1 vs B [95% CI]              F1 bar           prec bar    recall bar        ECE bar     p95 ms bar    LLM share bar    every bar?
+  A      0.1720 [0.1155, 0.2222]   -0.8250 [-0.8758, -0.7710]    fail           1.0000 pass   0.5248 reference        n/a            n/a              n/a    no
+  B      0.9971 [0.9925, 1.0000]   baseline                      reference      1.0000 pass   0.5800 pass    0.0166 n/a            n/a              n/a    yes
+  C      0.9653 [0.9510, 0.9780]   -0.0060 [-0.0149, +0.0015]    pass           0.9944 pass   0.5793 pass    0.0004 pass     0.295 pass             n/a    yes
+  D      0.9838 [0.9736, 0.9924]   -0.0075 [-0.0152, +0.0000]    pass           0.9988 pass   0.5791 pass    0.0002 pass     0.296 n/a      0.00085 pass   yes
+  E      not run
+  Bases: A full band; F1 difference on the sample; B sample estimate (weighted); B is the baseline of the F1 bar; C full band; F1 difference on the sample; D exact full band; F1 difference on the sample
