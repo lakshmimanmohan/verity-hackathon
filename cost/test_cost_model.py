@@ -33,6 +33,7 @@ Who pays, per month, at 1,000 records/day (components: llm, hosting, operations,
 from __future__ import annotations
 
 import csv
+import json
 import shutil
 import sys
 import tempfile
@@ -402,6 +403,88 @@ class InputTests(unittest.TestCase):
             self.assertEqual(list(csv.reader((x for x in (tmp / "a.csv").read_text(encoding="utf-8").splitlines() if not x.startswith("#")))), [["x"], ["1"]])
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
+
+
+class BPerCallFromDevTests(unittest.TestCase):
+    """B's per-call figures come from the run's own sample5000 stage, or from the dev run when that stage made no live call."""
+
+    def stage(self, root: Path, calls: int, spent: float, minutes: float, inp: int = 0, cached: int = 0, out_tok: int = 0) -> Path:
+        b = root / "options" / "b_llm" / "openai" / "sample5000"
+        b.mkdir(parents=True)
+        (b / "run_meta.json").write_text(json.dumps({"calls": calls, "spent_usd": spent, "run_time_minutes": minutes,
+                                                     "prompt_cache": {"cached_tokens": cached, "input_tokens": inp}}), encoding="utf-8")
+        (b / "timings.json").write_text(json.dumps({"timings": [{"stage": "b.llm_call", "per_item_ms": {"p50": 900.0, "p95": 1800.0}}]}), encoding="utf-8")
+        (b / "sample_report.txt").write_text(f"  tokens: input {inp:,}, cached {cached:,}, output {out_tok:,}; hit ratio overall 0.9" + chr(10), encoding="utf-8")
+        return b
+
+    def add_concurrency(self, root: Path) -> None:
+        c = root / "options" / "b_llm" / "openai" / "concurrency"
+        c.mkdir(parents=True)
+        (c / "concurrency.json").write_text("{}", encoding="utf-8")
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.dev, self.run = self.tmp / "dev", self.tmp / "run"
+        self.rows: list = []
+        self.add = lambda name, value, unit, status, source, note="": self.rows.append({"name": name, "value": value, "status": status, "source": source})
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_no_live_calls_reads_the_dev_run_and_marks_every_row(self):
+        self.stage(self.dev, calls=1000, spent=1.5, minutes=10, inp=2_000_000, cached=1_700_000, out_tok=18_000)
+        self.add_concurrency(self.dev)
+        self.stage(self.run, calls=0, spent=0.0, minutes=0.0)                         # every answer from the cache
+        p = M.Params()
+        meta = M.load_b_per_call(self.tmp, self.run, self.dev, p, self.add)
+        self.assertEqual(meta["calls"], 1000)
+        self.assertEqual((p.in_tokens, p.out_tokens), (2000.0, 18.0))
+        self.assertAlmostEqual(p.hit_ratio, 0.85)
+        by = {r["name"]: r for r in self.rows}
+        self.assertEqual(len(self.rows), 8)
+        self.assertEqual({r["status"] for r in self.rows}, {"from dev run"})
+        self.assertEqual(by["B cost per call, from the ledger run"]["value"], 0.0015)
+        self.assertEqual(by["B throughput in the final run (8 keys, 12 requests per minute per key, 2 workers)"]["value"], 100.0)
+        self.assertEqual((by["B latency p50"]["value"], by["B latency p95"]["value"]), (0.9, 1.8))
+        self.assertTrue(all("dev" in r["source"] for r in self.rows))
+
+    def test_live_calls_use_the_runs_own_figures_as_measured(self):
+        self.stage(self.run, calls=500, spent=1.0, minutes=5, inp=1_000_000, cached=800_000, out_tok=9_000)
+        self.stage(self.dev, calls=1000, spent=1.5, minutes=10, inp=2_000_000, cached=1_700_000, out_tok=18_000)    # present but not used
+        p = M.Params()
+        M.load_b_per_call(self.tmp, self.run, self.dev, p, self.add)
+        self.assertEqual({r["status"] for r in self.rows}, {"measured"})
+        self.assertEqual((p.in_tokens, p.out_tokens), (2000.0, 18.0))
+        self.assertAlmostEqual(p.hit_ratio, 0.8)
+        self.assertEqual({r["name"]: r["value"] for r in self.rows}["B cost per call, from the ledger run"], 0.002)
+
+    def test_a_missing_dev_file_stops_with_an_error(self):
+        for missing in ("run_meta.json", "timings.json", "sample_report.txt", "concurrency.json"):
+            shutil.rmtree(self.tmp, ignore_errors=True)
+            self.tmp.mkdir()
+            self.stage(self.dev, calls=1000, spent=1.5, minutes=10, inp=2_000_000, cached=1_700_000, out_tok=18_000)
+            self.add_concurrency(self.dev)
+            self.stage(self.run, calls=0, spent=0.0, minutes=0.0)
+            victim = next(self.dev.rglob(missing))
+            victim.unlink()
+            with self.assertRaises(SystemExit) as cm:
+                M.load_b_per_call(self.tmp, self.run, self.dev, M.Params(), self.add)
+            self.assertIn(missing, str(cm.exception), missing)
+
+    def test_no_live_calls_without_a_separate_dev_run_stops(self):
+        self.stage(self.run, calls=0, spent=0.0, minutes=0.0)
+        for dev in (None, self.run):
+            with self.assertRaises(SystemExit) as cm:
+                M.load_b_per_call(self.tmp, self.run, dev, M.Params(), self.add)
+            self.assertIn("--dev-run", str(cm.exception))
+
+    def test_a_dev_run_without_live_calls_stops(self):
+        self.stage(self.dev, calls=0, spent=0.0, minutes=0.0)
+        self.add_concurrency(self.dev)
+        self.stage(self.run, calls=0, spent=0.0, minutes=0.0)
+        with self.assertRaises(SystemExit) as cm:
+            M.load_b_per_call(self.tmp, self.run, self.dev, M.Params(), self.add)
+        self.assertIn("made no live calls either", str(cm.exception))
 
 
 def replace_factor(p: M.Params, f: float) -> M.Params:

@@ -201,7 +201,8 @@ class Runner:
                "git_commit": head, "files": files, "params": params, "python": sys.version.split()[0], "platform": platform.platform(),
                "pip_freeze_sha256": hashlib.sha256(pf.encode()).hexdigest(), "tag": TAG if self.mode == "real" else None,
                "not_frozen": ["cost/effort_log.csv (read as it is by the cost stage; its hash is printed)"],
-               "notes": [f"reporting and driver scripts changed on {CHANGE_DATE} to handle an all-cached B stage; no model-side asset changed"]}
+               "notes": [f"reporting and driver scripts changed on {CHANGE_DATE} to handle an all-cached B stage; no model-side asset changed",
+                         "cost model reads B per-call figures from the dev run when a stage made no live calls"]}
         self.freeze_dir.mkdir(parents=True, exist_ok=True)
         self.manifest_path.write_text(json.dumps(doc, indent=1) + "\n", encoding="utf-8")
         return doc

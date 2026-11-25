@@ -512,16 +512,25 @@ def label_hours_per_1000_from_log(rows: list[dict]) -> float:
     return r["hours"] / n * 1000
 
 
-def load_inputs(repo: Path, run: Path, out_rows: list, productization_hours: float, effort_log_path: Path | None = None,
-                dev_run: Path | None = None) -> tuple[Params, dict]:
-    """Build Params from the repo's result files and record every input in out_rows (name, value, unit, status,
-    source, note)."""
-    def add(name, value, unit, status, source, note=""):
-        out_rows.append({"name": name, "value": value, "unit": unit, "status": status, "source": source, "note": note})
-
-    p = Params(verity_productization_hours=productization_hours)
+def load_b_per_call(repo: Path, run: Path, dev_run: Path | None, p: Params, add) -> dict:
+    """B's per-call figures (tokens, cost, cache hit ratio, latency, throughput) into p and the input rows. They come from the run's own
+    sample5000 stage; when that stage made no live call (every answer from the cache) they come from the dev run and each row is marked
+    "from dev run". A missing dev file stops the run. Returns the run_meta used."""
     b = run / "options" / "b_llm" / "openai" / "sample5000"
     meta = json.loads((b / "run_meta.json").read_text(encoding="utf-8"))
+    from_dev = meta["calls"] == 0        # the B stage made no live call (every answer from the cache): no per-call figures of its own
+    b_status = "from dev run" if from_dev else "measured"
+    if from_dev:
+        if dev_run is None or Path(dev_run).resolve() == Path(run).resolve():
+            raise SystemExit("the B stage made no live calls, so B's per-call figures come from the dev run: pass --dev-run (a different folder)")
+        b = Path(dev_run) / "options" / "b_llm" / "openai" / "sample5000"
+        need = [b / "run_meta.json", b / "timings.json", b / "sample_report.txt", Path(dev_run) / "options" / "b_llm" / "openai" / "concurrency" / "concurrency.json"]
+        missing = [x.as_posix() for x in need if not x.exists()]
+        if missing:
+            raise SystemExit("the B stage made no live calls and the dev run lacks: " + ", ".join(missing))
+        meta = json.loads((b / "run_meta.json").read_text(encoding="utf-8"))
+        if meta["calls"] == 0:
+            raise SystemExit(f"the dev run's sample5000 made no live calls either: {b.as_posix()}")
     tim = json.loads((b / "timings.json").read_text(encoding="utf-8"))
     rep = (b / "sample_report.txt").read_text(encoding="utf-8")
     m = re.search(r"tokens: input ([\d,]+), cached ([\d,]+), output ([\d,]+)", rep)
@@ -530,18 +539,30 @@ def load_inputs(repo: Path, run: Path, out_rows: list, productization_hours: flo
     p.out_tokens = int(m.group(3).replace(",", "")) / n_calls
     p.hit_ratio = meta["prompt_cache"]["cached_tokens"] / meta["prompt_cache"]["input_tokens"]
     src = b.relative_to(repo).as_posix() if b.is_relative_to(repo) else b.as_posix()
-    add("B calls in the final run", n_calls, "calls", "measured", f"{src}/run_meta.json")
-    add("B input tokens per call", round(p.in_tokens, 1), "tokens", "measured", f"{src}/sample_report.txt")
-    add("B output tokens per call", round(p.out_tokens, 2), "tokens", "measured", f"{src}/sample_report.txt")
-    add("B prompt-cache hit ratio (cached / input tokens)", round(p.hit_ratio, 4), "ratio", "measured", f"{src}/run_meta.json",
+    add("B calls in the final run", n_calls, "calls", b_status, f"{src}/run_meta.json")
+    add("B input tokens per call", round(p.in_tokens, 1), "tokens", b_status, f"{src}/sample_report.txt")
+    add("B output tokens per call", round(p.out_tokens, 2), "tokens", b_status, f"{src}/sample_report.txt")
+    add("B prompt-cache hit ratio (cached / input tokens)", round(p.hit_ratio, 4), "ratio", b_status, f"{src}/run_meta.json",
         "sensitivity 0 and 0.85")
-    add("B cost per call, from the ledger run", round(meta["spent_usd"] / n_calls, 6), "USD", "measured", f"{src}/run_meta.json")
+    add("B cost per call, from the ledger run", round(meta["spent_usd"] / n_calls, 6), "USD", b_status, f"{src}/run_meta.json")
     pc = [t for t in tim["timings"] if t["stage"].endswith("llm_call")][0]
-    add("B latency p50", round(pc["per_item_ms"]["p50"] / 1000, 3), "s", "measured", f"{src}/timings.json")
-    add("B latency p95", round(pc["per_item_ms"]["p95"] / 1000, 3), "s", "measured", f"{src}/timings.json")
+    add("B latency p50", round(pc["per_item_ms"]["p50"] / 1000, 3), "s", b_status, f"{src}/timings.json")
+    add("B latency p95", round(pc["per_item_ms"]["p95"] / 1000, 3), "s", b_status, f"{src}/timings.json")
     add("B throughput in the final run (8 keys, 12 requests per minute per key, 2 workers)",
-        round(n_calls / meta["run_time_minutes"], 1), "calls per minute", "measured", f"{src}/run_meta.json",
+        round(n_calls / meta["run_time_minutes"], 1), "calls per minute", b_status, f"{src}/run_meta.json",
         "limited by the per-key limiter, not the API")
+    return meta
+
+
+def load_inputs(repo: Path, run: Path, out_rows: list, productization_hours: float, effort_log_path: Path | None = None,
+                dev_run: Path | None = None) -> tuple[Params, dict]:
+    """Build Params from the repo's result files and record every input in out_rows (name, value, unit, status,
+    source, note)."""
+    def add(name, value, unit, status, source, note=""):
+        out_rows.append({"name": name, "value": value, "unit": unit, "status": status, "source": source, "note": note})
+
+    p = Params(verity_productization_hours=productization_hours)
+    meta = load_b_per_call(repo, run, dev_run, p, add)
     for k, v, note in (("input price", p.price_in, ""), ("cached input price", p.price_cached, ""), ("output price", p.price_out, ""),
                        ("batch input price", p.batch_in, "batch cache hits are undocumented"), ("batch cached input price", p.batch_cached, ""),
                        ("batch output price", p.batch_out, "")):
