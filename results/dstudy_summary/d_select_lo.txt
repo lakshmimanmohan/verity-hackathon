@@ -1,0 +1,24 @@
+D routing rule v2 applied (selection_rule_v2.txt): hi 0.9; lo from {0.005, 0.01, 0.05, 0.1, 0.5}; highest pooled band F1 among settings
+with pooled LLM share of the test band at most 1%; ties to the higher lo. Routed pairs take B's answer, all others take C's own decision.
+Pooled over 5 development seeds (dstudy_11, dstudy_12, dstudy_13, rehearsal_42, rehearsal_2026); 221,961 test band pairs. Pooled F1 is from the pooled TP, FP, FN.
+
+      lo pooled F1    prec  recall   FP   FN  routed  LLM share  eligible   per-seed band F1 (dstudy_11, dstudy_12, dstudy_13, rehearsal_42, rehearsal_2026)
+   0.005    0.9898  0.9915  0.9881   15   21     576     0.260%  yes        0.9948  0.9928  0.9873  0.9881  0.9853
+    0.01    0.9892  0.9914  0.9869   15   23     378     0.170%  yes        0.9934  0.9914  0.9873  0.9881  0.9853
+    0.05    0.9863  0.9914  0.9813   15   33     307     0.138%  yes        0.9881  0.9826  0.9873  0.9881  0.9853
+     0.1    0.9831  0.9913  0.9750   15   44     254     0.114%  yes        0.9881  0.9766  0.9773  0.9881  0.9853
+     0.5    0.9754  0.9850  0.9659   26   60     155     0.070%  yes        0.9855  0.9612  0.9729  0.9727  0.9838
+  C alone    0.9655  0.9628  0.9682   66   56       0     0.000%  (reference)
+
+  Eligible settings: 0.005, 0.01, 0.05, 0.1, 0.5. Highest pooled band F1 0.989767; settings at that value: 0.005.
+  CHOSEN lo = 0.005 (hi 0.9).
+  Next best: lo 0.01 with pooled F1 0.989192 (-0.000575 against the chosen).
+
+  D(v2) at lo 0.005: routed pairs and share of the test band per seed; projected LLM cost per 1,000 band pairs at $0.001527 per call
+  run              test band  routed     share  LLM $ per 1,000 band pairs
+  dstudy_11           45,676     238    0.521%                      0.0080
+  dstudy_12           42,153     193    0.458%                      0.0070
+  dstudy_13           44,265      54    0.122%                      0.0019
+  rehearsal_42        44,985      40    0.089%                      0.0014
+  rehearsal_2026      44,882      51    0.114%                      0.0017
+  pooled             221,961     576    0.260%                      0.0040

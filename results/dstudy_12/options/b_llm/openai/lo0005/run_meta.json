@@ -1,0 +1,100 @@
+{
+ "provider": "openai",
+ "requested_model": "gpt-5.4-2026-03-05",
+ "models_reported": {
+  "gpt-5.4-2026-03-05": 193
+ },
+ "settings": "max_output_tokens=64;reasoning_effort=none",
+ "system_prompt_sha256": "857de291325e9b49d7878eb34d180c180e716c99da5a96b60a5aaf747fd5ac94",
+ "answer_settings": {
+  "max_output_tokens": 64,
+  "reasoning_effort": "none"
+ },
+ "mode": "live",
+ "pairs": 193,
+ "distinct_prompts": 193,
+ "cache_hits": 65,
+ "calls": 128,
+ "spent_usd": 0.191251,
+ "pending": 0,
+ "stopped": null,
+ "refusals": 0,
+ "api_errors": 0,
+ "unusable_answers": 0,
+ "prefix_check": {
+  "predicted_tokens": 1910,
+  "predicted_status": "ok",
+  "first_call": {
+   "input_tokens": 2094,
+   "cached_tokens": 1792,
+   "pair_tokens_estimate": 123,
+   "observed_prefix_tokens": 1971,
+   "status": "outside"
+  }
+ },
+ "prompt_cache_keys": 8,
+ "key_rpm": 12.0,
+ "concurrency": 2,
+ "prompt_cache": {
+  "calls": 128,
+  "input_tokens": 268347,
+  "cached_tokens": 229376,
+  "hit_ratio": 0.8547738562383779,
+  "calls_excl_first_per_key": 120,
+  "input_tokens_excl_first": 251553,
+  "cached_tokens_excl_first": 215040,
+  "hit_ratio_excl_first": 0.8548496738261917,
+  "keys_used": 8,
+  "per_key": {
+   "0": {
+    "calls": 14,
+    "input_tokens": 29355,
+    "cached_tokens": 25088
+   },
+   "1": {
+    "calls": 15,
+    "input_tokens": 31465,
+    "cached_tokens": 26880
+   },
+   "2": {
+    "calls": 18,
+    "input_tokens": 37727,
+    "cached_tokens": 32256
+   },
+   "3": {
+    "calls": 14,
+    "input_tokens": 29317,
+    "cached_tokens": 25088
+   },
+   "4": {
+    "calls": 16,
+    "input_tokens": 33539,
+    "cached_tokens": 28672
+   },
+   "5": {
+    "calls": 16,
+    "input_tokens": 33546,
+    "cached_tokens": 28672
+   },
+   "6": {
+    "calls": 18,
+    "input_tokens": 37750,
+    "cached_tokens": 32256
+   },
+   "7": {
+    "calls": 17,
+    "input_tokens": 35648,
+    "cached_tokens": 30464
+   }
+  }
+ },
+ "hit_log": [],
+ "final_sample": "C:\\verity-hackathon\\results\\dstudy_12\\options\\d_lo\\routed_lo0.005_hi0.9.csv",
+ "frozen_prompt": "C:\\verity-hackathon\\results\\dstudy_12\\options\\b_llm\\frozen_prompt.json",
+ "gate": "cost gate: 128 pairs to call x $0.001545 (pilot cost per call) x 1.3 = $0.26; ledger total $12.8010, remaining under the $45 cap $32.20; platform limit $30 - ledger total = $17.20 -> PASS",
+ "power": "ac",
+ "started_utc": "2026-11-25T13:24:01Z",
+ "ended_utc": "2026-11-25T13:26:00Z",
+ "run_time_minutes": 1.97,
+ "test_pairs": 193
+}

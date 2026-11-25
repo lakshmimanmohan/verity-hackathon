@@ -1,0 +1,13 @@
+Option B openai / gpt-5.4-2026-03-05 (max_output_tokens=64;reasoning_effort=none): 54 TEST band sample pairs (routed_lo0.005_hi0.9.csv)
+calls 32, cache hits 22, spent $0.0519, pending 0, refusals 0, models reported {'gpt-5.4-2026-03-05': 54}
+prefix-length check: system prompt 6,684 characters (appendix 885 characters, sha256 857de291325e); predicted shared prefix 1910 tokens, inside the target 1900 to 1950
+first live call: input_tokens 2098, cached 1792, pair about 129 tokens: observed shared prefix 1969 (outside)
+final hit ratio after 32 calls: overall 0.828 (55,552 / 67,114 input tokens); excluding each key's first call 0.819 (24 calls)
+api errors 0, unusable answers 0; prompt-cache keys 8, 12 requests per minute per key, 2 workers
+latency per call: p50 0.99s, p95 1.30s, max 2.24s
+gate: cost gate: 32 pairs to call x $0.001545 (pilot cost per call) x 1.3 = $0.06; ledger total $12.9922, remaining under the $45 cap $32.01; platform limit $30 - ledger total = $17.01 -> PASS
+power: ac
+started utc: 2026-11-25T13:26:04Z
+ended utc: 2026-11-25T13:26:35Z
+run time minutes: 0.52
+decisions: C:\verity-hackathon\results\dstudy_13\options\b_llm\openai\lo0005\decisions.csv

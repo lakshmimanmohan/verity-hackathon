@@ -1,0 +1,48 @@
+{
+  "option": "B",
+  "provider": "openai",
+  "model": "gpt-5.4-2026-03-05",
+  "host": {
+    "cpu_model": "Intel(R) Core(TM) Ultra 7 265U",
+    "logical_cores": 14,
+    "ram_gb": 31.5,
+    "os": "Windows-11-10.0.26300-SP0",
+    "python": "3.13.16",
+    "torch_threads": 12,
+    "omp_num_threads": null
+  },
+  "timings": [
+    {
+      "stage": "optionB.openai.llm_call",
+      "parent": null,
+      "seconds": 33.375554,
+      "items": 32,
+      "item": "call",
+      "note": "live calls, gpt-5.4-2026-03-05",
+      "per_item_ms": {
+        "p50": 986.6702,
+        "p95": 1302.2398,
+        "max": 2238.6205
+      }
+    }
+  ],
+  "timing_summary": {
+    "mode": "live",
+    "pairs": 54,
+    "calls": 32,
+    "cache_hits": 22,
+    "spent_usd": 0.051913,
+    "settings": "max_output_tokens=64;reasoning_effort=none",
+    "prompt_cache": {
+      "calls": 32,
+      "input_tokens": 67114,
+      "cached_tokens": 55552,
+      "hit_ratio": 0.8277259588163424,
+      "calls_excl_first_per_key": 24,
+      "input_tokens_excl_first": 50326,
+      "cached_tokens_excl_first": 41216,
+      "hit_ratio_excl_first": 0.8189802487779676,
+      "keys_used": 8
+    }
+  }
+}
