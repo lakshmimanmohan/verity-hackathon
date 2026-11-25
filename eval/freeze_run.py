@@ -2,6 +2,7 @@
 The freeze run: one rehearsable runbook from "generate the data" to "results table", every parameter frozen in a
 manifest beforehand.
 
+  python eval/freeze_run.py preflight                            # read-only checks before the freeze day (writes nothing, calls no API)
   python eval/freeze_run.py write-manifest                       # real run: write results/freeze_<YYYY-MM-DD>/freeze_manifest.json
                                                                  # (the date is the day the manifest is written; it is stored in the manifest)
   (commit the manifest)                                          # then
@@ -283,7 +284,8 @@ class Runner:
                          f"embedding model pinned to revision {embedding_revision(self.repo)}, safetensors; no output changed",
                          "B cache directory can be overridden by VERITY_LLM_CACHE_DIR; default, requests and keys unchanged",
                          "real-run B stage caps: sample 12.00, routed 1.00, decoy 1.00 USD; rehearsal caps unchanged",
-                         "freeze folder and tag are named from the manifest date"]}
+                         "freeze folder and tag are named from the manifest date",
+                         "preflight command added (read-only)"]}
         self.freeze_dir.mkdir(parents=True, exist_ok=True)
         self.manifest_path.write_text(json.dumps(doc, indent=1) + "\n", encoding="utf-8")
         return doc
@@ -903,6 +905,92 @@ def runner_from_args(args) -> Runner:
     return Runner("real", EVAL_SEED, REPO / REAL_RUN_REL, existing, approve=args.approve_seed_7919, allow_battery=args.allow_battery, freeze_date=date)
 
 
+# ====================================================================== preflight (read-only)
+
+PREFLIGHT_SIZES = (("sample5000", 5000), ("dfull", 450), ("decoycheck", 300))        # the worst-case pair counts of the real run's B stages
+LEDGER_CAP_USD = 45.0
+PLATFORM_LIMIT_USD = 30.0
+
+
+def _ro_git(repo: Path, *args: str) -> tuple[int, str]:
+    """A git command that takes no optional locks and changes nothing."""
+    r = subprocess.run(["git", "--no-optional-locks", *args], cwd=repo, capture_output=True, text=True, encoding="utf-8")
+    return r.returncode, (r.stdout or "").strip()
+
+
+def preflight_checks(repo: Path = REPO, env: dict | None = None, power: str | None = None, ledger_path: Path | None = None) -> list[tuple[str, bool, str]]:
+    """The freeze-day checks, each (name, ok, detail). Read-only: no folder, no file, no API call, no data; the key's value is never printed."""
+    env = os.environ if env is None else env
+    out: list[tuple[str, bool, str]] = []
+
+    def add(name: str, ok: bool, detail: str) -> None:
+        out.append((name, bool(ok), detail))
+
+    rc, porcelain = _ro_git(repo, "status", "--porcelain", "--untracked-files=all")
+    lines = [ln for ln in porcelain.splitlines() if ln.strip()]
+    add("clean tree (no modified tracked files, no untracked files outside .gitignore)", rc == 0 and not lines,
+        "clean" if rc == 0 and not lines else (f"git status failed (exit {rc})" if rc else f"{len(lines)} path(s): " + "; ".join(lines[:5])))
+
+    sys.path.insert(0, str(REPO / "options"))
+    try:
+        import b_llm_baseline as B
+        pw = power if power is not None else B.power_status()
+        pilot, margin = B.PILOT_COST_PER_CALL, B.GATE_MARGIN
+        b_ok = True
+    except (ImportError, SystemExit) as e:
+        pw, pilot, margin, b_ok = power or "unknown", 0.001545, 1.3, False
+        add("b_llm_baseline imports (needed for the power check and the gate constants)", False, f"{type(e).__name__}: {e}")
+    add("AC power", pw != "battery", f"power: {pw}")
+
+    key = bool((env.get("OPENAI_API_KEY") or "").strip())
+    env_file = repo / ".env"
+    if not key and env_file.exists():
+        for line in env_file.read_text(encoding="utf-8").splitlines():
+            k, _, v = line.strip().removeprefix("export ").partition("=")
+            if k.strip() == "OPENAI_API_KEY" and v.strip().strip("\"'"):
+                key = True
+    add("OPENAI_API_KEY is present (value never printed)", key, "set" if key else "missing (environment and repo-root .env)")
+
+    add("PYTHONHASHSEED=0", env.get("PYTHONHASHSEED") == "0", f"PYTHONHASHSEED={'unset' if env.get('PYTHONHASHSEED') is None else env.get('PYTHONHASHSEED')}")
+    add("PYTHONUTF8=1", env.get("PYTHONUTF8") == "1", f"PYTHONUTF8={'unset' if env.get('PYTHONUTF8') is None else env.get('PYTHONUTF8')}")
+
+    sys.path.insert(0, str(REPO / "options"))
+    from llm_ledger import Ledger
+    st = Ledger(ledger_path or (repo / "results" / "llm_ledger.jsonl"))._read()          # no lock file touched
+    total = st.total_micro / 1e6
+    caps_sum = sum(B_CAPS["real"].values())
+    add(f"ledger headroom: total + the three real-run caps within the ${LEDGER_CAP_USD:.0f} ledger cap and the ${PLATFORM_LIMIT_USD:.0f} platform limit",
+        total + caps_sum <= min(LEDGER_CAP_USD, PLATFORM_LIMIT_USD),
+        f"ledger total ${total:.4f} + caps ${caps_sum:.2f} = ${total + caps_sum:.2f}; room under ${LEDGER_CAP_USD:.0f}: ${LEDGER_CAP_USD - total - caps_sum:.2f}, "
+        f"under ${PLATFORM_LIMIT_USD:.0f}: ${PLATFORM_LIMIT_USD - total - caps_sum:.2f}")
+
+    for label, n in PREFLIGHT_SIZES:
+        cap, need = B_CAPS["real"][label], n * pilot * margin
+        add(f"real-run cap covers the worst-case gate: {label} ({n:,} pairs)", cap >= need,
+            f"cap ${cap:.2f}, gate ${need:.2f} ({n:,} x ${pilot} x {margin:g}); no API call")
+
+    add(f"{REAL_RUN_REL} does not exist", not (repo / REAL_RUN_REL).exists(), "absent" if not (repo / REAL_RUN_REL).exists() else "EXISTS")
+    freezes = sorted(d.name for d in (repo / "results").glob("freeze_*") if d.is_dir() and DATE_RE.match(d.name[len("freeze_"):])) if (repo / "results").exists() else []
+    add("no real freeze folder (results/freeze_<YYYY-MM-DD>) exists", not freezes, "none" if not freezes else "exists: " + ", ".join(freezes))
+
+    rc, head = _ro_git(repo, "log", "-1", "--format=%H %s")
+    rc2, _ = _ro_git(repo, "merge-base", "--is-ancestor", "HEAD", "origin/main")
+    rc3, _ = _ro_git(repo, "rev-parse", "--verify", "--quiet", "origin/main")
+    pushed = rc == 0 and rc3 == 0 and rc2 == 0
+    add("HEAD is pushed (an ancestor of origin/main, as of the last fetch)", pushed,
+        (f"HEAD {head[:12]} {head[41:101]}; " if rc == 0 else "no HEAD; ") + ("pushed" if pushed else ("no origin/main ref" if rc3 else "NOT on origin/main")))
+    return out
+
+
+def cmd_preflight(args) -> int:
+    results = preflight_checks()
+    for name, ok, detail in results:
+        print(f"{'PASS' if ok else 'FAIL'}  {name}: {detail}")
+    failed = [n for n, ok, _ in results if not ok]
+    print(f"\npreflight: {len(results) - len(failed)} of {len(results)} checks passed" + ("" if not failed else f"; FAILED: {len(failed)}"))
+    return 1 if failed else 0
+
+
 def cmd_tag(args) -> int:
     if args.rehearsal:
         print("rehearsal: no tag is created")
@@ -943,7 +1031,7 @@ def cmd_hand_check(args) -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="The freeze run: generate, run, score, price, report.")
-    ap.add_argument("command", nargs="?", default="run", choices=("run", "write-manifest", "tag", "hand-check"))
+    ap.add_argument("command", nargs="?", default="run", choices=("run", "write-manifest", "tag", "hand-check", "preflight"))
     ap.add_argument("--rehearsal", action="store_true")
     ap.add_argument("--dev-seed", type=int, default=42)
     ap.add_argument("--approve-seed-7919", action="store_true")
@@ -953,6 +1041,8 @@ def main() -> int:
     ap.add_argument("--run", default=None, help="hand-check: the run folder")
     ap.add_argument("--score", action="store_true", help="hand-check: score the labelled pairs")
     args = ap.parse_args()
+    if args.command == "preflight":
+        return cmd_preflight(args)
     if args.command == "tag":
         return cmd_tag(args)
     if args.command == "hand-check":

@@ -281,6 +281,151 @@ def unittest_mock_patch(obj, name, value):
     return mock.patch.object(obj, name, value)
 
 
+class PreflightTests(Base):
+    """The read-only preflight: a pass case and a failing case per check. Runs against a temporary git repo with a local 'origin'."""
+
+    GOOD_ENV = {"OPENAI_API_KEY": "sk-test-not-a-real-key-0123456789", "PYTHONHASHSEED": "0", "PYTHONUTF8": "1"}
+
+    def git(self, *args, cwd=None):
+        import subprocess
+        r = subprocess.run(["git", *args], cwd=cwd or self.repo, capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return r.stdout
+
+    def setUp(self):
+        super().setUp()
+        origin = self.repo.parent / (self.repo.name + "_origin.git")
+        self.git("init", "-q", "--bare", str(origin), cwd=self.repo.parent)
+        self.git("init", "-q")
+        self.git("config", "user.email", "t@example.org")
+        self.git("config", "user.name", "t")
+        (self.repo / ".gitignore").write_text("ledger.jsonl\nledger.jsonl.lock\n", encoding="utf-8")
+        (self.repo / "results").mkdir()
+        (self.repo / "results" / ".keep").write_text("", encoding="utf-8")
+        self.git("add", "-A")
+        self.git("commit", "-q", "-m", "first")
+        self.git("branch", "-M", "main")
+        self.git("remote", "add", "origin", str(origin))
+        self.git("push", "-q", "origin", "main")
+        self.git("fetch", "-q", "origin")
+        self.origin = origin
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.origin, ignore_errors=True)
+        super().tearDown()
+
+    def push_all(self, message):
+        self.git("add", "-A")
+        self.git("commit", "-q", "-m", message)
+        self.git("push", "-q", "origin", "main")
+        self.git("fetch", "-q", "origin")
+
+    def failed(self, **kw):
+        args = {"env": dict(self.GOOD_ENV), "power": "ac", "ledger_path": self.repo / "ledger.jsonl", **kw}
+        return [n for n, ok, _ in F.preflight_checks(self.repo, **args) if not ok]
+
+    def test_pass_case(self):
+        self.assertEqual(self.failed(), [])
+
+    def test_dirty_tree_fails(self):
+        (self.repo / "stray.txt").write_text("x", encoding="utf-8")                      # untracked, not ignored
+        bad = self.failed()
+        self.assertEqual(len(bad), 1)
+        self.assertTrue(bad[0].startswith("clean tree"))
+        (self.repo / "stray.txt").unlink()
+        (self.repo / ".gitignore").write_text("ledger.jsonl\nledger.jsonl.lock\nchanged\n", encoding="utf-8")        # a modified tracked file
+        self.assertTrue(self.failed()[0].startswith("clean tree"))
+
+    def test_missing_key_fails_and_the_value_is_never_printed(self):
+        env = {k: v for k, v in self.GOOD_ENV.items() if k != "OPENAI_API_KEY"}
+        bad = self.failed(env=env)
+        self.assertEqual(len(bad), 1)
+        self.assertTrue(bad[0].startswith("OPENAI_API_KEY"))
+        shown = " ".join(f"{n} {d}" for n, _, d in F.preflight_checks(self.repo, env=dict(self.GOOD_ENV), power="ac", ledger_path=self.repo / "ledger.jsonl"))
+        self.assertNotIn("sk-test-not-a-real-key", shown)
+        (self.repo / ".gitignore").write_text("ledger.jsonl\nledger.jsonl.lock\n.env\n", encoding="utf-8")
+        (self.repo / ".env").write_text("OPENAI_API_KEY=sk-from-env-file-9999999\n", encoding="utf-8")       # a key in the repo-root .env counts
+        self.push_all("ignore env")
+        self.assertEqual(self.failed(env=env), [])
+        shown = " ".join(f"{n} {d}" for n, _, d in F.preflight_checks(self.repo, env=env, power="ac", ledger_path=self.repo / "ledger.jsonl"))
+        self.assertNotIn("sk-from-env-file", shown)
+
+    def test_wrong_pythonhashseed_fails(self):
+        for value in ("1", None):
+            env = dict(self.GOOD_ENV)
+            if value is None:
+                del env["PYTHONHASHSEED"]
+            else:
+                env["PYTHONHASHSEED"] = value
+            self.assertEqual(self.failed(env=env), ["PYTHONHASHSEED=0"])
+        self.assertEqual(self.failed(env=dict(self.GOOD_ENV, PYTHONUTF8="0")), ["PYTHONUTF8=1"])
+
+    def test_existing_freeze_folder_or_eval_folder_fails(self):
+        (self.repo / "results" / "freeze_2026-11-27").mkdir()
+        (self.repo / "results" / "freeze_2026-11-27" / ".keep").write_text("", encoding="utf-8")
+        self.push_all("folder")
+        self.assertEqual(self.failed(), ["no real freeze folder (results/freeze_<YYYY-MM-DD>) exists"])
+        (self.repo / "results" / "eval_7919").mkdir()
+        (self.repo / "results" / "eval_7919" / ".keep").write_text("", encoding="utf-8")
+        self.push_all("eval")
+        self.assertEqual(len(self.failed()), 2)
+
+    def test_battery_fails(self):
+        self.assertEqual(self.failed(power="battery"), ["AC power"])
+
+    def test_ledger_headroom_fails_when_the_caps_do_not_fit_under_the_platform_limit(self):
+        import sys
+        sys.path.insert(0, str(F.REPO / "options"))
+        from llm_ledger import Ledger
+        led = Ledger(self.repo / "ledger.jsonl", lifetime_cap_usd=45.0)
+        rid = led.reserve(17.0, run="x", provider="openai", model="m", run_cap_usd=20.0)
+        led.settle(rid, 17.0)                                                          # 17 + caps 14 = 31 > 30
+        bad = self.failed()
+        self.assertEqual(len(bad), 1)
+        self.assertTrue(bad[0].startswith("ledger headroom"))
+
+    def test_a_cap_below_a_worst_case_gate_fails(self):
+        from unittest import mock
+        with mock.patch.dict(F.B_CAPS["real"], {"decoycheck": 0.50}):
+            bad = self.failed()
+        self.assertEqual(bad, ["real-run cap covers the worst-case gate: decoycheck (300 pairs)"])
+
+    def test_an_unpushed_head_fails(self):
+        (self.repo / "more.txt").write_text("x", encoding="utf-8")
+        self.git("add", "-A")
+        self.git("commit", "-q", "-m", "not pushed")
+        self.assertEqual(self.failed(), ["HEAD is pushed (an ancestor of origin/main, as of the last fetch)"])
+
+    def test_it_is_read_only(self):
+        import hashlib
+
+        def snapshot():
+            kept = [p for p in sorted(self.repo.rglob("*")) if p.relative_to(self.repo).parts[0] != ".git"]
+            files = {str(p.relative_to(self.repo)): hashlib.sha256(p.read_bytes()).hexdigest() for p in kept if p.is_file()}
+            dirs = [str(p.relative_to(self.repo)) for p in kept if p.is_dir()]
+            return files, dirs, hashlib.sha256((self.repo / ".git" / "index").read_bytes()).hexdigest()
+
+        before = snapshot()
+        F.preflight_checks(self.repo, env=dict(self.GOOD_ENV), power="ac", ledger_path=self.repo / "ledger.jsonl")
+        self.assertEqual(snapshot(), before)                                           # no file, no folder, the git index untouched
+
+    def test_the_command_exits_1_on_any_fail_and_0_when_all_pass(self):
+        import contextlib
+        import io
+        from unittest import mock
+        with mock.patch.object(F, "preflight_checks", return_value=[("a", True, "ok"), ("b", False, "bad")]), contextlib.redirect_stdout(io.StringIO()) as out:
+            self.assertEqual(F.cmd_preflight(None), 1)
+        self.assertIn("FAIL  b: bad", out.getvalue())
+        with mock.patch.object(F, "preflight_checks", return_value=[("a", True, "ok")]), contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(F.cmd_preflight(None), 0)
+
+    def test_manifest_notes_the_preflight_command(self):
+        notes = F.Runner("rehearsal", 42, self.repo / "run", self.repo / "run" / "_freeze", allow_battery=True, repo=F.REPO, frozen=[],
+                         stages=[], call=no_call, log=self.logs.append, ledger_path=self.repo / "ledger.jsonl").write_manifest()["notes"]
+        self.assertIn("preflight command added (read-only)", notes)
+
+
 class SeedRefusals(Base):
     def real(self, approve):
         return self.runner(mode="real", seed=F.EVAL_SEED, approve=approve, run_dir=self.repo / "results" / "eval_7919",
