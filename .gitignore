@@ -40,3 +40,5 @@ results/dstudy_*/options/a_threshold/decisions.csv
 results/dstudy_*/options/c_model/*/decisions.csv
 results/dstudy_*/verity_data/golden_records.csv
 results/dstudy_*/verity_data/match_candidates.csv
+results/rehearsal_*/options/c_model/*/model.txt
+results/dstudy_*/options/c_model/*/model.txt
