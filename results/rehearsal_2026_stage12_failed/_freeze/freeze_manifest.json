@@ -1,10 +1,10 @@
 {
- "created_utc": "2026-11-25T12:54:12Z",
+ "created_utc": "2026-11-25T13:05:20Z",
  "mode": "rehearsal",
  "seed": 2026,
  "run_dir": "results/rehearsal_2026",
  "freeze_dir": "results/rehearsal_2026/_freeze",
- "git_commit": "8ab9f84bc4a388abcd8847ddc17838d7cff58ac5",
+ "git_commit": "f4c2770f04cc02d08cdeb87b1456b8bd64d68ed2",
  "files": {
   "protocol.md": "775fc4bedc28d720facb3b045a73deaeb40ad01a8dcc5c7a4205e7cf77699dce",
   "requirements.txt": "4a4cb693aae7f3ad09ccfc21a89bd35d29baee3e07665db85090dbc5ffe3dff9",
@@ -21,7 +21,7 @@
   "options/c_features.py": "e877260afa0c52e36fba94a892b9dc91351e7ffc09ea1798f703075e49ce7414",
   "options/d_hybrid.py": "407d5bf001e99a6edfa566d6377a4c5944a279437bbf1fb47e97256c986e9251",
   "options/latency_bench.py": "4e85af0b9fde8905c15a87b6d75dfe4b554b7e087f9e31f96c700d8c873a9645",
-  "eval/freeze_run.py": "a851f38ace5e33ba5ba02332ae2f6b982217c9df10c4aad5505ea362b596188a",
+  "eval/freeze_run.py": "21210c8a179fc0c9a323dfb5869eb1b8c8f9f544903baf905115f2094247f42a",
   "eval/data_profile.py": "731c526408a5bdb4a070dc8b8a759d1b1098c13bfb1c5d89bc98fce7d17030f4",
   "eval/check_scored_pairs.py": "f24d4e3f87198eedde7927bc3364f07f29cfa05f58a85f7f34bc7e06a0c19724",
   "eval/band.py": "ee22e0ff80172cf07914d61ca45b95dacf90aa7f53fd64911c51a40e779935f5",
@@ -39,7 +39,7 @@
   "eval/bars_table.py": "d87db1a0f2d7fd26c42bce532ef4d1f9e3d89f76ec1e9d6a517978ec28083fd9",
   "eval/results_table.py": "56e13984ebc3d62465f30368feab9cefaa8ae4bca13eea52773dff24a2e2b866",
   "eval/hand_check.py": "05e4c1024130c64b829848b857bfccfe18a4d9e13ea2ab3b92ba8853812ef1e8",
-  "cost/cost_model.py": "3b4201733320e4683d082fc44cf6fd9ac120ceef1d4dee8b3bbe1095d5d690e9",
+  "cost/cost_model.py": "09fc8144358c4f88af232ead6e90ee9125fc235acb82879413b690a58be021d7",
   "results/dev_2026_run11/options/b_llm/fewshot.json": "2345a01923495f8d365983df3210e61e3808e7b79806a65955eb1d9e56a857d7",
   "results/dev_2026_run11/options/b_llm/frozen_prompt.json": "c0e58d2216df977c8fe3b705d44ffd7dff4360b2d1cfd7477e8eecd6aadc6bfa",
   "results/dev_2026_run11/options/d_hybrid/frozen_settings.json": "271f25b4e8367b55c1fd60226c855fab0feb993c5d49caed17b2a7e9a0ac039f",
@@ -90,6 +90,7 @@
   "cost/effort_log.csv (read as it is by the cost stage; its hash is printed)"
  ],
  "notes": [
-  "reporting and driver scripts changed on 2026-11-25 to handle an all-cached B stage; no model-side asset changed"
+  "reporting and driver scripts changed on 2026-11-25 to handle an all-cached B stage; no model-side asset changed",
+  "cost model reads B per-call figures from the dev run when a stage made no live calls"
  ]
 }

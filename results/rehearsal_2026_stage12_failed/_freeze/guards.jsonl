@@ -31,3 +31,4 @@
 {"time": "2026-11-25T12:58:46Z", "stage": 10, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
 {"time": "2026-11-25T12:59:04Z", "stage": 11, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
 {"time": "2026-11-25T12:59:05Z", "stage": 12, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T13:05:24Z", "stage": 0, "guard": "outputs unchanged since the stage finished", "fired": true, "detail": "changed or missing: results/rehearsal_2026/_freeze/freeze_manifest.json"}
