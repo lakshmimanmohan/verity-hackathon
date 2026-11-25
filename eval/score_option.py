@@ -107,6 +107,8 @@ def main() -> int:
     p.add_argument("--truth", type=Path, default=None)
     p.add_argument("--split", type=Path, default=None)
     p.add_argument("--name", default=None, help="Option name for the report header")
+    p.add_argument("--json-out", type=Path, default=None,
+                   help="Also write the headline numbers (band, overall, ECE, average precision) to this JSON file")
     p.add_argument("--calibration-plot", type=Path, default=None,
                    help="Write a reliability diagram (test band) to this PNG when confidences are given")
     p.add_argument("--oof-reliability", type=Path, default=None,
@@ -295,6 +297,7 @@ def main() -> int:
     print(f"\nDecoy pairs in the test group: {fmt(dden, weighted)}, wrongly matched "
           f"{fmt(wrong, weighted)} ({wrong / dden if dden else 0:.2%}){est}")
 
+    ece = ap_band = None
     # Calibration, when every decision carries a confidence (probability of "same").
     if sampled and len(confidence) == len(decisions):
         pc = np.array([confidence[k] for k in sampled], dtype=float)
@@ -350,6 +353,15 @@ def main() -> int:
             fig.savefig(args.calibration_plot, dpi=120)
             plt.close(fig)
             print(f"  calibration plot: {args.calibration_plot}")
+    if args.json_out:
+        import json
+        args.json_out.write_text(json.dumps({
+            "option": name, "weighted": weighted, "band_pairs": btot, "band_true": btp + bfn,
+            "band_f1": bf1, "band_f1_ci": [lo, hi], "band_precision": bp, "band_recall": br, "band_accuracy": acc,
+            "band_tp": btp, "band_fp": bfp, "band_fn": bfn, "band_tn": btn,
+            "overall_precision": op, "overall_recall": orc, "overall_f1": of1,
+            "overall_tp": otp, "overall_fp": ofp, "overall_fn": ofn,
+            "ece": ece, "band_average_precision": ap_band}, indent=1) + "\n", encoding="utf-8")
     return 0
 
 
