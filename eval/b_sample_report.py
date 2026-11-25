@@ -135,7 +135,8 @@ def main() -> int:
     inc = sum((x["pred"] and x["p"] < 0.5) or ((not x["pred"]) and x["p"] >= 0.5) for x in rows)
     say(f"  inconsistent answers (decision against p_same at 0.5): {inc} of {n}")
 
-    calls = [json.loads(x) for x in (out_dir / "calls.jsonl").read_text(encoding="utf-8").splitlines() if x.strip()]
+    calls_path = out_dir / "calls.jsonl"                      # absent when every answer came from the cache (no live calls)
+    calls = [json.loads(x) for x in calls_path.read_text(encoding="utf-8").splitlines() if x.strip()] if calls_path.exists() else []
     meta = json.loads((out_dir / "run_meta.json").read_text(encoding="utf-8"))
     live = [c for c in calls if c.get("mode") == "live"]
     inp = sum((c.get("usage") or {}).get("input_tokens", 0) or 0 for c in live)
@@ -155,8 +156,9 @@ def main() -> int:
     say("\nRun (calls.jsonl, run_meta.json)")
     say(f"  calls {len(live)} (log lines), cache hits {meta.get('cache_hits')}, pairs {meta.get('pairs')}, distinct prompts "
         f"{meta.get('distinct_prompts')}; models reported {meta.get('models_reported')}")
-    say(f"  tokens: input {inp:,}, cached {cac:,}, output {outt:,}; hit ratio overall {cac / inp if inp else 0:.3f}, "
-        f"excluding each key's first call {ce / ie if ie else 0:.3f} ({len(seen)} keys)")
+    na = "n/a (no live calls)"
+    say(f"  tokens: input {inp:,}, cached {cac:,}, output {outt:,}; hit ratio overall {format(cac / inp, '.3f') if inp else na}, "
+        f"excluding each key's first call {format(ce / ie, '.3f') if ie else na} ({len(seen)} keys)")
     say(f"  cost: total ${sum(usd):.4f}, per call ${sum(usd) / max(len(usd), 1):.6f}")
     say(f"  latency per call: p50 {pct(lat, 0.5):.2f} s, p95 {pct(lat, 0.95):.2f} s, max {max(lat, default=0):.2f} s")
     say(f"  refusals {meta.get('refusals')}, parse failures {meta.get('unusable_answers')}, API errors {api_err} "

@@ -68,6 +68,7 @@ DECOY_MAX = 300
 B_CAPS = {"real": {"sample5000": 10.0, "dfull": 0.30, "decoycheck": 0.50},
           "rehearsal": {"sample5000": 0.75, "dfull": 0.10, "decoycheck": 0.15}}       # rehearsal total: $1.00
 ARCHIVE_COMMIT_MAX_BYTES = 1_000_000
+CHANGE_DATE = "2026-11-25"                       # written into the manifest's notes (all-cached B stage fix)
 # frozen assets: run-relative destination -> repo-relative source (copied into the run folder and verified)
 ASSETS_B = {"options/b_llm/fewshot.json": f"{DEV_RUN_REL}/options/b_llm/fewshot.json",
             "options/b_llm/frozen_prompt.json": f"{DEV_RUN_REL}/options/b_llm/frozen_prompt.json"}
@@ -199,7 +200,8 @@ class Runner:
         doc = {"created_utc": utc(), "mode": self.mode, "seed": self.seed, "run_dir": self.rel(self.run_dir), "freeze_dir": self.rel(self.freeze_dir),
                "git_commit": head, "files": files, "params": params, "python": sys.version.split()[0], "platform": platform.platform(),
                "pip_freeze_sha256": hashlib.sha256(pf.encode()).hexdigest(), "tag": TAG if self.mode == "real" else None,
-               "not_frozen": ["cost/effort_log.csv (read as it is by the cost stage; its hash is printed)"]}
+               "not_frozen": ["cost/effort_log.csv (read as it is by the cost stage; its hash is printed)"],
+               "notes": [f"reporting and driver scripts changed on {CHANGE_DATE} to handle an all-cached B stage; no model-side asset changed"]}
         self.freeze_dir.mkdir(parents=True, exist_ok=True)
         self.manifest_path.write_text(json.dumps(doc, indent=1) + "\n", encoding="utf-8")
         return doc
@@ -536,17 +538,51 @@ def s7_b(R: Runner) -> dict:
     arch = R.freeze_dir / "b_archive"
     arch.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(bdir / "decisions.csv", arch / "decisions.csv")
-    with (bdir / "calls.jsonl").open("rb") as src, gzip.open(arch / "calls.jsonl.gz", "wb") as dst:
-        shutil.copyfileobj(src, dst)
-    size = (arch / "calls.jsonl.gz").stat().st_size
+    info = {"decisions_sha256": sha256_file(arch / "decisions.csv"), "rule": "commit the gzipped archive file if it is under 1 MB"}
+    if (bdir / "calls.jsonl").exists():
+        packed = arch / "calls.jsonl.gz"
+        with (bdir / "calls.jsonl").open("rb") as src, gzip.open(packed, "wb") as dst:
+            shutil.copyfileobj(src, dst)
+        info.update({"mode": "calls.jsonl", "what": "gzipped calls.jsonl of the stage"})
+    else:                                                    # no live calls: every answer came from the cache
+        packed = arch / "cache_entries.jsonl.gz"
+        n = write_cache_entries(R, R.run_dir / "options" / "b_llm" / "test_sample5000.csv", packed)
+        info.update({"mode": "cache_entries", "what": f"gzipped pair-cache entries of the stage's {n} distinct prompts (no calls.jsonl: 0 live calls)"})
+    size = packed.stat().st_size
     commit = size < ARCHIVE_COMMIT_MAX_BYTES
-    (arch / "archive.json").write_text(json.dumps({"decisions_sha256": sha256_file(arch / "decisions.csv"), "calls_gz_bytes": size,
-                                                   "commit_calls_gz": commit, "rule": "commit the gzipped calls.jsonl if it is under 1 MB"}, indent=1) + "\n", encoding="utf-8")
-    R.note(f"B archive: decisions.csv and calls.jsonl.gz ({size:,} bytes; {'under' if commit else 'over'} 1 MB: {'commit it' if commit else 'keep it local'})")
+    info.update({"archive_file": packed.name, "archive_gz_bytes": size, "commit_archive": commit})
+    (arch / "archive.json").write_text(json.dumps(info, indent=1) + "\n", encoding="utf-8")
+    R.note(f"B archive: decisions.csv and {packed.name} ({size:,} bytes; {'under' if commit else 'over'} 1 MB: {'commit it' if commit else 'keep it local'})"
+           + ("" if info["mode"] == "calls.jsonl" else "; no calls.jsonl, so the stage's cache entries were archived instead"))
     meta = json.loads((bdir / "run_meta.json").read_text(encoding="utf-8"))
     R.note(f"B: {meta['calls']} calls, cache hits {meta['cache_hits']}, spent ${meta['spent_usd']:.4f}, hit ratio excl. first "
-           f"{(meta.get('prompt_cache') or {}).get('hit_ratio_excl_first')}")
-    return {"outputs": assets + [bdir / "decisions.csv", bdir / "run_meta.json", bdir / "report.txt", arch / "decisions.csv", arch / "calls.jsonl.gz", arch / "archive.json"]}
+           f"{(meta.get('prompt_cache') or {}).get('hit_ratio_excl_first') if meta['calls'] else 'n/a (no live calls)'}")
+    return {"outputs": assets + [bdir / "decisions.csv", bdir / "run_meta.json", bdir / "report.txt", arch / "decisions.csv", packed, arch / "archive.json"]}
+
+
+def write_cache_entries(R: Runner, sample: Path, out: Path) -> int:
+    """The pair-cache entries (key, value) for the stage's distinct prompts, gzipped. Keys are rebuilt the way
+    options/b_llm_baseline.py --final-sample builds them (same provider settings, same system prompt, same record text)."""
+    sys.path.insert(0, str(REPO / "options"))
+    import b_llm_baseline as B  # noqa: E402
+    from llm_cache import PairCache, sha256_text  # noqa: E402
+    provider = B.make_provider("openai", None, live=False)
+    rd = B.RunData(R.run_dir)
+    fewshot = json.loads((R.run_dir / "options" / "b_llm" / "fewshot.json").read_text(encoding="utf-8"))
+    system = B.build_system_prompt(fewshot, rd.cols)
+    pairs = B.load_sample_pairs(sample, None)
+    items = B.make_items(rd, pairs, provider, system, provider.settings_sha(), sha256_text(system))
+    cache = PairCache(B.CACHE_DIR / f"{provider.name}.jsonl")
+    seen: dict = {}
+    for it in items:
+        seen.setdefault(it.key, cache.get(it.key))
+    missing = [k[:12] for k, v in seen.items() if v is None]
+    if missing:
+        raise StageFailed(f"{len(missing)} cache entries missing for the archive, e.g. {missing[:3]}")
+    with gzip.open(out, "wt", encoding="utf-8") as f:
+        for k, v in seen.items():
+            f.write(json.dumps({"key": k, "value": v}, ensure_ascii=False, separators=(",", ":")) + "\n")
+    return len(seen)
 
 
 def s8_d(R: Runner) -> dict:
@@ -681,7 +717,7 @@ def write_freeze_report(R: Runner) -> Path:
     arch = R.freeze_dir / "b_archive" / "archive.json"
     if arch.exists():
         a = json.loads(arch.read_text(encoding="utf-8"))
-        L.append(f"  B archive: calls.jsonl.gz {a['calls_gz_bytes']:,} bytes ({'commit it' if a['commit_calls_gz'] else 'over 1 MB: keep it local'})")
+        L.append(f"  B archive: {a['archive_file']} {a['archive_gz_bytes']:,} bytes ({'commit it' if a['commit_archive'] else 'over 1 MB: keep it local'}); {a['what']}")
     if R.mode == "real":
         L.append(f"  tag: {TAG} at the manifest commit (python eval/freeze_run.py tag); to publish it: git push origin {TAG}")
     else:

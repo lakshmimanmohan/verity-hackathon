@@ -80,7 +80,7 @@ def main() -> int:
             say(f"      {c:<16} {(records[x['a']].get(c) or '(missing)')[:44]:<44} | {(records[x['b']].get(c) or '(missing)')[:44]}")
     say(f"\nRun: calls {meta['calls']}, cache hits {meta['cache_hits']} (pairs already answered in the sample run), spent "
         f"${meta['spent_usd']:.4f}; hit ratio excluding each key's first call "
-        f"{meta['prompt_cache'].get('hit_ratio_excl_first', 0):.3f}; refusals {meta['refusals']}, parse failures "
+        f"{'n/a (no live calls)' if meta['prompt_cache'].get('hit_ratio_excl_first') is None else format(meta['prompt_cache']['hit_ratio_excl_first'], '.3f')}; refusals {meta['refusals']}, parse failures "
         f"{meta['unusable_answers']}, API errors {meta['api_errors']}; run time {meta['run_time_minutes']} minutes")
     text = "\n".join(x for x in L if x != "") + "\n"
     (out_dir / "decoy_report.txt").write_text(text, encoding="utf-8")
