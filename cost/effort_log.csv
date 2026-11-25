@@ -32,3 +32,6 @@ date,hours,activity,bucket,production_needed
 11/25/2026,0.5,"Option D routing rule v2: selection and amendment",D,yes
 11/25/2026,0.5,"D robustness study across 5 development seeds",eval,no
 11/25/2026,0.5,"Embedding model pin and compliance check",verity,yes
+11/25/2026,0.25,"Scope decision: option E out, protocol amendment",eval,no
+11/25/2026,0.5,"Dry run of the freeze path, cleanup of the clone",eval,no
+11/25/2026,0.5,"Freeze day: manifest review, go decision, report review",eval,no
