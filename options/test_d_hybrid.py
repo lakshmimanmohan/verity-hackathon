@@ -85,6 +85,39 @@ class BuildTests(unittest.TestCase):
             shutil.rmtree(tmp, ignore_errors=True)
 
 
+class FullBandTests(unittest.TestCase):
+    def test_routed_pairs_keep_the_files_orientation_and_use_lo_hi(self):
+        rows = [{"record_a": "z", "record_b": "a", "confidence": "0.6"}, {"record_a": "b", "record_b": "c", "confidence": "0.9"},
+                {"record_a": "d", "record_b": "e", "confidence": "0.4999"}, {"record_a": "f", "record_b": "g", "confidence": "0.5"}]
+        got = D.routed_pairs(rows, 0.5, 0.9)
+        self.assertEqual([(a, b) for a, b, _ in got], [("f", "g"), ("z", "a")])        # 0.9 is c_same, 0.4999 c_different
+
+    def test_merge_b_unions_runs_and_rejects_conflicting_answers(self):
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            for name, rows in (("one", [("a", "b", "same", "0.9"), ("c", "d", "different", "0.1")]),
+                               ("two", [("b", "a", "same", "0.9"), ("e", "f", "different", "0.2")])):
+                with (tmp / f"{name}.csv").open("w", newline="", encoding="utf-8") as f:
+                    w = csv.writer(f)
+                    w.writerow(["record_a", "record_b", "decision", "confidence"])
+                    w.writerows(rows)
+            merged = D.merge_b([tmp / "one.csv", tmp / "two.csv", tmp / "missing.csv"])
+            self.assertEqual(set(merged), {("a", "b"), ("c", "d"), ("e", "f")})
+            with (tmp / "three.csv").open("w", newline="", encoding="utf-8") as f:
+                csv.writer(f).writerows([["record_a", "record_b", "decision", "confidence"], ["a", "b", "different", "0.1"]])
+            with self.assertRaises(SystemExit):
+                D.merge_b([tmp / "one.csv", tmp / "three.csv"])
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_full_band_build_needs_a_b_answer_for_every_routed_pair(self):
+        c = {("a", "b"): ("same", 0.6), ("c", "d"): ("same", 0.95), ("e", "f"): ("different", 0.0)}
+        with self.assertRaises(SystemExit):
+            D.build(c, {}, [(k, 1.0) for k in sorted(c)], 0.5, 0.9)
+        rows = D.build(c, {("a", "b"): ("different", 0.2)}, [(k, 1.0) for k in sorted(c)], 0.5, 0.9)
+        self.assertEqual([(r["route"], r["decision"]) for r in rows], [("llm", "different"), ("c_same", "same"), ("c_different", "different")])
+
+
 class SelectionTests(unittest.TestCase):
     def r(self, lo, hi, share, f1):
         return {"lo": lo, "hi": hi, "weighted_llm_share": share, "band_f1": f1}

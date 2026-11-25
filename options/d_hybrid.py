@@ -10,6 +10,8 @@ The rule that picks lo and hi is in results/<run>/options/d_hybrid/selection_rul
 
   python options/d_hybrid.py route results/<run> --lo 0.05 --hi 0.9 [--out decisions.csv]
   python options/d_hybrid.py sweep results/<run>
+  python options/d_hybrid.py list-routed results/<run>     # the full test band's pairs that go to the LLM (no truth)
+  python options/d_hybrid.py full results/<run>            # exact D decisions for every test band pair (no sampling)
 
 Inputs (all under results/<run>/options/):
   c_model/c_v1_lgbm/decisions.csv        C's decision and calibrated confidence for every test band pair
@@ -160,6 +162,73 @@ def fmt_hi(hi):
     return "none" if hi is None else f"{hi:g}"
 
 
+def merge_b(paths: list[Path]) -> dict:
+    """B's recorded answers from several runs (sample, decoy check, routed pairs) as one dict. A pair answered in two
+    runs must have the same decision (the answers come from one pair cache); a conflict is an error."""
+    out: dict = {}
+    for path in paths:
+        if not path.exists():
+            continue
+        for k, v in load_b(path).items():
+            if k in out and out[k][0] != v[0]:
+                raise SystemExit(f"B answered {k} differently in two runs ({out[k][0]} and {v[0]})")
+            out.setdefault(k, v)
+    return out
+
+
+def routed_pairs(c_rows: list[dict], lo: float, hi: float | None) -> list[tuple[str, str, float]]:
+    """(record_a, record_b, p) of the pairs the rule sends to the LLM, in the orientation the C file has them."""
+    out = [(r["record_a"], r["record_b"], float(r["confidence"])) for r in c_rows
+           if route_of(float(r["confidence"]), lo, hi) == "llm"]
+    return sorted(out)
+
+
+def b_paths(run: Path) -> list[Path]:
+    base = run / "options" / "b_llm" / "openai"
+    return [base / "sample5000" / "decisions.csv", base / "decoycheck" / "decisions.csv", base / "dfull" / "decisions.csv"]
+
+
+def frozen_lo_hi(P: dict) -> tuple[float, float | None]:
+    fz = json.loads((P["dir"] / "frozen_settings.json").read_text(encoding="utf-8"))
+    if not fz["selected"]:
+        raise SystemExit("no frozen setting")
+    return fz["lo"], fz["hi"]
+
+
+def cmd_list_routed(args) -> int:
+    P = paths(args.run)
+    lo, hi = frozen_lo_hi(P)
+    c_rows = read_csv(P["c"])
+    pairs = routed_pairs(c_rows, lo, hi)
+    out = P["dir"] / "routed_fullband_pairs.csv"
+    with out.open("w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["record_a", "record_b", "weight"])
+        for a, b, _ in pairs:
+            w.writerow([a, b, "1.0"])
+    answered = merge_b(b_paths(args.run))
+    have = sum(key(a, b) in answered for a, b, _ in pairs)
+    print(f"frozen setting lo {lo:g}, hi {fmt_hi(hi)}: {len(pairs)} of {len(c_rows):,} test band pairs are routed to the LLM "
+          f"(C's p from {min(p for *_, p in pairs):.3f} to {max(p for *_, p in pairs):.3f}); {have} already have a recorded B answer in "
+          f"the sample / decoy-check / earlier D runs; {len(pairs) - have} do not (the local cache is checked by the B run itself)")
+    print(f"written: {out}")
+    return 0
+
+
+def cmd_full(args) -> int:
+    P = paths(args.run)
+    lo, hi = frozen_lo_hi(P)
+    c = load_c(P["c"])
+    b = merge_b(b_paths(args.run))
+    rows = build(c, b, [(k, 1.0) for k in sorted(c)], lo, hi)
+    out = P["dir"] / "decisions_fullband.csv"
+    write_decisions(out, rows)
+    n_llm = sum(r["route"] == "llm" for r in rows)
+    print(f"exact D decisions for all {len(rows):,} test band pairs (lo {lo:g}, hi {fmt_hi(hi)}): "
+          f"{ {k: sum(r['route'] == k for r in rows) for k in ('c_different', 'llm', 'c_same')} }; LLM share {n_llm / len(rows):.5f} -> {out}")
+    return 0
+
+
 def cmd_route(args) -> int:
     P = paths(args.run)
     hi = None if args.hi.lower() == "none" else float(args.hi)
@@ -255,8 +324,10 @@ def main() -> int:
     s = sub.add_parser("sweep")
     s.add_argument("run", type=Path)
     s.add_argument("--workers", type=int, default=4)
+    for name in ("list-routed", "full"):
+        sub.add_parser(name).add_argument("run", type=Path)
     args = ap.parse_args()
-    return cmd_route(args) if args.cmd == "route" else cmd_sweep(args)
+    return {"route": cmd_route, "sweep": cmd_sweep, "list-routed": cmd_list_routed, "full": cmd_full}[args.cmd](args)
 
 
 if __name__ == "__main__":
