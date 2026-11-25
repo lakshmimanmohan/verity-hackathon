@@ -1,0 +1,39 @@
+D with a lower lo, on development seeds: frozen rule (lo 0.5, hi 0.9) against lo 0.1, hi 0.9. C is the reference.
+Exact full test band for each setting, scored with eval/score_option.py (band F1, precision, recall from its report; FP and FN from the truth
+sidecar). Where the LLM is used, B's answers come from the cache (sample, decoy-check and lo01 runs). 'fixed' = C wrong and D right on an LLM-routed pair;
+'introduced' = C right and D wrong. No frozen setting was changed.
+
+  run            option                 band F1    prec  recall   FP   FN  LLM pairs  fixed  introduced
+  dstudy_11      C (reference)           0.9614  0.9468  0.9765   21    9          0      0           0
+  dstudy_11      D frozen (lo 0.5, hi 0.9)  0.9855  0.9973  0.9739    1   10         70     20           1
+  dstudy_11      D lo0.1 (lo 0.1, hi 0.9)  0.9881  0.9973  0.9791    1    8         76     22           1
+
+  dstudy_12      C (reference)           0.9614  0.9628  0.9600   13   14          0      0           0
+  dstudy_12      D frozen (lo 0.5, hi 0.9)  0.9552  1.0000  0.9143    0   30         39      2           2
+  dstudy_12      D lo0.1 (lo 0.1, hi 0.9)  0.9766  1.0000  0.9543    0   16         65     14           3
+
+  dstudy_13      C (reference)           0.9674  0.9771  0.9579    8   15          0      0           0
+  dstudy_13      D frozen (lo 0.5, hi 0.9)  0.9729  0.9884  0.9579    4   15          8      4           0
+  dstudy_13      D lo0.1 (lo 0.1, hi 0.9)  0.9773  0.9885  0.9663    4   12         22      7           0
+
+  rehearsal_42   C (reference)           0.9727  0.9817  0.9640    6   12          0      0           0
+  rehearsal_42   D frozen (lo 0.5, hi 0.9)  0.9727  0.9817  0.9640    6   12          0      0           0
+  rehearsal_42   D lo0.1 (lo 0.1, hi 0.9)  0.9881  0.9822  0.9940    6    2         40     10           0
+
+  rehearsal_2026 C (reference)           0.9653  0.9489  0.9824   18    6          0      0           0
+  rehearsal_2026 D frozen (lo 0.5, hi 0.9)  0.9838  0.9881  0.9794    4    7         38     14           1
+  rehearsal_2026 D lo0.1 (lo 0.1, hi 0.9)  0.9853  0.9882  0.9824    4    6         51     15           1
+
+  Totals over the 5 seeds (pooled counts; the F1 is from the pooled TP, FP, FN; the mean is of the per-seed F1)
+  option                 pooled F1    prec  recall   FP   FN  mean F1  LLM pairs  fixed  introduced
+  C (reference)             0.9655  0.9628  0.9682   66   56   0.9656          0      0           0
+  D frozen (lo 0.5, hi 0.9)    0.9743  0.9912  0.9580   15   74   0.9740        155     40           4
+  D lo0.1 (lo 0.1, hi 0.9)    0.9831  0.9913  0.9750   15   44   0.9831        254     68           5
+
+  Does lo 0.1 beat lo 0.5 on each seed? (band F1, lo 0.1 minus frozen; FP / FN change)
+    dstudy_11       lo 0.1 is better: F1 0.9881 vs 0.9855 (+0.0027); FP 1 vs 1 (+0), FN 8 vs 10 (-2); LLM pairs 76 vs 70
+    dstudy_12       lo 0.1 is better: F1 0.9766 vs 0.9552 (+0.0214); FP 0 vs 0 (+0), FN 16 vs 30 (-14); LLM pairs 65 vs 39
+    dstudy_13       lo 0.1 is better: F1 0.9773 vs 0.9729 (+0.0044); FP 4 vs 4 (+0), FN 12 vs 15 (-3); LLM pairs 22 vs 8
+    rehearsal_42    lo 0.1 is better: F1 0.9881 vs 0.9727 (+0.0153); FP 6 vs 6 (+0), FN 2 vs 12 (-10); LLM pairs 40 vs 0
+    rehearsal_2026  lo 0.1 is better: F1 0.9853 vs 0.9838 (+0.0015); FP 4 vs 4 (+0), FN 6 vs 7 (-1); LLM pairs 51 vs 38
+    lo 0.1 is better on 5 of 5 seeds, worse on 0, the same on 0.

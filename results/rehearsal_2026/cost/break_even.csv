@@ -1,0 +1,74 @@
+# DRAFT: effort log incomplete, one-time costs for B and D undercounted
+scenario,labels_for_C_and_D,hourly_rate_usd,option,break_even_records_per_day,result
+S1 and S2 (same total),500,50.0,A,,option cheaper everywhere in range
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",500,50.0,A,,option cheaper everywhere in range
+S1 and S2 (same total),500,50.0,C,,option cheaper everywhere in range
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",500,50.0,C,,option cheaper everywhere in range
+S1 and S2 (same total),500,50.0,D,,option cheaper everywhere in range
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",500,50.0,D,,option cheaper everywhere in range
+S1 and S2 (same total),500,100.0,A,,option cheaper everywhere in range
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",500,100.0,A,,option cheaper everywhere in range
+S1 and S2 (same total),500,100.0,C,,option cheaper everywhere in range
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",500,100.0,C,,option cheaper everywhere in range
+S1 and S2 (same total),500,100.0,D,,option cheaper everywhere in range
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",500,100.0,D,,option cheaper everywhere in range
+S1 and S2 (same total),500,200.0,A,,option cheaper everywhere in range
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",500,200.0,A,,option cheaper everywhere in range
+S1 and S2 (same total),500,200.0,C,,option cheaper everywhere in range
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",500,200.0,C,,option cheaper everywhere in range
+S1 and S2 (same total),500,200.0,D,,option cheaper everywhere in range
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",500,200.0,D,,option cheaper everywhere in range
+S1 and S2 (same total),1000,50.0,A,,option cheaper everywhere in range
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",1000,50.0,A,,option cheaper everywhere in range
+S1 and S2 (same total),1000,50.0,C,,option cheaper everywhere in range
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",1000,50.0,C,,option cheaper everywhere in range
+S1 and S2 (same total),1000,50.0,D,,option cheaper everywhere in range
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",1000,50.0,D,,option cheaper everywhere in range
+S1 and S2 (same total),1000,100.0,A,,option cheaper everywhere in range
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",1000,100.0,A,,option cheaper everywhere in range
+S1 and S2 (same total),1000,100.0,C,,option cheaper everywhere in range
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",1000,100.0,C,,option cheaper everywhere in range
+S1 and S2 (same total),1000,100.0,D,,option cheaper everywhere in range
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",1000,100.0,D,,option cheaper everywhere in range
+S1 and S2 (same total),1000,200.0,A,,option cheaper everywhere in range
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",1000,200.0,A,,option cheaper everywhere in range
+S1 and S2 (same total),1000,200.0,C,,option cheaper everywhere in range
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",1000,200.0,C,,option cheaper everywhere in range
+S1 and S2 (same total),1000,200.0,D,,option cheaper everywhere in range
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",1000,200.0,D,,option cheaper everywhere in range
+S1 and S2 (same total),2000,50.0,A,,option cheaper everywhere in range
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",2000,50.0,A,,option cheaper everywhere in range
+S1 and S2 (same total),2000,50.0,C,,option cheaper everywhere in range
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",2000,50.0,C,,option cheaper everywhere in range
+S1 and S2 (same total),2000,50.0,D,,option cheaper everywhere in range
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",2000,50.0,D,,option cheaper everywhere in range
+S1 and S2 (same total),2000,100.0,A,,option cheaper everywhere in range
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",2000,100.0,A,,option cheaper everywhere in range
+S1 and S2 (same total),2000,100.0,C,,option cheaper everywhere in range
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",2000,100.0,C,,option cheaper everywhere in range
+S1 and S2 (same total),2000,100.0,D,,option cheaper everywhere in range
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",2000,100.0,D,,option cheaper everywhere in range
+S1 and S2 (same total),2000,200.0,A,,option cheaper everywhere in range
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",2000,200.0,A,,option cheaper everywhere in range
+S1 and S2 (same total),2000,200.0,C,,option cheaper everywhere in range
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",2000,200.0,C,,option cheaper everywhere in range
+S1 and S2 (same total),2000,200.0,D,1056,option cheaper above
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",2000,200.0,D,1037,option cheaper above
+S1 and S2 (same total),63665,50.0,A,,option cheaper everywhere in range
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",63665,50.0,A,,option cheaper everywhere in range
+S1 and S2 (same total),63665,50.0,C,1418,option cheaper above
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",63665,50.0,C,1423,option cheaper above
+S1 and S2 (same total),63665,50.0,D,1643,option cheaper above
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",63665,50.0,D,1637,option cheaper above
+S1 and S2 (same total),63665,100.0,A,,option cheaper everywhere in range
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",63665,100.0,A,,option cheaper everywhere in range
+S1 and S2 (same total),63665,100.0,C,2836,option cheaper above
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",63665,100.0,C,2846,option cheaper above
+S1 and S2 (same total),63665,100.0,D,3287,option cheaper above
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",63665,100.0,D,3275,option cheaper above
+S1 and S2 (same total),63665,200.0,A,,option cheaper everywhere in range
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",63665,200.0,A,,option cheaper everywhere in range
+S1 and S2 (same total),63665,200.0,C,5673,option cheaper above
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",63665,200.0,C,5691,option cheaper above
+S1 and S2 (same total),63665,200.0,D,6573,option cheaper above
+"S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",63665,200.0,D,6550,option cheaper above

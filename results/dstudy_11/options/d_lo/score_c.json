@@ -1,0 +1,26 @@
+{
+ "option": "C v1 LightGBM",
+ "weighted": false,
+ "band_pairs": 45676.0,
+ "band_true": 383.0,
+ "band_f1": 0.9614395886889461,
+ "band_f1_ci": [
+  0.9466055234303409,
+  0.9742961977640939
+ ],
+ "band_precision": 0.9468354430379747,
+ "band_recall": 0.9765013054830287,
+ "band_accuracy": 0.9993431999299414,
+ "band_tp": 374.0,
+ "band_fp": 21.0,
+ "band_fn": 9.0,
+ "band_tn": 45272.0,
+ "overall_precision": 0.9939095127610209,
+ "overall_recall": 0.5745180217937972,
+ "overall_f1": 0.7281419313715076,
+ "overall_tp": 3427.0,
+ "overall_fp": 21.0,
+ "overall_fn": 2538.0,
+ "ece": 0.00025190384446974347,
+ "band_average_precision": 0.9879438556593159
+}

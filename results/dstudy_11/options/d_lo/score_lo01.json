@@ -1,0 +1,26 @@
+{
+ "option": "D lo 0.1 hi 0.9",
+ "weighted": false,
+ "band_pairs": 45676.0,
+ "band_true": 383.0,
+ "band_f1": 0.9881422924901186,
+ "band_f1_ci": [
+  0.97979421076436,
+  0.9951749125437281
+ ],
+ "band_precision": 0.9973404255319149,
+ "band_recall": 0.97911227154047,
+ "band_accuracy": 0.9998029599789824,
+ "band_tp": 375.0,
+ "band_fp": 1.0,
+ "band_fn": 8.0,
+ "band_tn": 45292.0,
+ "overall_precision": 0.99970836978711,
+ "overall_recall": 0.574685666387259,
+ "overall_f1": 0.7298275494996807,
+ "overall_tp": 3428.0,
+ "overall_fp": 1.0,
+ "overall_fn": 2537.0,
+ "ece": 0.0001743755363867244,
+ "band_average_precision": 0.9913267410528614
+}

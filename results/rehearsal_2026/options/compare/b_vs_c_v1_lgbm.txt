@@ -1,0 +1,27 @@
+Paired comparison on the sample: C:\verity-hackathon\results\rehearsal_2026\options\b_llm\test_sample5000.csv
+  run C:\verity-hackathon\results\rehearsal_2026
+  400 sample pairs (340 same-entity), weights sum 44,882.0 = test band pairs; 1000 resamples, seed 0, same resample for both options; percentile 95% intervals
+
+B (frontier LLM)
+  band F1         0.9971  95% CI [0.9925, 1.0000]
+  band precision  1.0000  95% CI [1.0000, 1.0000]  (degenerate)
+  band recall     0.9941  95% CI [0.9852, 1.0000]
+  zero-error bounds (exact one-sided 95% Clopper-Pearson; the bootstrap interval is degenerate when an error count is 0):
+    false matches: 0 of 60 false pairs; false-match rate <= 0.04870 (up to 2169 false matches on 44,542 false pairs)
+    implied worst case on a band of 340 true and 44,542 false pairs: precision >= 0.1348, recall = 0.9941, F1 >= 0.2374
+C v1 LightGBM
+  band F1         0.9911  95% CI [0.9836, 0.9971]
+  band precision  1.0000  95% CI [1.0000, 1.0000]  (degenerate)
+  band recall     0.9824  95% CI [0.9677, 0.9942]
+  zero-error bounds (exact one-sided 95% Clopper-Pearson; the bootstrap interval is degenerate when an error count is 0):
+    false matches: 0 of 60 false pairs; false-match rate <= 0.04870 (up to 2169 false matches on 44,542 false pairs)
+    implied worst case on a band of 340 true and 44,542 false pairs: precision >= 0.1334, recall = 0.9824, F1 >= 0.2349
+
+Difference (first minus second) = B (frontier LLM) minus C v1 LightGBM
+  band F1         +0.0060  95% CI [-0.0015, +0.0149]  (width 0.0164)
+  band precision  +0.0000  95% CI [+0.0000, +0.0000]  (width 0.0000)
+  band recall     +0.0118  95% CI [-0.0030, +0.0293]  (width 0.0323)
+
+Bar: band F1 difference vs -0.02 (B (frontier LLM) against C v1 LightGBM as the baseline): +0.0060 [-0.0015, +0.0149] -> PASS  (pass: lower end > -0.02; fail: upper end < -0.02; else inconclusive)
+
+For reference, unpaired (independent resamples): band F1 difference interval [-0.0026, +0.0149] (width 0.0175) against paired width 0.0164

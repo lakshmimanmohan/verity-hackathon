@@ -1,0 +1,35 @@
+Option: D lo 0.1 hi 0.9
+Run: C:\verity-hackathon\results\rehearsal_42
+Decisions: C:\verity-hackathon\results\rehearsal_42\options\d_lo\decisions_fullband_lo0.1_hi0.9.csv  (44985 test band pairs; confidence given for 44985)
+Test group: 4500 records, 51351 scored pairs, 5474 true pairs
+
+Band (test band pairs, same-entity = positive)
+  pairs 44985  (true 333, 0.74%)
+  F1 0.9881  95% CI [0.9798, 0.9955]  (bootstrap, 1000 resamples, seed 0)
+  accuracy 0.9998  precision 0.9822  recall 0.9940
+  TP 331  FP 6  FN 2  TN 44646
+
+Overall (test group; outside the band Verity's decision_status)
+  precision 0.9981  recall 0.5769  F1 0.7312
+  TP 3158  FP 6  FN 2316
+
+Recall by hard-case slice (test group; pairs where either record carries the tag)
+  acronym           442 / 729      recall 0.6063
+  truncation        689 / 1134     recall 0.6076
+  po_box            389 / 772      recall 0.5039
+  easy             1788 / 3056     recall 0.5851
+
+Decoy pairs in the test group: 89, wrongly matched 0 (0.00%)
+
+Band average precision (cutoff-free, ranked by confidence): 0.9773
+
+Calibration (test band, 10 equal-width bins)
+  ECE 0.0002   (bar: <= 0.05)
+  ECE among pairs with confidence >= 0.05: 0.0220  (345 pairs)
+  bin           pairs     mean conf   frac true
+  [0.0, 0.1)      44642   0.0000      0.0000
+  [0.1, 0.2)          4   0.1625      0.0000
+  [0.2, 0.3)          2   0.2700      0.0000
+  [0.6, 0.7)          1   0.6800      1.0000
+  [0.8, 0.9)          3   0.8833      1.0000
+  [0.9, 1.0]        333   0.9988      0.9820

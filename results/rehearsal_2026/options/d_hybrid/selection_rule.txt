@@ -1,0 +1,7 @@
+D routing: a band pair with calibrated C probability p >= hi is decided same without the LLM; a pair
+with lo <= p < hi goes to the LLM and takes its decision; a pair with p < lo is decided different
+(hi may be none). Grid: lo in {0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.3, 0.5}, hi in {0.9, 0.95,
+0.99, none}, hi > lo. Select among settings with band F1 (point estimate, dev sample) at least B's
+band F1 minus 0.01 and weighted LLM share of the band at most 0.20: the smallest weighted LLM
+share; ties go to the higher F1, then the higher lo. Chosen lo and hi are frozen and applied
+unchanged to seed 7919 with C retrained on that seed's train split.

@@ -1,0 +1,9 @@
+{
+ "decisions_sha256": "d028b7ea63d7fc242ad1c586aecbfaa6aacd9ce3ef354fc9ca2b2dba09215c17",
+ "rule": "commit the gzipped archive file if it is under 1 MB",
+ "mode": "cache_entries",
+ "what": "gzipped pair-cache entries of the stage's 394 distinct prompts (no calls.jsonl: 0 live calls)",
+ "archive_file": "cache_entries.jsonl.gz",
+ "archive_gz_bytes": 25955,
+ "commit_archive": true
+}

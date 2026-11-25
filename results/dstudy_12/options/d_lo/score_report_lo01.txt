@@ -1,0 +1,37 @@
+Option: D lo 0.1 hi 0.9
+Run: C:\verity-hackathon\results\dstudy_12
+Decisions: C:\verity-hackathon\results\dstudy_12\options\d_lo\decisions_fullband_lo0.1_hi0.9.csv  (42153 test band pairs; confidence given for 42153)
+Test group: 4500 records, 48426 scored pairs, 5516 true pairs
+
+Band (test band pairs, same-entity = positive)
+  pairs 42153  (true 350, 0.83%)
+  F1 0.9766  95% CI [0.9641, 0.9873]  (bootstrap, 1000 resamples, seed 0)
+  zero-error bounds (exact one-sided 95% Clopper-Pearson; the bootstrap interval is degenerate when an error count is 0):
+    false matches: 0 of 41,803 false pairs; false-match rate <= 0.00007 (up to 3 false matches on 41,803 false pairs)
+    implied worst case on a band of 350 true and 41,803 false pairs: precision >= 0.9911, recall = 0.9543, F1 >= 0.9723
+  accuracy 0.9996  precision 1.0000  recall 0.9543
+  TP 334  FP 0  FN 16  TN 41803
+
+Overall (test group; outside the band Verity's decision_status)
+  precision 1.0000  recall 0.5858  F1 0.7388
+  TP 3231  FP 0  FN 2285
+
+Recall by hard-case slice (test group; pairs where either record carries the tag)
+  acronym           537 / 845      recall 0.6355
+  truncation        566 / 1004     recall 0.5637
+  po_box            366 / 806      recall 0.4541
+  easy             1890 / 3069     recall 0.6158
+
+Decoy pairs in the test group: 107, wrongly matched 0 (0.00%)
+
+Band average precision (cutoff-free, ranked by confidence): 0.9948
+
+Calibration (test band, 10 equal-width bins)
+  ECE 0.0004   (bar: <= 0.05)
+  ECE among pairs with confidence >= 0.05: 0.0235  (364 pairs)
+  bin           pairs     mean conf   frac true
+  [0.0, 0.1)      41812   0.0001      0.0003
+  [0.1, 0.2)          4   0.1450      0.0000
+  [0.2, 0.3)          3   0.2433      1.0000
+  [0.8, 0.9)          1   0.8500      1.0000
+  [0.9, 1.0]        333   0.9930      1.0000

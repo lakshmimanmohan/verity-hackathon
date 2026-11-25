@@ -1,0 +1,84 @@
+# DRAFT: effort log incomplete, one-time costs for B and D undercounted
+name,value,unit,status,source,note
+B calls in the final run,4993,calls,from dev run,results/dev_2026_run11/options/b_llm/openai/sample5000/run_meta.json,
+B input tokens per call,2103.0,tokens,from dev run,results/dev_2026_run11/options/b_llm/openai/sample5000/sample_report.txt,
+B output tokens per call,19.0,tokens,from dev run,results/dev_2026_run11/options/b_llm/openai/sample5000/sample_report.txt,
+B prompt-cache hit ratio (cached / input tokens),0.8487,ratio,from dev run,results/dev_2026_run11/options/b_llm/openai/sample5000/run_meta.json,sensitivity 0 and 0.85
+"B cost per call, from the ledger run",0.001527,USD,from dev run,results/dev_2026_run11/options/b_llm/openai/sample5000/run_meta.json,
+B latency p50,0.952,s,from dev run,results/dev_2026_run11/options/b_llm/openai/sample5000/timings.json,
+B latency p95,1.197,s,from dev run,results/dev_2026_run11/options/b_llm/openai/sample5000/timings.json,
+"B throughput in the final run (8 keys, 12 requests per minute per key, 2 workers)",95.1,calls per minute,from dev run,results/dev_2026_run11/options/b_llm/openai/sample5000/run_meta.json,"limited by the per-key limiter, not the API"
+gpt-5.4 input price,2.5,USD per million tokens,measured,"options/prices.json (provider price page, 2026-11-24)",
+gpt-5.4 cached input price,0.25,USD per million tokens,measured,"options/prices.json (provider price page, 2026-11-24)",
+gpt-5.4 output price,15.0,USD per million tokens,measured,"options/prices.json (provider price page, 2026-11-24)",
+gpt-5.4 batch input price,1.25,USD per million tokens,measured,"options/prices.json (provider price page, 2026-11-24)",batch cache hits are undocumented
+gpt-5.4 batch cached input price,0.13,USD per million tokens,measured,"options/prices.json (provider price page, 2026-11-24)",
+gpt-5.4 batch output price,7.5,USD per million tokens,measured,"options/prices.json (provider price page, 2026-11-24)",
+LLM price factor,1.0,x,assumed,model parameter,sensitivity 0.5 and 1.5
+"D routed share (exact, full test band)",0.000847,ratio,measured,results/.../options/d_hybrid/routed_fullband_pairs.csv and c_v1_lgbm/decisions.csv,"38 of 44,882 band pairs; sensitivity 0.001, 0.01, 0.05, 0.20"
+band pairs per record,20.0854,pairs,measured,rehearsal_2026/band_summary.json,"200,854 / 10,000; sensitivity 5, 10, 20"
+D per-pair CPU time (before the D measurement),0.186,ms,assumed,derived from C,D runs C on every band pair; the routing test is negligible; replaced by the measurement when present
+A per-pair CPU time,0.0,ms,assumed,not measured,a threshold test; treated as zero
+"Verity pipeline total, 1thread, per record (median of 3 repeats)",18.05,ms,measured,results/dev_2026_timing_summary/verity_timing.json,"min 178.9 s, max 187.8 s, first of 3 repeats after other runs 187.8 s, median of the other 2 179.7 s (a cold start after a reboot was not measured); spread (max-min)/median 5.0%; the repeats agree within 10%: label removed; includes startup; shared by every option, B included"
+"Verity pipeline total, allthreads, per record (median of 3 repeats)",10.19,ms,measured,results/dev_2026_timing_summary/verity_timing.json,"min 100.0 s, max 111.5 s, first of 3 repeats after other runs 111.5 s, median of the other 2 100.9 s (a cold start after a reboot was not measured); spread (max-min)/median 11.3%; NOT FOR QUOTING: the repeats differ by more than 10% on total time; includes startup; shared by every option, B included"
+"C per-pair latency, one core, median of 3 repeats","p50 0.0909 ms, p95 0.3068 ms, max 4.7874 ms, mean 0.1306 ms",ms,measured,results/rehearsal_2026/options/latency/latency_summary.json,"44,882 test band pairs, features included, one pair at a time"
+"D per-pair latency, one core, median of 3 repeats","p50 0.0913 ms, p95 0.3081 ms, max 4.79 ms, mean 0.1312 ms",ms,measured,results/rehearsal_2026/options/latency/latency_summary.json,"44,882 test band pairs, features included, one pair at a time; plus the routing step"
+"C and D under load: 10 processes, one thread each","67332.6 pairs per second in total, per-pair p95 0.2128 ms (C); D 67332.6 pairs per second, p95 0.2139 ms",,measured,results/rehearsal_2026/options/latency/latency_summary.json,"disjoint slices of the band; this machine has 12 cores, 14 threads"
+D per-pair latency with the LLM fallback (simulation),"p50 0.0592 ms, p95 0.1323 ms, p99 0.2271 ms, p99.9 0.5671 ms, p99.95 921.2648 ms, max 4028.0308 ms",ms,measured-derived,results/dev_2026_run11/options/latency/d_latency_mixture.json,"a SIMULATION from measured distributions, not a direct measurement: 1,000,000 draws, seed 0; a pair takes C's per-pair latency (134,646 measured values, 3 repeats) and with probability 38 / 44,882 also one B call (6,170 measured call latencies at one thread level: sample5000, tune2, decoy check, D routed pairs, concurrency 2 workers)"
+"B call latency, pooled (2-worker level)","p50 956.4425 ms, p95 1212.6061 ms, p99 1493.7365 ms, max 11899.5227 ms",ms,measured,results/dev_2026_run11/options/latency/d_latency_mixture.json (b_call_latencies.csv),the first call of each run runs alone with a cold cache and is included
+B per-record latency,about 20 calls per record; at 10 workers about 2.09 s (3.12 s counting whole rounds of 10 calls),s,measured-derived,results/dev_2026_run11/options/latency/d_latency_mixture.json,band pairs per record x measured p50 call latency at 10 workers (1.041 s); queueing not included
+D LLM calls per record,0.017 on average; 1.69% of records need any call,calls,measured-derived,results/dev_2026_run11/options/latency/d_latency_mixture.json,band pairs per record x the exact routed share
+S3 D with the LLM fallback off: quality,"measured: identical to C by construction, verified (0 of 44,882 pairs differ); band F1 0.9653, band precision 0.9489, band recall 0.9824, overall precision 0.9944, overall recall 0.5793, ECE 0.0004 (full test band)",,measured,options/d_hybrid/fallback_off_check.json and options/c_model/c_v1_lgbm/score_report.txt (C's full-band score report),"38 LLM-routed pairs take C's own decision; every other pair is routed as D does; compared with C v1 LightGBM's decisions on all 44,882 test band pairs"
+ANN (approximate neighbor search) timing,not measured,,measured,results/dev_2026_ann/ann_not_measured.txt,"annoy==1.17.3 failed to build on this machine (error class: Microsoft Visual C++ 14.0 or greater is required; no Windows wheel); one attempt, no retry. The shared pipeline's cost uses exact search only"
+"labeling hours per 1,000 pairs",5.0,hours,measured,cost/effort_log.csv row 'Hand check of 100 pairs' (0.5 h),"sensitivity 2 and 10; the hand check was blind agreement checking, not a labeling workflow"
+"effort-log hours, bucket A","1 total, 1 production needed (yes), 0 no",hours,measured,cost/effort_log.csv,production-needed hours are charged to this option (and to D if B or C); 'no' hours are evidence
+"effort-log hours, bucket B","3.75 total, 1.5 production needed (yes), 2.25 no",hours,measured,cost/effort_log.csv,production-needed hours are charged to this option (and to D if B or C); 'no' hours are evidence
+"effort-log hours, bucket C","1.5 total, 0.5 production needed (yes), 1 no",hours,measured,cost/effort_log.csv,production-needed hours are charged to this option (and to D if B or C); 'no' hours are evidence
+"effort-log hours, bucket D","0.5 total, 0.5 production needed (yes), 0 no",hours,measured,cost/effort_log.csv,production-needed hours are charged to this option (and to D if B or C); 'no' hours are evidence
+"effort-log hours, bucket eval","7.75 total, 0 production needed (yes), 7.75 no",hours,measured,cost/effort_log.csv,"eval hours: the block 'cost to build the evidence', charged to no option"
+"effort-log hours, bucket verity","4 total, 3.5 production needed (yes), 0.5 no",hours,measured,cost/effort_log.csv,"production-needed hours are charged to A, B, C and D (shared); 'no' hours are evidence"
+Verity pre-existing build,80.0,hours,assumed,cost/verity_preexisting_cost.csv (your estimate),
+Verity productization,100.0,hours,assumed,stated by you (--productization-hours),
+ledger classification rule,"tuning rounds (tune*), caching diagnostics (cache_diagnostic*), the smoke test (smoke*) and the concurrency test = B development, a one-time cost of B and, by inheritance, of D; sample5000, decoycheck, dfull (D routed pairs) and the coming Dec 4 runs (final*, dec4*) = evaluation, counted once: the evidence block, charged to no option or scenario",,assumed,your instruction; cost/cost_model.py classify_ledger_label,the concurrency test is my classification (a capacity measurement for B)
+"ledger spend, run cache_diagnostic",0.0868,USD,measured,results/llm_ledger.jsonl,B development
+"ledger spend, run cache_diagnostic_r2",0.0213,USD,measured,results/llm_ledger.jsonl,B development
+"ledger spend, run cache_diagnostic_r3",0.0065,USD,measured,results/llm_ledger.jsonl,B development
+"ledger spend, run concurrency",0.4976,USD,measured,results/llm_ledger.jsonl,B development
+"ledger spend, run decoycheck",0.1999,USD,measured,results/llm_ledger.jsonl,evaluation
+"ledger spend, run dfull",0.0316,USD,measured,results/llm_ledger.jsonl,evaluation
+"ledger spend, run sample5000",8.2473,USD,measured,results/llm_ledger.jsonl,evaluation
+"ledger spend, run smoke5",0.0241,USD,measured,results/llm_ledger.jsonl,B development
+"ledger spend, run tune1",1.5304,USD,measured,results/llm_ledger.jsonl,B development
+"ledger spend, run tune2",1.5454,USD,measured,results/llm_ledger.jsonl,B development
+ledger: B development API spend,3.7121,USD,measured,results/llm_ledger.jsonl,"one-time cost of B, and of D through inheritance"
+ledger: evaluation API spend (counted once),8.4788,USD,measured,results/llm_ledger.jsonl,cost to build the evidence; charged to no option or scenario
+"concurrency test, 2 workers: calls per minute",94.6,calls per minute,measured,results/dev_2026_run11/options/b_llm/openai/concurrency/concurrency.json,"latency p50 1.019 s, p95 1.436 s, max 3.148 s; hit ratio excl. first calls 0.852; errors 0; 16 keys, no limiter"
+"concurrency test, 5 workers: calls per minute",234.2,calls per minute,measured,results/dev_2026_run11/options/b_llm/openai/concurrency/concurrency.json,"latency p50 1.004 s, p95 1.22 s, max 2.043 s; hit ratio excl. first calls 0.8419; errors 0; 16 keys, no limiter"
+"concurrency test, 10 workers: calls per minute",399.0,calls per minute,measured,results/dev_2026_run11/options/b_llm/openai/concurrency/concurrency.json,"latency p50 1.041 s, p95 1.32 s, max 1.37 s; hit ratio excl. first calls 0.8319; errors 0; 16 keys, no limiter"
+concurrency test: last clean level,10,workers,measured,results/dev_2026_run11/options/b_llm/openai/concurrency/concurrency.json,no error at any level
+hosting: always-on price,0.05,USD per core-hour,assumed,"generic cloud list price, replace with a quote",
+hosting: serverless price,0.12,USD per core-hour of use,assumed,"generic cloud list price, replace with a quote",
+hosting: always-on utilisation,0.5,ratio,assumed,model parameter,
+operations: monitoring,2.0,hours per month,assumed,model parameter,
+"operations: retraining, per run",4.0,hours,assumed,model parameter,"sensitivity: weekly 4.33, monthly 1, quarterly 0.33"
+operations: retraining runs per month,1.0,runs,assumed,model parameter,"sensitivity: weekly 4.33, monthly 1, quarterly 0.33"
+"operations: LLM upkeep (model retirements, prompt re-validation)",4.0,hours per month,assumed,model parameter,
+operations: option A operations,1.0,hours per month,assumed,model parameter,
+"volume 100,000 records per day",100000,records per day,assumed,protocol.md,
+"volume 1,000,000 records per day",1000000,records per day,assumed,protocol.md,
+"volume 10,000,000 records per day",10000000,records per day,assumed,protocol.md,
+hourly rates,"50, 100, 200",USD per hour,assumed,your instruction,
+days per month,30.4,days,assumed,model parameter,
+horizon,12,months,assumed,"one-time cost (Verity build and productization, labeling) is amortized and totals are taken over this horizon",
+scenario S1,"Precisely-hosted: Precisely pays hosting, operations and LLM tokens; the customer pays the price passed through (not modeled)",,assumed,your instruction,"who pays is a commercial decision this PoC can inform but not settle; the three scenarios and the party for each cost component are assumptions, not findings"
+scenario S2,Precisely-hosted matcher with the customer's own LLM key (BYOK): Precisely pays hosting and operations; the customer pays LLM tokens,,assumed,your instruction,"who pays is a commercial decision this PoC can inform but not settle; the three scenarios and the party for each cost component are assumptions, not findings"
+scenario S3,"Customer self-hosted or on-prem: the customer pays hardware, operations and LLM tokens only if they connect their own key; Precisely pays development and support (not modeled)",,assumed,your instruction,"who pays is a commercial decision this PoC can inform but not settle; the three scenarios and the party for each cost component are assumptions, not findings"
+scenario S1: who pays each component,"LLM tokens: Precisely; hosting (the matcher or model, and the shared Verity pipeline): Precisely; operations (monitoring, retraining, LLM upkeep): Precisely; development (Verity build and productization, amortized): Precisely; labeling for C and D (amortized): customer",,assumed,your instruction,hosting and operations assumptions are unchanged; only the party is assigned. Labeling is paid by the customer in all three scenarios (assumed: the customer's data stewards hold the knowledge about which records are the same entity); sensitivity: Precisely pays for labeling (a services engagement) at the same hourly rates. In S3 Precisely's development and support are n/m (not modeled)
+scenario S2: who pays each component,"LLM tokens: customer; hosting (the matcher or model, and the shared Verity pipeline): Precisely; operations (monitoring, retraining, LLM upkeep): Precisely; development (Verity build and productization, amortized): Precisely; labeling for C and D (amortized): customer",,assumed,your instruction,hosting and operations assumptions are unchanged; only the party is assigned. Labeling is paid by the customer in all three scenarios (assumed: the customer's data stewards hold the knowledge about which records are the same entity); sensitivity: Precisely pays for labeling (a services engagement) at the same hourly rates. In S3 Precisely's development and support are n/m (not modeled)
+scenario S3: who pays each component,"LLM tokens: customer; hosting (the matcher or model, and the shared Verity pipeline): customer; operations (monitoring, retraining, LLM upkeep): customer; development (Verity build and productization, amortized): Precisely (not modeled); labeling for C and D (amortized): customer",,assumed,your instruction,hosting and operations assumptions are unchanged; only the party is assigned. Labeling is paid by the customer in all three scenarios (assumed: the customer's data stewards hold the knowledge about which records are the same entity); sensitivity: Precisely pays for labeling (a services engagement) at the same hourly rates. In S3 Precisely's development and support are n/m (not modeled)
+scenario S3: feasible when data cannot leave the environment,A yes; B no; C yes; D yes with the LLM fallback off,,assumed,your instruction,"B needs an external LLM for every band pair; D's quality with the LLM fallback off was never measured (it is C's decisions for the routed pairs, which the evaluation did not score)"
+scenario S3: B and D cost basis,B and D(own key connected) are costed with the customer's own LLM key; D(LLM fallback off) has no LLM line,,assumed,model parameter,
+cost to build the evidence,separate block: effort-log hours x hourly rate and the ledger API spend,,measured,cost/effort_log.csv and results/llm_ledger.jsonl,not charged to any option or scenario; undercounted for B and D until the effort log is complete
+option E,not run,,measured,options/e_slm.py has no results,no numbers are invented
+"learning curve (mean band F1 at 500, 1,000, 2,000 labels)","0.77706, 0.83756, 0.89994",,measured,results/dev_2026_run11/options/c_model/lc_v2/learning_curve.csv,dev run
+labels as evaluated (C and D),63665,labels,measured,options/c_model/c_v1_lgbm/cv_report.txt,every train band pair of this run; C's full-band band F1 0.9653

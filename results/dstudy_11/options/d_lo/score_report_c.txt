@@ -1,0 +1,35 @@
+Option: C v1 LightGBM
+Run: C:\verity-hackathon\results\dstudy_11
+Decisions: C:\verity-hackathon\results\dstudy_11\options\c_model\c_v1_lgbm\decisions.csv  (45676 test band pairs; confidence given for 45676)
+Test group: 4494 records, 52496 scored pairs, 5965 true pairs
+
+Band (test band pairs, same-entity = positive)
+  pairs 45676  (true 383, 0.84%)
+  F1 0.9614  95% CI [0.9466, 0.9743]  (bootstrap, 1000 resamples, seed 0)
+  accuracy 0.9993  precision 0.9468  recall 0.9765
+  TP 374  FP 21  FN 9  TN 45272
+
+Overall (test group; outside the band Verity's decision_status)
+  precision 0.9939  recall 0.5745  F1 0.7281
+  TP 3427  FP 21  FN 2538
+
+Recall by hard-case slice (test group; pairs where either record carries the tag)
+  acronym           549 / 929      recall 0.5910
+  truncation        608 / 1030     recall 0.5903
+  po_box            394 / 849      recall 0.4641
+  easy             2012 / 3382     recall 0.5949
+
+Decoy pairs in the test group: 111, wrongly matched 0 (0.00%)
+
+Band average precision (cutoff-free, ranked by confidence): 0.9879
+
+Calibration (test band, 10 equal-width bins)
+  ECE 0.0003   (bar: <= 0.05)
+  ECE among pairs with confidence >= 0.05: 0.0158  (401 pairs)
+  bin           pairs     mean conf   frac true
+  [0.0, 0.1)      45275   0.0000      0.0002
+  [0.2, 0.3)          1   0.2690      1.0000
+  [0.3, 0.4)          5   0.3888      0.2000
+  [0.5, 0.6)         18   0.5592      0.4444
+  [0.7, 0.8)         52   0.7767      0.8077
+  [0.9, 1.0]        325   1.0000      0.9969
