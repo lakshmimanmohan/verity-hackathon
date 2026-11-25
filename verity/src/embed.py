@@ -38,6 +38,10 @@ def model_in_local_cache(model_name: str) -> bool | None:
     return isinstance(try_to_load_from_cache(repo, "config.json"), str)
 
 MODEL_NAME = "all-MiniLM-L6-v2"
+# The embedding model is loaded from this exact Hub revision, from model.safetensors only (no pickle weights), with no custom
+# code (trust_remote_code off). Changing the revision is a model change: it changes the embeddings.
+MODEL_REPO = "sentence-transformers/all-MiniLM-L6-v2"
+MODEL_REVISION = "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
 WRITE_BATCH_SIZE = 50
 STORE_FETCH_PAGE_SIZE = 5000
 ENCODE_SEGMENT_BATCH = 512
@@ -449,14 +453,15 @@ def main(
     print(f"Loading sentence-transformers model '{MODEL_NAME}'…")
     cache_hit = model_in_local_cache(MODEL_NAME)
     t_load = time.perf_counter()
-    model = SentenceTransformer(MODEL_NAME)
+    model = SentenceTransformer(MODEL_REPO, revision=MODEL_REVISION, trust_remote_code=False,
+                                model_kwargs={"use_safetensors": True})
     dim = int(model.get_sentence_embedding_dimension())
     load_s = time.perf_counter() - t_load
     record_timing(
         "verity.embed.model_load", load_s, parent="verity.embed",
         note=f"model {MODEL_NAME}; model_cache_hit={cache_hit}",
     )
-    update_run_info(model_cache_hit=cache_hit)
+    update_run_info(model_cache_hit=cache_hit, embedding_model_revision=MODEL_REVISION, embedding_weights="model.safetensors")
     encode_s = 0.0
     n_segments = 0
 

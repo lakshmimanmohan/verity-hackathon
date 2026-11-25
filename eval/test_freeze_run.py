@@ -90,6 +90,18 @@ class ManifestNoteAndReport(Base):
         self.assertIn("51 of 44,882", text)                     # this run's own routed share (the dev run)
         self.assertIn("0.114%", text)
 
+    def test_embedding_model_is_pinned_safetensors_and_noted_in_the_manifest(self):
+        import re
+        src = (F.REPO / "verity" / "src" / "embed.py").read_text(encoding="utf-8")
+        rev = re.search(r'^MODEL_REVISION = "([0-9a-f]{40})"', src, re.M).group(1)
+        self.assertEqual(F.embedding_revision(F.REPO), rev)
+        self.assertIn("SentenceTransformer(MODEL_REPO, revision=MODEL_REVISION, trust_remote_code=False", src)
+        self.assertIn('"use_safetensors": True', src)
+        self.assertNotIn("trust_remote_code=True", " ".join(p.read_text(encoding="utf-8") for p in (F.REPO / "verity" / "src").glob("*.py")))
+        self.assertIn("verity/src/embed.py", F.FROZEN_FILES)
+        notes = self.runner_real_repo(self.repo / "run").write_manifest()["notes"]
+        self.assertIn(f"embedding model pinned to revision {rev}, safetensors; no output changed", notes)
+
     def test_stage_8_makes_the_forced_diagnostic_and_stage_10_compares_it(self):
         import inspect
         self.assertIn('"--reading", "forced"', inspect.getsource(F.s8_d))

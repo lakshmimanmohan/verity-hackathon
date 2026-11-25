@@ -47,6 +47,7 @@ import hashlib
 import json
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -79,7 +80,7 @@ ASSETS_D = {"options/d_hybrid/selection_rule.txt": f"{DEV_RUN_REL}/options/d_hyb
             "options/d_hybrid/selection_rule_v2.txt": f"{DEV_RUN_REL}/options/d_hybrid/selection_rule_v2.txt",
             "options/d_hybrid/frozen_settings_v2.json": f"{DEV_RUN_REL}/options/d_hybrid/frozen_settings_v2.json"}
 FROZEN_FILES = [
-    "protocol.md", "requirements.txt", "verity/requirements.txt", "data/generate_data_org.py",
+    "protocol.md", "requirements.txt", "verity/requirements.txt", "verity/src/embed.py", "data/generate_data_org.py",
     "options/b_system_prompt.txt", "options/b_prompt_appendix.txt", "options/prices.json", "options/b_llm_baseline.py",
     "options/llm_cache.py", "options/llm_ledger.py", "options/a_threshold.py", "options/c_decision_model.py", "options/c_features.py",
     "options/d_hybrid.py", "options/latency_bench.py",
@@ -97,6 +98,16 @@ REHEARSAL_CANNOT_TEST = [
     "the platform's monthly limit reset in December",
     "quality: seed 42 is a development seed, so the rehearsal numbers are not evidence",
 ]
+
+
+def embedding_revision(repo: Path) -> str:
+    """The Hub revision verity/src/embed.py pins the embedding model to (read from the source, not imported)."""
+    try:
+        text = (repo / "verity" / "src" / "embed.py").read_text(encoding="utf-8")
+    except OSError:                                          # tests without the source tree
+        return "not pinned"
+    m = re.search(r'^MODEL_REVISION = "([0-9a-f]{40})"', text, re.M)
+    return m.group(1) if m else "not pinned"
 
 
 def d_share_text(R: "Runner") -> str:
@@ -227,7 +238,8 @@ class Runner:
                          "cost model reads B per-call figures from the dev run when a stage made no live calls",
                          f"option D routing rule v2 (selection_rule_v2.txt, frozen_settings_v2.json) replaced the original rule as D's setting on {CHANGE_DATE}; "
                          "the original rule (lo 0.5, hi 0.9) is reported as the secondary row 'D (original rule)'; both rule files and both settings files are hashed here",
-                         "D decisions for pairs outside [lo, hi): C's own decision (literal v2 text); forced reading reported as a diagnostic"]}
+                         "D decisions for pairs outside [lo, hi): C's own decision (literal v2 text); forced reading reported as a diagnostic",
+                         f"embedding model pinned to revision {embedding_revision(self.repo)}, safetensors; no output changed"]}
         self.freeze_dir.mkdir(parents=True, exist_ok=True)
         self.manifest_path.write_text(json.dumps(doc, indent=1) + "\n", encoding="utf-8")
         return doc
