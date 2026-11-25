@@ -8,19 +8,29 @@ Hours by bucket (total / production needed / other):
   D          0.5 /   0.5 /     0
   eval       6.5 /     0 /   6.5
   verity       4 /   3.5 /   0.5
-  Production hours logged: B 1.5, D 0.5. Building B (code, tuning rounds, final run) and D (routing, sweep, full-band run) is only partly in the log, so one-time costs for B and D are undercounted until the log is completed (use --effort-log-complete once it is).
+  These hours are the PoC's own effort. They go into the block 'cost to build the evidence' below and are not charged to any option or scenario. B and D are only partly in the log (logged production hours: B 1.5, D 0.5), so that block is undercounted until the log is completed (use --effort-log-complete once it is).
 
-Ledger spend by class: B development $3.7121, evaluation $7.7704
-  cache_diagnostic             $  0.0868  B development
-  cache_diagnostic_r2          $  0.0213  B development
-  cache_diagnostic_r3          $  0.0065  B development
-  concurrency                  $  0.4976  B development
-  decoycheck                   $  0.1168  evaluation
-  dfull                        $  0.0316  evaluation
-  sample5000                   $  7.6220  evaluation
-  smoke5                       $  0.0241  B development
-  tune1                        $  1.5304  B development
-  tune2                        $  1.5454  B development
+Cost to build the evidence (the PoC's own spend; NOT charged to any option or scenario)
+  effort-log hours                 hours       $50/h      $100/h      $200/h
+  bucket A                             1          50         100         200
+  bucket B                          3.75         188         375         750
+  bucket C                           1.5          75         150         300
+  bucket D                           0.5          25          50         100
+  bucket eval                        6.5         325         650       1,300
+  bucket verity                        4         200         400         800
+  hours total                      17.25         862       1,725       3,450
+  API spend from the ledger: B development $3.7121, evaluation $7.7704; total $11.4825
+    cache_diagnostic             $  0.0868  B development
+    cache_diagnostic_r2          $  0.0213  B development
+    cache_diagnostic_r3          $  0.0065  B development
+    concurrency                  $  0.4976  B development
+    decoycheck                   $  0.1168  evaluation
+    dfull                        $  0.0316  evaluation
+    sample5000                   $  7.6220  evaluation
+    smoke5                       $  0.0241  B development
+    tune1                        $  1.5304  B development
+    tune2                        $  1.5454  B development
+  evidence total (hours x rate + API spend)            874       1,736       3,461
 
 Labeling for C and D, next to B's zero labels (hours at 5 h per 1,000 pairs, measured from the hand check; sensitivity 2 and 10)
     labels  mean band F1   hours       $50/h      $100/h      $200/h
@@ -31,24 +41,92 @@ Labeling for C and D, next to B's zero labels (hours at 5 h per 1,000 pairs, mea
       B: 0                     0           0           0           0   (B needs no labeled training pairs to run)
   The 63,665 row is what the dev result for C used (every train band pair, F1 0.9653); it is not a recommended budget. On the dev data the labels came free from the generator. The 500 to 2,000 rows are the mean band F1 over 5 sampling seeds of the learning curve (lc_v2); the spread between seeds is large (see learning_curve.csv). B's development also used labeled train pairs (8 few-shot examples and 2,000 tuning pairs, free from the generator); that is not charged as labeling here.
 
-Monthly cost at the base case (hourly rate $100, labels 2,000, standard prices with cache, hit ratio 0.849), USD per month
-   records/day option         LLM   hosting  operations  one-time/12       total   BYOK: Precisely / customer
-       100,000      A           0         2         100        1,538       1,639   1,639 / 0
-       100,000      B      93,217         2         600        1,542      95,361   2,144 / 93,217
-       100,000      C           0         2         600        1,617       2,219   2,219 / 0
-       100,000      D          79         2       1,000        1,634       2,715   2,636 / 79
+Deployment scenarios (assumed; who pays is a commercial decision this PoC can inform but not settle)
+  S1: Precisely-hosted: Precisely pays hosting, operations and LLM tokens; the customer pays the price passed through (not modeled)
+  S2: Precisely-hosted matcher with the customer's own LLM key (BYOK): Precisely pays hosting and operations; the customer pays LLM tokens
+  S3: Customer self-hosted or on-prem: the customer pays hardware, operations and LLM tokens only if they connect their own key; Precisely pays development and support (not modeled)
+  Who pays each cost component (hosting and operations assumptions are unchanged; only the party is assigned):
+    component                                                     S1          S2          S3
+    LLM tokens                                                    Precisely   customer    customer
+    hosting (the matcher or model, and the shared Verity pipeline)Precisely   Precisely   customer
+    operations (monitoring, retraining, LLM upkeep)               Precisely   Precisely   customer
+    development (Verity build and productization, amortized)      Precisely   Precisely   Precisely (not modeled)
+    labeling for C and D (amortized)                              Precisely   Precisely   customer
+    Labeling is assumed to be done by Precisely when it hosts the matcher and by the customer when the matcher runs in their environment.
+  S3 feasibility when data cannot leave the environment: A yes, B no, C yes, D yes with the LLM fallback off (its quality in that case is not measured).
+
+Monthly cost by component at the base case (hourly rate $100, labels 2,000, standard prices with cache, hit ratio 0.849), USD per month, all parties together
+   records/day option         LLM   hosting  operations  one-time/12       total
+       100,000      A           0         2         100        1,500       1,602
+       100,000      B      93,217         2         600        1,500      95,319
+       100,000      C           0         2         600        1,583       2,185
+       100,000      D          79         2       1,000        1,583       2,664
        100,000      E  not run
-     1,000,000      A           0        18         100        1,538       1,656   1,656 / 0
-     1,000,000      B     932,175        18         600        1,542     934,335   2,160 / 932,175
-     1,000,000      C           0        20         600        1,617       2,236   2,236 / 0
-     1,000,000      D         789        20       1,000        1,634       3,442   2,653 / 789
+     1,000,000      A           0        18         100        1,500       1,618
+     1,000,000      B     932,175        18         600        1,500     934,293
+     1,000,000      C           0        20         600        1,583       2,203
+     1,000,000      D         789        20       1,000        1,583       3,392
      1,000,000      E  not run
-    10,000,000      A           0       182         100        1,538       1,820   1,820 / 0
-    10,000,000      B   9,321,746       182         600        1,542   9,324,071   2,324 / 9,321,746
-    10,000,000      C           0       195         600        1,617       2,411   2,411 / 0
-    10,000,000      D       7,892       195       1,000        1,634      10,721   2,828 / 7,892
+    10,000,000      A           0       182         100        1,500       1,782
+    10,000,000      B   9,321,746       182         600        1,500   9,324,029
+    10,000,000      C           0       195         600        1,583       2,378
+    10,000,000      D       7,892       195       1,000        1,583      10,670
     10,000,000      E  not run
-  (hosting is the cheaper of always-on and serverless; shared Verity pipeline per record is in every row: 18.1 ms of one core per record)
+  (hosting is the cheaper of always-on and serverless; shared Verity pipeline per record is in every row: 18.1 ms of one core per record; one-time = the Verity build and productization shared by every option, plus labeling for C and D)
+
+Who pays at 1,000,000 records per day, USD per month (hourly rate $100; C and D with 63,665 labels, as evaluated; development and labeling amortized over 12 months)
+  option                  scen.     Precisely     customer        total   feasible if data cannot leave (S3)  quality
+  A                       S1            1,618            0        1,618                                       
+  A                       S2            1,618            0        1,618                                       
+  A                       S3               0*          118          118   yes                                 
+  B                       S1          934,293            0      934,293                                       
+  B                       S2            2,118      932,175      934,293                                       
+  B (own key connected)   S3               0*      932,793      932,793   no                                  
+  C                       S1            4,772            0        4,772                                       
+  C                       S2            4,772            0        4,772                                       
+  C                       S3               0*        3,272        3,272   yes                                 
+  D                       S1            5,961            0        5,961                                       
+  D                       S2            5,172          789        5,961                                       
+  D (LLM fallback off)    S3               0*        3,672        3,672   yes, with the LLM fallback off      not measured
+  D (own key connected)   S3               0*        4,461        4,461   yes, with the LLM fallback off      as evaluated
+  E                             not run (no results; no numbers)
+  * S3: Precisely's development and support are not modeled (shown as 0); S1: the price passed through to the customer is not modeled. B in S3 is costed with the customer's own key and is not feasible when data cannot leave the environment.
+
+Who pays at 100,000 records per day, USD per month (hourly rate $100; C and D with 63,665 labels, as evaluated; development and labeling amortized over 12 months)
+  option                  scen.     Precisely     customer        total   feasible if data cannot leave (S3)  quality
+  A                       S1            1,602            0        1,602                                       
+  A                       S2            1,602            0        1,602                                       
+  A                       S3               0*          102          102   yes                                 
+  B                       S1           95,319            0       95,319                                       
+  B                       S2            2,102       93,217       95,319                                       
+  B (own key connected)   S3               0*       93,819       93,819   no                                  
+  C                       S1            4,755            0        4,755                                       
+  C                       S2            4,755            0        4,755                                       
+  C                       S3               0*        3,255        3,255   yes                                 
+  D                       S1            5,234            0        5,234                                       
+  D                       S2            5,155           79        5,234                                       
+  D (LLM fallback off)    S3               0*        3,655        3,655   yes, with the LLM fallback off      not measured
+  D (own key connected)   S3               0*        3,734        3,734   yes, with the LLM fallback off      as evaluated
+  E                             not run (no results; no numbers)
+  * S3: Precisely's development and support are not modeled (shown as 0); S1: the price passed through to the customer is not modeled. B in S3 is costed with the customer's own key and is not feasible when data cannot leave the environment.
+
+Who pays at 10,000,000 records per day, USD per month (hourly rate $100; C and D with 63,665 labels, as evaluated; development and labeling amortized over 12 months)
+  option                  scen.     Precisely     customer        total   feasible if data cannot leave (S3)  quality
+  A                       S1            1,782            0        1,782                                       
+  A                       S2            1,782            0        1,782                                       
+  A                       S3               0*          282          282   yes                                 
+  B                       S1        9,324,029            0    9,324,029                                       
+  B                       S2            2,282    9,321,746    9,324,029                                       
+  B (own key connected)   S3               0*    9,322,529    9,322,529   no                                  
+  C                       S1            4,947            0        4,947                                       
+  C                       S2            4,947            0        4,947                                       
+  C                       S3               0*        3,447        3,447   yes                                 
+  D                       S1           13,240            0       13,240                                       
+  D                       S2            5,347        7,892       13,240                                       
+  D (LLM fallback off)    S3               0*        3,847        3,847   yes, with the LLM fallback off      not measured
+  D (own key connected)   S3               0*       11,740       11,740   yes, with the LLM fallback off      as evaluated
+  E                             not run (no results; no numbers)
+  * S3: Precisely's development and support are not modeled (shown as 0); S1: the price passed through to the customer is not modeled. B in S3 is costed with the customer's own key and is not feasible when data cannot leave the environment.
 
 Throughput: B at 100K records/day needs 2,008,540 calls a day = 1,395 calls per minute (23.2 per second; about 22 requests in flight at the measured p50 latency of 0.95 s). 1M and 10M records/day need 10x and 100x that. D needs 118 calls per minute at 10M records/day.
 
@@ -56,26 +134,26 @@ Options against the protocol bars (protocol.md), with cost at 1,000,000 records 
   F1 bar: band F1 within 2 points of B, judged on the paired 5,000-pair sample (pass: interval lower end above -0.02; fail: upper end below; else inconclusive).
   Precision bar: overall precision >= 0.98. Recall bar: overall recall at least 5 points above A. ECE <= 0.05 (C, D). C latency p95 <= 20 ms. D LLM share <= 20%.
   option  F1 vs B [95% CI]              F1 bar           prec   bar  recall   bar  ECE bar  latency LLM share  every bar?          cost/month   12-month total
-  A       -0.8250 [-0.8739, -0.7722]    fail           1.0000  pass  0.5248 refer     n/a      n/a       n/a   no                       1,656          19,870
-  B       baseline                      reference (B   1.0000  pass  0.5800  pass     n/a      n/a       n/a   yes                    934,335      11,212,019
-  C       -0.0464 [-0.0936, -0.0045]    inconclusive   0.9944  pass  0.5793  pass     pass     pass      n/a   not shown (inconclusive)       4,806          57,667
-  D       -0.0075 [-0.0154, +0.0000]    pass           0.9988  pass  0.5791  pass     pass     n/a       pass  yes                      6,012          72,141
+  A       -0.8250 [-0.8739, -0.7722]    fail           1.0000  pass  0.5248 refer     n/a      n/a       n/a   no                       1,618          19,420
+  B       baseline                      reference (B   1.0000  pass  0.5800  pass     n/a      n/a       n/a   yes                    934,293      11,211,515
+  C       -0.0464 [-0.0936, -0.0045]    inconclusive   0.9944  pass  0.5793  pass     pass     pass      n/a   not shown (inconclusive)       4,772          57,267
+  D       -0.0075 [-0.0154, +0.0000]    pass           0.9988  pass  0.5791  pass     pass     n/a       pass  yes                      5,961          71,538
   E       not run (no results; no numbers)
   B's overall figures are sample estimates; A, C and D are exact on the full test band. A is the reference for the recall bar and fails the F1 bar; C's F1 bar is inconclusive at this sample size (its interval straddles -0.02).
 
 Label rows for C and D: the label cost is only ever shown next to the F1 measured with that label count
   optionrow             labels label hours   label cost at $50/$100/$200                   band F1  12-month total at 1M/day
-  C     as evaluated    63,665       318.3          15,916/31,832/63,665              0.9653 (full band)        57,667
-  D     as evaluated    63,665       318.3          15,916/31,832/63,665              0.9838 (full band)        72,141
-  C     at 2,000         2,000        10.0               500/1,000/2,000        0.8999 (mean of 5 seeds)   26,834
-  D     at 2,000         2,000        10.0               500/1,000/2,000              not measured        41,309
+  C     as evaluated    63,665       318.3          15,916/31,832/63,665              0.9653 (full band)        57,267
+  D     as evaluated    63,665       318.3          15,916/31,832/63,665              0.9838 (full band)        71,538
+  C     at 2,000         2,000        10.0               500/1,000/2,000        0.8999 (mean of 5 seeds)   26,434
+  D     at 2,000         2,000        10.0               500/1,000/2,000              not measured        40,705
   'As evaluated' is what the dev results used (every train band pair, labels free from the generator); it is not a recommended budget. D's F1 was never measured with fewer labels, so no F1 is shown for D at 2,000. The C figure at 2,000 is the mean over 5 sampling seeds of the learning curve (individual seeds ranged widely), not a paired test result.
 
 B variants (cost only; no quality claim for either) at 1,000,000 records per day, $100/h, USD
   variant                                                                    LLM / month  total / month  12-month total
-  B as measured (gpt-5.4, frozen prompt)                                         932,175        934,335      11,212,019
-  B, LLM price -70% (mini-class, price only, no quality claim)                   279,652        281,813       3,381,752
-  B without the shared Verity build in its one-time costs                        932,175        932,806      11,193,669
+  B as measured (gpt-5.4, frozen prompt)                                         932,175        934,293      11,211,515
+  B, LLM price -70% (mini-class, price only, no quality claim)                   279,652        281,771       3,381,248
+  B without the shared Verity build in its one-time costs                        932,175        932,793      11,193,515
   Break-even of A, C and D against each B variant (labels 2,000; range 1,000 to 100,000,000 records per day):
     B, price -70%       A at $50/h: no crossing: option cheaper everywhere in range
     B, price -70%       A at $100/h: no crossing: option cheaper everywhere in range
@@ -84,17 +162,17 @@ B variants (cost only; no quality claim for either) at 1,000,000 records per day
     B, price -70%       C at $100/h: no crossing: option cheaper everywhere in range
     B, price -70%       C at $200/h: no crossing: option cheaper everywhere in range
     B, price -70%       D at $50/h: no crossing: option cheaper everywhere in range
-    B, price -70%       D at $100/h: 1,763 records per day (option cheaper above)
-    B, price -70%       D at $200/h: 3,526 records per day (option cheaper above)
+    B, price -70%       D at $100/h: 1,733 records per day (option cheaper above)
+    B, price -70%       D at $200/h: 3,466 records per day (option cheaper above)
     B, no Verity build  A at $50/h: no crossing: option cheaper everywhere in range
-    B, no Verity build  A at $100/h: 1,099 records per day (option cheaper above)
-    B, no Verity build  A at $200/h: 2,199 records per day (option cheaper above)
+    B, no Verity build  A at $100/h: 1,073 records per day (option cheaper above)
+    B, no Verity build  A at $200/h: 2,146 records per day (option cheaper above)
     B, no Verity build  C at $50/h: no crossing: option cheaper everywhere in range
-    B, no Verity build  C at $100/h: 1,721 records per day (option cheaper above)
-    B, no Verity build  C at $200/h: 3,441 records per day (option cheaper above)
-    B, no Verity build  D at $50/h: 1,085 records per day (option cheaper above)
-    B, no Verity build  D at $100/h: 2,170 records per day (option cheaper above)
-    B, no Verity build  D at $200/h: 4,339 records per day (option cheaper above)
+    B, no Verity build  C at $100/h: 1,699 records per day (option cheaper above)
+    B, no Verity build  C at $200/h: 3,397 records per day (option cheaper above)
+    B, no Verity build  D at $50/h: 1,065 records per day (option cheaper above)
+    B, no Verity build  D at $100/h: 2,129 records per day (option cheaper above)
+    B, no Verity build  D at $200/h: 4,259 records per day (option cheaper above)
 
 Measured concurrency (16 cache keys, per-key limiter off, 100 calls per level, Balanced power plan, on AC):
    2 workers:   94.6 calls per minute, latency p50 1.019 s, p95 1.436 s, max 3.148 s, hit ratio excluding first calls 0.852, errors 0
@@ -112,37 +190,37 @@ Break-even against B (total over 12 months equal; labels 2,000; volume range 1,0
   D at $100/h: option cheaper everywhere in range
   A at $200/h: option cheaper everywhere in range
   C at $200/h: option cheaper everywhere in range
-  D at $200/h: 1,056 records per day (option cheaper above)
-  -> D at $200/h: B is cheaper overall below 1,056 records per day; D is cheaper above
+  D at $200/h: 1,038 records per day (option cheaper above)
+  -> D at $200/h: B is cheaper overall below 1,038 records per day; D is cheaper above
   Where no break-even is listed for an option, it is cheaper than B overall at every volume in the range: A at $50/h, C at $50/h, D at $50/h, A at $100/h, C at $100/h, D at $100/h, A at $200/h, C at $200/h. At the measured price B costs about $31 per 1,000 records in LLM calls alone, so any one-time saving is spent within days.
 
 Sensitivity at 1,000,000 records per day, $100/h, 2,000 labels: total over 12 months, USD (sensitivity.csv has the pieces)
   factor                         value             A             B             C             D
-  base case                                   19,870    11,212,019        26,834        41,309
-  hourly rate                     50.0        10,045    11,199,169        13,534        25,509
-  hourly rate                    100.0        19,870    11,212,019        26,834        41,309
-  hourly rate                    200.0        39,520    11,237,719        53,434        72,909
-  band pairs per record              5        19,870     2,810,557        26,823        34,185
-  band pairs per record             10        19,870     5,595,190        26,827        36,546
-  band pairs per record             20        19,870    11,164,457        26,834        41,269
-  band pairs per record          20.09        19,870    11,214,581        26,834        41,311
-  D routed share                 0.001        19,870    11,212,019        26,834        43,024
-  D routed share                  0.01        19,870    11,212,019        26,834       143,699
-  D routed share                  0.05        19,870    11,212,019        26,834       591,143
-  D routed share                   0.2        19,870    11,212,019        26,834     2,269,057
-  LLM price factor                 0.5        19,870     5,618,971        26,834        36,573
-  LLM price factor                 1.0        19,870    11,212,019        26,834        41,309
-  LLM price factor                 1.5        19,870    16,805,067        26,834        46,044
-  hit ratio                        0.0        19,870    40,636,766        26,834        66,222
-  hit ratio                       0.85        19,870    11,166,974        26,834        41,271
-  retrainings per month           4.33        19,870    11,212,019        42,818        57,293
-  retrainings per month            1.0        19,870    11,212,019        26,834        41,309
-  retrainings per month           0.33        19,870    11,212,019        23,618        38,093
-  labeling hours per 1,000           2        19,870    11,212,019        26,234        40,709
-  labeling hours per 1,000           5        19,870    11,212,019        26,834        41,309
-  labeling hours per 1,000          10        19,870    11,212,019        27,834        42,309
-  batch prices (cache hits)                   19,870     5,684,359        26,834        36,629
-  batch prices (no hits)                      19,870    20,331,344        26,834        49,030
-  standard, no caching                        19,870    40,636,766        26,834        66,222
+  base case                                   19,420    11,211,515        26,434        40,705
+  hourly rate                     50.0         9,820    11,198,915        13,334        25,205
+  hourly rate                    100.0        19,420    11,211,515        26,434        40,705
+  hourly rate                    200.0        38,620    11,236,715        52,634        71,705
+  band pairs per record              5        19,420     2,810,053        26,423        33,581
+  band pairs per record             10        19,420     5,594,687        26,427        35,942
+  band pairs per record             20        19,420    11,163,954        26,434        40,665
+  band pairs per record          20.09        19,420    11,214,077        26,434        40,707
+  D routed share                 0.001        19,420    11,211,515        26,434        42,420
+  D routed share                  0.01        19,420    11,211,515        26,434       143,095
+  D routed share                  0.05        19,420    11,211,515        26,434       590,539
+  D routed share                   0.2        19,420    11,211,515        26,434     2,268,453
+  LLM price factor                 0.5        19,420     5,618,467        26,434        35,970
+  LLM price factor                 1.0        19,420    11,211,515        26,434        40,705
+  LLM price factor                 1.5        19,420    16,804,563        26,434        45,441
+  hit ratio                        0.0        19,420    40,636,262        26,434        65,618
+  hit ratio                       0.85        19,420    11,166,470        26,434        40,667
+  retrainings per month           4.33        19,420    11,211,515        42,418        56,689
+  retrainings per month            1.0        19,420    11,211,515        26,434        40,705
+  retrainings per month           0.33        19,420    11,211,515        23,218        37,489
+  labeling hours per 1,000           2        19,420    11,211,515        25,834        40,105
+  labeling hours per 1,000           5        19,420    11,211,515        26,434        40,705
+  labeling hours per 1,000          10        19,420    11,211,515        27,434        41,705
+  batch prices (cache hits)                   19,420     5,683,856        26,434        36,025
+  batch prices (no hits)                      19,420    20,330,841        26,434        48,426
+  standard, no caching                        19,420    40,636,262        26,434        65,618
 
 Option E: not run (no results; no numbers).
