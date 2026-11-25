@@ -1,0 +1,7 @@
+# DRAFT: effort log incomplete, one-time costs for B and D undercounted
+share_label,routed_share,llm_usd_month,running_usd_month,total_usd_month
+measured (this run),0.001136,1059.24,2078.67,6281.69
+0.1%,0.001000,932.17,1951.60,6154.62
+0.3%,0.003000,2796.52,3815.95,8018.97
+0.6%,0.006000,5593.05,6612.47,10815.49
+1%,0.010000,9321.75,10341.17,14544.19

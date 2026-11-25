@@ -1,0 +1,87 @@
+{
+ "stage": 8,
+ "name": "option D",
+ "mode": "rehearsal",
+ "seed": 2026,
+ "ended_utc": "2026-11-25T15:20:09Z",
+ "seconds": 53.0,
+ "ledger_cost_usd": 0.0,
+ "exit": 0,
+ "reads_truth": [
+  "score D. hybrid, exact full test band",
+  "score D. hybrid (C + LLM) (sample)",
+  "score D (original rule), exact full test band",
+  "score D (original rule) (C + LLM) (sample)"
+ ],
+ "guards": [
+  {
+   "time": "2026-11-25T15:19:16Z",
+   "stage": 8,
+   "guard": "frozen files unchanged since the manifest",
+   "fired": false,
+   "detail": "all match"
+  },
+  {
+   "time": "2026-11-25T15:19:16Z",
+   "stage": 8,
+   "guard": "frozen asset selection_rule.txt matches the manifest",
+   "fired": false,
+   "detail": "results/dev_2026_run11/options/d_hybrid/selection_rule.txt -> results/rehearsal_2026/options/d_hybrid/selection_rule.txt"
+  },
+  {
+   "time": "2026-11-25T15:19:16Z",
+   "stage": 8,
+   "guard": "frozen asset frozen_settings.json matches the manifest",
+   "fired": false,
+   "detail": "results/dev_2026_run11/options/d_hybrid/frozen_settings.json -> results/rehearsal_2026/options/d_hybrid/frozen_settings.json"
+  },
+  {
+   "time": "2026-11-25T15:19:16Z",
+   "stage": 8,
+   "guard": "frozen asset selection_rule_v2.txt matches the manifest",
+   "fired": false,
+   "detail": "results/dev_2026_run11/options/d_hybrid/selection_rule_v2.txt -> results/rehearsal_2026/options/d_hybrid/selection_rule_v2.txt"
+  },
+  {
+   "time": "2026-11-25T15:19:16Z",
+   "stage": 8,
+   "guard": "frozen asset frozen_settings_v2.json matches the manifest",
+   "fired": false,
+   "detail": "results/dev_2026_run11/options/d_hybrid/frozen_settings_v2.json -> results/rehearsal_2026/options/d_hybrid/frozen_settings_v2.json"
+  },
+  {
+   "time": "2026-11-25T15:19:17Z",
+   "stage": 8,
+   "guard": "AC power",
+   "fired": false,
+   "detail": "power: ac"
+  }
+ ],
+ "notes": [
+  "51 test band pairs routed to the LLM by v2; 38 by the original rule",
+  "pairs: 51 (sample file routed_fullband_pairs.csv); distinct prompts 51 (0 pairs repeat another pair's exact record content and share its answer); already answered in the local cache: 51; calls to make: 0",
+  "projection: about $0.00 at the pilot's $0.001545 per call; about 0 minutes at 95.3 calls per minute (8 keys x 12 per minute, 2 workers; the pilot measured 95.3); run cap --max-usd $0.10",
+  "cost gate: 0 pairs to call x $0.001545 (pilot cost per call) x 1.3 = $0.00; ledger total $13.0442, remaining under the $45 cap $31.96; platform limit $30 - ledger total = $16.96 -> PASS",
+  "fallback off: C's cutoff 0.8014, [lo, hi) = [0.005, 0.9): inside [lo, hi): identity with C verified; 0 pairs differ from C",
+  "original rule: lo 0.5, hi 0.9: 38 routed pairs; scored as the secondary row"
+ ],
+ "outputs": {
+  "results/rehearsal_2026/options/d_hybrid/selection_rule.txt": "74964ba785815b63cbde4e15f9b8c555545d8853a385ccaeba0cd53fa5e9b3f8",
+  "results/rehearsal_2026/options/d_hybrid/frozen_settings.json": "271f25b4e8367b55c1fd60226c855fab0feb993c5d49caed17b2a7e9a0ac039f",
+  "results/rehearsal_2026/options/d_hybrid/selection_rule_v2.txt": "9d76bede9e14a00cc89f55baa56530277784c8757730f27d59fc262a0412d51a",
+  "results/rehearsal_2026/options/d_hybrid/frozen_settings_v2.json": "f8c88ffdd3d86e4866bb5db6e23a0adb2f28704d1cc48a4bbe83332dd1df8673",
+  "results/rehearsal_2026/options/d_hybrid/routed_fullband_pairs.csv": "f45725b46b4368a18b7366a1fbb1ae2596a6a5b3447f5f1d06d59345e3845317",
+  "results/rehearsal_2026/options/d_hybrid/routed_fullband_pairs_original.csv": "0ff5974b3000c39dc9aaba5b4d0c43aec878966ccf3a53b1d0971bf773531127",
+  "results/rehearsal_2026/options/d_hybrid/decisions_fullband.csv": "2c71732be39d7fafd40b9d83e1b283bea73055040611081863602208c82a324b",
+  "results/rehearsal_2026/options/d_hybrid/decisions_fullband_original.csv": "870de7919a77a3c9e7832ca191a588ccb528a920ac323c328bd65e55ec4b2850",
+  "results/rehearsal_2026/options/d_hybrid/fallback_off_check.json": "cf0feae17f6f08c0806538537bcc5b4e90ca780246bbc73e8be53b81c213c5c7",
+  "results/rehearsal_2026/options/d_hybrid/decisions.csv": "5b389200ed3d30769252fbeb760fd3d3ea22288ceb961be984fc10ee3d72d904",
+  "results/rehearsal_2026/options/d_hybrid/decisions_original.csv": "760a9f18e97a6d557c92286d6cd932b0a4067b7f744ae5097af465f5eccaad89",
+  "results/rehearsal_2026/options/latency/latency_summary.json": "733a147df4817e2c02dbe30b8e42dcda0eeb040fbc446cabdc2c2885cdeb53eb",
+  "results/rehearsal_2026/options/d_hybrid/score_report_fullband.txt": "2cfd6b50c4a941296bf0e940e2900bba62b5683f950212b9d2613d37c279306a",
+  "results/rehearsal_2026/options/d_hybrid/score_report_sample5000.txt": "721c688d00f614b32dbe5274b09295d52a0a6d04ca14644da8280c7c7fc2a5ff",
+  "results/rehearsal_2026/options/d_hybrid/score_report_fullband_original.txt": "2219b76e49c1926b3910561b06d43c30e3f96e84776fc1b913026f9857664faa",
+  "results/rehearsal_2026/options/d_hybrid/score_report_sample5000_original.txt": "fd6e1ae4b9dce06a41c92ae80ac7708ccb749bbf73009cabbb5b9f0f3ffbe314"
+ },
+ "manifest_sha256": "d545a3b2e2a1a1c9f86fc51109101370e8d9029b44d5a04f88b0d993333a9cd1"
+}

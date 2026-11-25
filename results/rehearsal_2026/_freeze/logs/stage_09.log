@@ -1,0 +1,84 @@
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe eval/make_decoy_check.py C:\verity-hackathon\results\rehearsal_2026   [reads truth; 2026-11-25T15:20:09Z]
+decoy test band pairs (same decoy group, different entities): 68 of 44,882 band pairs; 0 are in the 5,000-pair sample (already answered in the cache)
+written: C:\verity-hackathon\results\rehearsal_2026\options\b_llm\decoy_check_pairs.csv
+upper-bound cost estimate if none were cached: 68 x $0.001527 = $0.104; for the 68 not in the sample: $0.104
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe options/b_llm_baseline.py C:\verity-hackathon\results\rehearsal_2026 --provider openai --final-sample C:\verity-hackathon\results\rehearsal_2026\options\b_llm\decoy_check_pairs.csv --label decoycheck --max-usd 0.15 --estimate-only   [truth sealed; 2026-11-25T15:20:11Z]
+prefix-length check: system prompt 6,684 characters (appendix 885 characters, sha256 857de291325e); predicted shared prefix 1910 tokens, inside the target 1900 to 1950
+pairs: 68 (sample file decoy_check_pairs.csv); distinct prompts 68 (0 pairs repeat another pair's exact record content and share its answer); already answered in the local cache: 68; calls to make: 0
+projection: about $0.00 at the pilot's $0.001545 per call; about 0 minutes at 95.3 calls per minute (8 keys x 12 per minute, 2 workers; the pilot measured 95.3); run cap --max-usd $0.15
+cost gate: 0 pairs to call x $0.001545 (pilot cost per call) x 1.3 = $0.00; ledger total $13.0442, remaining under the $45 cap $31.96; platform limit $30 - ledger total = $16.96 -> PASS
+estimate only: no call made; --approve-final-run NOT given
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe options/b_llm_baseline.py C:\verity-hackathon\results\rehearsal_2026 --provider openai --final-sample C:\verity-hackathon\results\rehearsal_2026\options\b_llm\decoy_check_pairs.csv --label decoycheck --max-usd 0.15 --approve-final-run   [truth sealed; 2026-11-25T15:20:12Z]
+prefix-length check: system prompt 6,684 characters (appendix 885 characters, sha256 857de291325e); predicted shared prefix 1910 tokens, inside the target 1900 to 1950
+pairs: 68 (sample file decoy_check_pairs.csv); distinct prompts 68 (0 pairs repeat another pair's exact record content and share its answer); already answered in the local cache: 68; calls to make: 0
+projection: about $0.00 at the pilot's $0.001545 per call; about 0 minutes at 95.3 calls per minute (8 keys x 12 per minute, 2 workers; the pilot measured 95.3); run cap --max-usd $0.15
+cost gate: 0 pairs to call x $0.001545 (pilot cost per call) x 1.3 = $0.00; ledger total $13.0442, remaining under the $45 cap $31.96; platform limit $30 - ledger total = $16.96 -> PASS
+power: ac
+start: 2026-11-25 09:20:13 local (15:20:13Z)
+end: 2026-11-25 09:20:13 local (15:20:13Z); run time 0.0 minutes
+Option B openai / gpt-5.4-2026-03-05 (max_output_tokens=64;reasoning_effort=none): 68 TEST band sample pairs (decoy_check_pairs.csv)
+calls 0, cache hits 68, spent $0.0000, pending 0, refusals 0, models reported {'gpt-5.4-2026-03-05': 68}
+prefix-length check: system prompt 6,684 characters (appendix 885 characters, sha256 857de291325e); predicted shared prefix 1910 tokens, inside the target 1900 to 1950
+final hit ratio after 0 calls: overall n/a (0 / 0 input tokens); excluding each key's first call n/a (0 calls)
+api errors 0, unusable answers 0; prompt-cache keys 8, 12 requests per minute per key, 2 workers
+gate: cost gate: 0 pairs to call x $0.001545 (pilot cost per call) x 1.3 = $0.00; ledger total $13.0442, remaining under the $45 cap $31.96; platform limit $30 - ledger total = $16.96 -> PASS
+power: ac
+started utc: 2026-11-25T15:20:13Z
+ended utc: 2026-11-25T15:20:13Z
+run time minutes: 0.0
+decisions: C:\verity-hackathon\results\rehearsal_2026\options\b_llm\openai\decoycheck\decisions.csv
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe eval/decoy_check_report.py C:\verity-hackathon\results\rehearsal_2026 --label decoycheck   [reads truth; 2026-11-25T15:20:15Z]
+Option B (frozen prompt, gpt-5.4) on every test band pair whose records share a decoy group but have different entities, run rehearsal_2026: 68 pairs (supplementary check, no bar)
+every pair is a different-organization pair: false matches 1 of 68
+  false-match rate 0.015; exact one-sided 95% upper bound 0.0679
+
+p_same distribution (all pairs are truly different)
+  [0.0, 0.2)    67   decided same 0
+  [0.2, 0.4)     0   decided same 0
+  [0.4, 0.6)     0   decided same 0
+  [0.6, 0.8)     0   decided same 0
+  [0.8, 1.0]     1   decided same 1
+  highest p_same 0.88, mean 0.083
+
+False matches (decided same): 1, all shown
+  R22fa661a73 | R557e2011f9   decision same, p_same 0.88
+      address_line     3144 Highland Drive                          | 7167 Industrial Blvd.
+      city             Denver                                       | Columbus
+      company_name     Northgate Copper Staffing Solutions Ltd      | N.C.S.S. Ltd.
+      phone            (622) 779-3034                               | (missing)
+      postal_code      80248                                        | 43276
+      state            CO                                           | OH
+      website          northgatecopper.com                          | northgatecopper.com
+
+The 3 highest-p_same pairs that were decided different (closest calls), both records side by side
+  R22fa661a73 | Rca31666437   decision different, p_same 0.18
+      address_line     3144 Highland Drive                          | 7167 Industrial Blvd
+      city             Denver                                       | Columbus
+      company_name     Northgate Copper Staffing Solutions Ltd      | NORTHGATE COPPER STAFFING SOLUTIONS, LIMITED
+      phone            (622) 779-3034                               | 570-261-8393
+      postal_code      80248                                        | 43276-2564
+      state            CO                                           | OH
+      website          northgatecopper.com                          | northgatecopper.com
+  R456fa72550 | Rb672ba2294   decision different, p_same 0.16
+      address_line     4279 Pine Parkway                            | 4009 Airport Street
+      city             Pittsburgh                                   | Austin
+      company_name     Ironwood Brightpath Log                      | Ironwood Brightpath Logistics Inc
+      phone            +1 315 633 3742                              | +1 900 944 9760
+      postal_code      15250                                        | 78780
+      state            PA                                           | TX
+      website          ironwoodbrightpath.com                       | ironwoodbrightpath.com
+  R1cbc8b5579 | Rfa7c1db13d   decision different, p_same 0.15
+      address_line     6546 Commerce Boulevard                      | 7311 Washington Court
+      city             Milwaukee                                    | ATLANTA
+      company_name     Moreau Dental Group LLC                      | MOREAU DENTAL GROUP LLC
+      phone            (613) 478-8572                               | 4433868402
+      postal_code      53240                                        | 30390
+      state            WI                                           | GA
+      website          moreaudental.com                             | moreaudental.com
+
+Run: calls 0, cache hits 68 (pairs already answered in the sample run), spent $0.0000; hit ratio excluding each key's first call n/a (no live calls); refusals 0, parse failures 0, API errors 0; run time 0.0 minutes
+

@@ -1,0 +1,47 @@
+{
+ "stage": 10,
+ "name": "scoring",
+ "mode": "rehearsal",
+ "seed": 2026,
+ "ended_utc": "2026-11-25T15:20:39Z",
+ "seconds": 22.8,
+ "ledger_cost_usd": 0.0,
+ "exit": 0,
+ "reads_truth": [
+  "score B. frontier LLM (frozen prompt) (sample)",
+  "compare B (frontier LLM) vs A (threshold only)",
+  "compare B (frontier LLM) vs C v1 LightGBM",
+  "compare C v1 LightGBM vs B (frontier LLM)",
+  "compare D (hybrid) vs B (frontier LLM)",
+  "compare D (hybrid) vs C v1 LightGBM",
+  "compare D (original rule) vs B (frontier LLM)",
+  "compare D (hybrid) vs D (original rule)",
+  "b_sample_report",
+  "d_report",
+  "d_full_report"
+ ],
+ "guards": [
+  {
+   "time": "2026-11-25T15:20:17Z",
+   "stage": 10,
+   "guard": "frozen files unchanged since the manifest",
+   "fired": false,
+   "detail": "all match"
+  }
+ ],
+ "notes": [],
+ "outputs": {
+  "results/rehearsal_2026/options/b_llm/openai/sample5000/score_report_sample5000.txt": "4acdbe4eaa2331ae5540c5208f3826c3e8ba7d9a7ae23449051fd3795c173531",
+  "results/rehearsal_2026/options/compare/b_vs_a.txt": "2c1382ff4ed9a99468d0db2e9b22b8498415b844ac8e05112e573c5da2c07107",
+  "results/rehearsal_2026/options/compare/b_vs_c_v1_lgbm.txt": "2954562065f26787c758ce5442e8e68fb88fc0477be4f5fe07442835c3df18ad",
+  "results/rehearsal_2026/options/compare/c_v1_lgbm_vs_b.txt": "812b8ec0e5089a5d14ecfa58c8339bc950f3d3dde630dadc156f2cc585e07da0",
+  "results/rehearsal_2026/options/d_hybrid/compare_d_vs_b.txt": "92db5ee3d7c774a270c3c0521bc8ada22b84b7193bb978a6b74f8c87c2ddb74e",
+  "results/rehearsal_2026/options/d_hybrid/compare_d_vs_c.txt": "b9aed32e4b336778850a9cf1eb229b550190b67fc3e7ae501cebe82637c37f8b",
+  "results/rehearsal_2026/options/d_hybrid/compare_d_original_vs_b.txt": "201aee1ea2d21627e606bb4677839e2e562d9744f03fdd6f8ef5309bd53fd679",
+  "results/rehearsal_2026/options/d_hybrid/compare_d_vs_d_original.txt": "8ab069909412a5a4b039340e0923866cc7685c4285298799467aa0128e844a5d",
+  "results/rehearsal_2026/options/b_llm/openai/sample5000/sample_report.txt": "94c8f65f37e38a93cc91308d8c4ce5818c5418e027441db37245ee0955e45360",
+  "results/rehearsal_2026/options/d_hybrid/d_report.txt": "07541d046716db2717ba81456f214afd35a2f78974d94482d97c48d1963dd8a8",
+  "results/rehearsal_2026/options/d_hybrid/d_fullband_report.txt": "d189d5ab5a97ac8efc0228020511cd48a9b25f4137adb3f3edaa99e168855cc0"
+ },
+ "manifest_sha256": "d545a3b2e2a1a1c9f86fc51109101370e8d9029b44d5a04f88b0d993333a9cd1"
+}

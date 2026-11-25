@@ -1,0 +1,14 @@
+# DRAFT: effort log incomplete, one-time costs for B and D undercounted
+kind,item,hours,usd_at_50_per_hour,usd_at_100_per_hour,usd_at_200_per_hour
+effort-log hours (evidence),bucket B,2.25,112.50,225.00,450.00
+effort-log hours (evidence),bucket C,1,50.00,100.00,200.00
+effort-log hours (evidence),bucket eval,7.75,387.50,775.00,1550.00
+effort-log hours (evidence),bucket verity,0.5,25.00,50.00,100.00
+effort-log hours (evidence),total,11.5,575.00,1150.00,2300.00
+"API spend (ledger, evaluation)",decoycheck,,0.1999,0.1999,0.1999
+"API spend (ledger, evaluation)",dfull,,0.0316,0.0316,0.0316
+"API spend (ledger, evaluation)",sample5000,,8.2473,8.2473,8.2473
+"API spend (ledger, evaluation)",total,,8.4788,8.4788,8.4788
+total,evidence hours x rate + evaluation API spend,,583.48,1158.48,2308.48
+charged to options (reference),production-needed hours,7,350.00,700.00,1400.00
+charged to options (reference),B development API spend (ledger),,3.7121,3.7121,3.7121

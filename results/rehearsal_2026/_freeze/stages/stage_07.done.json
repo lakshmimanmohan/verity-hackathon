@@ -1,0 +1,59 @@
+{
+ "stage": 7,
+ "name": "option B",
+ "mode": "rehearsal",
+ "seed": 2026,
+ "ended_utc": "2026-11-25T15:19:16Z",
+ "seconds": 4.8,
+ "ledger_cost_usd": 0.0,
+ "exit": 0,
+ "reads_truth": [],
+ "guards": [
+  {
+   "time": "2026-11-25T15:19:11Z",
+   "stage": 7,
+   "guard": "frozen files unchanged since the manifest",
+   "fired": false,
+   "detail": "all match"
+  },
+  {
+   "time": "2026-11-25T15:19:11Z",
+   "stage": 7,
+   "guard": "frozen asset fewshot.json matches the manifest",
+   "fired": false,
+   "detail": "results/dev_2026_run11/options/b_llm/fewshot.json -> results/rehearsal_2026/options/b_llm/fewshot.json"
+  },
+  {
+   "time": "2026-11-25T15:19:11Z",
+   "stage": 7,
+   "guard": "frozen asset frozen_prompt.json matches the manifest",
+   "fired": false,
+   "detail": "results/dev_2026_run11/options/b_llm/frozen_prompt.json -> results/rehearsal_2026/options/b_llm/frozen_prompt.json"
+  },
+  {
+   "time": "2026-11-25T15:19:11Z",
+   "stage": 7,
+   "guard": "AC power",
+   "fired": false,
+   "detail": "power: ac"
+  }
+ ],
+ "notes": [
+  "pairs: 400 (sample file test_sample5000.csv); distinct prompts 394 (6 pairs repeat another pair's exact record content and share its answer); already answered in the local cache: 394; calls to make: 0",
+  "projection: about $0.00 at the pilot's $0.001545 per call; about 0 minutes at 95.3 calls per minute (8 keys x 12 per minute, 2 workers; the pilot measured 95.3); run cap --max-usd $0.75",
+  "cost gate: 0 pairs to call x $0.001545 (pilot cost per call) x 1.3 = $0.00; ledger total $13.0442, remaining under the $45 cap $31.96; platform limit $30 - ledger total = $16.96 -> PASS",
+  "B archive: decisions.csv and cache_entries.jsonl.gz (25,955 bytes; under 1 MB: commit it); no calls.jsonl, so the stage's cache entries were archived instead",
+  "B: 0 calls, cache hits 394, spent $0.0000, hit ratio excl. first n/a (no live calls)"
+ ],
+ "outputs": {
+  "results/rehearsal_2026/options/b_llm/fewshot.json": "2345a01923495f8d365983df3210e61e3808e7b79806a65955eb1d9e56a857d7",
+  "results/rehearsal_2026/options/b_llm/frozen_prompt.json": "c0e58d2216df977c8fe3b705d44ffd7dff4360b2d1cfd7477e8eecd6aadc6bfa",
+  "results/rehearsal_2026/options/b_llm/openai/sample5000/decisions.csv": "d028b7ea63d7fc242ad1c586aecbfaa6aacd9ce3ef354fc9ca2b2dba09215c17",
+  "results/rehearsal_2026/options/b_llm/openai/sample5000/run_meta.json": "8506e01172843b524c44e9f08ffdf00fa21858667d249e576d79f970bf2c69f7",
+  "results/rehearsal_2026/options/b_llm/openai/sample5000/report.txt": "70912ebb23f7980de01a63d771e389c7c6b16428388d1cfee2c07b918d221800",
+  "results/rehearsal_2026/_freeze/b_archive/decisions.csv": "d028b7ea63d7fc242ad1c586aecbfaa6aacd9ce3ef354fc9ca2b2dba09215c17",
+  "results/rehearsal_2026/_freeze/b_archive/cache_entries.jsonl.gz": "e842017b3995d8c467bf129b55a921dea83fc50ff43a2054d18cadf45c7d3c9a",
+  "results/rehearsal_2026/_freeze/b_archive/archive.json": "12b0571aff23434c2efa47fae3eebe124088d60249b3a4a14b795721297af8a9"
+ },
+ "manifest_sha256": "d545a3b2e2a1a1c9f86fc51109101370e8d9029b44d5a04f88b0d993333a9cd1"
+}

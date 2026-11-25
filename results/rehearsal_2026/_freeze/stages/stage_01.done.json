@@ -1,0 +1,53 @@
+{
+ "stage": 1,
+ "name": "generate",
+ "mode": "rehearsal",
+ "seed": 2026,
+ "ended_utc": "2026-11-25T15:16:43Z",
+ "seconds": 0.3,
+ "ledger_cost_usd": 0.0,
+ "exit": 0,
+ "reads_truth": [
+  "generate (writes the truth file)"
+ ],
+ "guards": [
+  {
+   "time": "2026-11-25T15:16:43Z",
+   "stage": 1,
+   "guard": "frozen files unchanged since the manifest",
+   "fired": false,
+   "detail": "all match"
+  },
+  {
+   "time": "2026-11-25T15:16:43Z",
+   "stage": 1,
+   "guard": "rehearsal never uses the evaluation seed",
+   "fired": false,
+   "detail": "seed 2026"
+  },
+  {
+   "time": "2026-11-25T15:16:43Z",
+   "stage": 1,
+   "guard": "rehearsal seed is a development seed",
+   "fired": false,
+   "detail": "seed 2026; allowed (42, 2026)"
+  },
+  {
+   "time": "2026-11-25T15:16:43Z",
+   "stage": 1,
+   "guard": "the run folder holds no data",
+   "fired": false,
+   "detail": "results/rehearsal_2026"
+  }
+ ],
+ "notes": [
+  "10,000 rows, csv sha256 1ea60a3e9554dfd1..., truth sha256 7b8bc52765d40289..."
+ ],
+ "outputs": {
+  "results/rehearsal_2026/orgs_raw.csv": "1ea60a3e9554dfd12b1f415078f93998490bd4101a891f02b36d5c7364f68f99",
+  "results/rehearsal_2026/orgs_raw_truth.csv": "7b8bc52765d40289bc22abfce55047bbb595e13bd8794aa3945b0a828fb8f021",
+  "results/rehearsal_2026/_freeze/data_manifest.json": "ef117254fe172c78618c3b863ee683c9d6928e2115146571506b907073f26ab1",
+  "results/rehearsal_2026/_freeze/generation_record.json": "5e3e9187c241e27a650393e3bde31a936ca706b6d03a63ec22a047f44342792d"
+ },
+ "manifest_sha256": "d545a3b2e2a1a1c9f86fc51109101370e8d9029b44d5a04f88b0d993333a9cd1"
+}

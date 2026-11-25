@@ -1,0 +1,7 @@
+option,band_f1,band_f1_ci_lo,band_f1_ci_hi,band_precision,band_recall,overall_precision,overall_recall,ece,f1_diff_vs_B,f1_bar,latency_p95_ms,llm_share,llm_usd_per_1000_band_pairs,total_usd_month_at_1M_records_per_day,meets_every_bar
+A,0.172,0.1155,0.2222,1.0,0.0941,1.0,0.5248,,-0.825,fail,,,0.0000,1655.79,no
+B,0.9971,0.9925,1.0,1.0,0.9941,1.0,0.58,0.0166,,reference (B is the baseline),,,0.0000,934334.91,yes
+C,0.9653,0.951,0.978,0.9489,0.9824,0.9944,0.5793,0.0004,-0.006,pass,0.064,,0.0000,4805.46,yes
+D,0.9853,0.9759,0.9932,0.9882,0.9824,0.9988,0.5793,0.0002,-0.006,pass,0.0643,0.0011363129985294772,0.0000,6281.69,yes
+D (orig),0.9838,0.9736,0.9924,0.9881,0.9794,0.9988,0.5791,0.0002,-0.0075,pass,0.0643,0.0008466645871396105,0.0000,6011.68,yes
+E,,,,,,,,,,,,,,,not run

@@ -1,0 +1,27 @@
+{
+ "stage": 13,
+ "name": "results",
+ "mode": "rehearsal",
+ "seed": 2026,
+ "ended_utc": "2026-11-25T15:20:43Z",
+ "seconds": 0.3,
+ "ledger_cost_usd": 0.0,
+ "exit": 0,
+ "reads_truth": [],
+ "guards": [
+  {
+   "time": "2026-11-25T15:20:43Z",
+   "stage": 13,
+   "guard": "frozen files unchanged since the manifest",
+   "fired": false,
+   "detail": "all match"
+  }
+ ],
+ "notes": [],
+ "outputs": {
+  "results/rehearsal_2026/results_table.csv": "f26d949e1cf335994999cc5333ee230f07497d789e58b953b1417134656fec48",
+  "results/rehearsal_2026/results_table.txt": "254ebb89ae2f9ecba5aec10e6edeaa9e7423fe46fbfc23a8409dbb87d3d68f1a",
+  "results/rehearsal_2026/_freeze/freeze_report.txt": "dea36c40f0b93f3f46c7408e3a832e4a80398010bbe22f48dfe5a445cdebddda"
+ },
+ "manifest_sha256": "d545a3b2e2a1a1c9f86fc51109101370e8d9029b44d5a04f88b0d993333a9cd1"
+}

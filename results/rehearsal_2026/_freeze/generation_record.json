@@ -1,0 +1,10 @@
+{
+ "seed": 2026,
+ "rows": 10000,
+ "csv": "results/rehearsal_2026/orgs_raw.csv",
+ "csv_sha256": "1ea60a3e9554dfd12b1f415078f93998490bd4101a891f02b36d5c7364f68f99",
+ "truth": "results/rehearsal_2026/orgs_raw_truth.csv",
+ "truth_sha256": "7b8bc52765d40289bc22abfce55047bbb595e13bd8794aa3945b0a828fb8f021",
+ "time": "2026-11-25T15:16:43Z",
+ "note": "written at generation; never regenerate this seed"
+}
