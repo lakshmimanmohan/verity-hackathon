@@ -2,10 +2,11 @@
 The freeze run: one rehearsable runbook from "generate the data" to "results table", every parameter frozen in a
 manifest beforehand.
 
-  python eval/freeze_run.py write-manifest                       # real run: write results/freeze_2026-12-04/freeze_manifest.json
+  python eval/freeze_run.py write-manifest                       # real run: write results/freeze_<YYYY-MM-DD>/freeze_manifest.json
+                                                                 # (the date is the day the manifest is written; it is stored in the manifest)
   (commit the manifest)                                          # then
-  python eval/freeze_run.py tag                                  # create the local tag freeze-2026-12-04 at the manifest commit
-  python eval/freeze_run.py run --approve-seed-7919              # Dec 4: stages 0 to 13 into results/eval_7919
+  python eval/freeze_run.py tag                                  # create the local tag freeze-<YYYY-MM-DD> at the manifest commit
+  python eval/freeze_run.py run --approve-seed-7919              # freeze day: stages 0 to 13 into results/eval_7919
   python eval/freeze_run.py run --approve-seed-7919 --resume     # after a stop: done stages are skipped
   python eval/freeze_run.py run --approve-seed-7919 --stage 9    # one stage (every earlier stage must be done)
 
@@ -56,13 +57,33 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 PY = sys.executable
-FREEZE_DATE = "2026-12-04"
-TAG = f"freeze-{FREEZE_DATE}"
+DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 EVAL_SEED = 7919
 DEV_SEEDS = (42, 2026)
 DEV_RUN_REL = "results/dev_2026_run11"
 REAL_RUN_REL = "results/eval_7919"
-REAL_FREEZE_REL = f"results/freeze_{FREEZE_DATE}"
+
+
+def today() -> str:
+    return time.strftime("%Y-%m-%d")
+
+
+def freeze_name(date: str) -> str:
+    """Name of the real freeze folder for a manifest date."""
+    return f"freeze_{date}"
+
+
+def tag_name(date: str) -> str:
+    """Name of the real freeze tag for a manifest date."""
+    return f"freeze-{date}"
+
+
+def find_real_freeze(repo: Path) -> Path | None:
+    """The one real freeze folder (results/freeze_<YYYY-MM-DD> holding a manifest), or None. Two of them stop the run: the freeze happens once."""
+    found = sorted(d for d in (repo / "results").glob("freeze_*") if d.is_dir() and DATE_RE.match(d.name[len("freeze_"):]) and (d / "freeze_manifest.json").exists())
+    if len(found) > 1:
+        raise Guard("more than one real freeze folder: " + ", ".join(d.name for d in found) + " (the freeze happens once)")
+    return found[0] if found else None
 SAMPLE_SIZE = 5000
 REHEARSAL_NONMATCHES = 60
 DECOY_MAX = 300
@@ -177,7 +198,7 @@ def git(repo: Path, *args: str) -> str:
 class Runner:
     def __init__(self, mode: str, seed: int, run_dir: Path, freeze_dir: Path, *, approve: bool = False, allow_battery: bool = False,
                  repo: Path = REPO, frozen: list[str] | None = None, stages: list | None = None, call=None, log=print,
-                 ledger_path: Path | None = None):
+                 ledger_path: Path | None = None, freeze_date: str | None = None):
         assert mode in ("real", "rehearsal")
         self.mode, self.seed, self.run_dir, self.freeze_dir = mode, seed, Path(run_dir), Path(freeze_dir)
         self.approve, self.allow_battery, self.repo = approve, allow_battery, Path(repo)
@@ -186,6 +207,7 @@ class Runner:
         self.call = call or self._call
         self.log = log
         self.ledger_path = ledger_path
+        self.freeze_date = freeze_date or today()           # real: the day the manifest is written; read back from the manifest afterwards
         self.pip_freeze = True
         self.truth =self.run_dir / "orgs_raw_truth.csv"
         self.sealed = self.run_dir / "orgs_raw_truth.csv.sealed"
@@ -251,7 +273,7 @@ class Runner:
                 pass
         doc = {"created_utc": utc(), "mode": self.mode, "seed": self.seed, "run_dir": self.rel(self.run_dir), "freeze_dir": self.rel(self.freeze_dir),
                "git_commit": head, "files": files, "params": params, "python": sys.version.split()[0], "platform": platform.platform(),
-               "pip_freeze_sha256": hashlib.sha256(pf.encode()).hexdigest(), "tag": TAG if self.mode == "real" else None,
+               "pip_freeze_sha256": hashlib.sha256(pf.encode()).hexdigest(), "tag": tag_name(self.freeze_date) if self.mode == "real" else None,
                "not_frozen": ["cost/effort_log.csv (read as it is by the cost stage; its hash is printed)"],
                "notes": [f"reporting and driver scripts changed on {CHANGE_DATE} to handle an all-cached B stage; no model-side asset changed",
                          "cost model reads B per-call figures from the dev run when a stage made no live calls",
@@ -260,7 +282,8 @@ class Runner:
                          "D decisions for pairs outside [lo, hi): C's own decision (literal v2 text); forced reading reported as a diagnostic",
                          f"embedding model pinned to revision {embedding_revision(self.repo)}, safetensors; no output changed",
                          "B cache directory can be overridden by VERITY_LLM_CACHE_DIR; default, requests and keys unchanged",
-                         "real-run B stage caps: sample 12.00, routed 1.00, decoy 1.00 USD; rehearsal caps unchanged"]}
+                         "real-run B stage caps: sample 12.00, routed 1.00, decoy 1.00 USD; rehearsal caps unchanged",
+                         "freeze folder and tag are named from the manifest date"]}
         self.freeze_dir.mkdir(parents=True, exist_ok=True)
         self.manifest_path.write_text(json.dumps(doc, indent=1) + "\n", encoding="utf-8")
         return doc
@@ -268,7 +291,13 @@ class Runner:
     def manifest(self) -> dict:
         if not self.manifest_path.exists():
             raise Guard(f"no manifest at {self.manifest_path}: run 'python eval/freeze_run.py write-manifest' first")
-        return json.loads(self.manifest_path.read_text(encoding="utf-8"))
+        doc = json.loads(self.manifest_path.read_text(encoding="utf-8"))
+        if self.mode == "real":
+            date = doc.get("params", {}).get("freeze_date")
+            if self.freeze_dir.name != freeze_name(str(date)):
+                raise Guard(f"freeze folder {self.freeze_dir.name} does not match the manifest date {date} (expected {freeze_name(str(date))})")
+            self.freeze_date = date
+        return doc
 
     def check_manifest(self, stage) -> None:
         m = self.manifest()
@@ -405,7 +434,7 @@ class Runner:
 # ====================================================================== helpers for the stages
 
 def manifest_params(R: Runner) -> dict:
-    out = {"freeze_date": FREEZE_DATE, "seeds": {"data": R.seed, "split": 0, "sample": 0, "cv_and_model": 0, "bootstrap": 0},
+    out = {"freeze_date": R.freeze_date, "seeds": {"data": R.seed, "split": 0, "sample": 0, "cv_and_model": 0, "bootstrap": 0},
            "sample": f"{SAMPLE_SIZE} pairs" if R.mode == "real" else f"every same-entity test band pair + {REHEARSAL_NONMATCHES} non-matches",
            "b_caps_usd": B_CAPS[R.mode], "decoy_max_pairs": DECOY_MAX, "c_recipe": "options/c_decision_model.py --model lgbm --version c_v1_lgbm "
            "(features, grid, 5-fold grouped CV, isotonic calibration and cutoff rule as in the code; no flags changed)",
@@ -832,7 +861,8 @@ def write_freeze_report(R: Runner) -> Path:
         a = json.loads(arch.read_text(encoding="utf-8"))
         L.append(f"  B archive: {a['archive_file']} {a['archive_gz_bytes']:,} bytes ({'commit it' if a['commit_archive'] else 'over 1 MB: keep it local'}); {a['what']}")
     if R.mode == "real":
-        L.append(f"  tag: {TAG} at the manifest commit (python eval/freeze_run.py tag); to publish it: git push origin {TAG}")
+        tag = tag_name(str(m["params"]["freeze_date"]))
+        L.append(f"  tag: {tag} at the manifest commit (python eval/freeze_run.py tag); to publish it: git push origin {tag}")
     else:
         L.append("  tag: none in the rehearsal")
         L += ["", "  What the rehearsal could not test:"] + [f"    - {x}" for x in cannot_test(R)]
@@ -860,14 +890,31 @@ def runner_from_args(args) -> Runner:
             raise Guard(f"--dev-seed must be one of {DEV_SEEDS}")
         root = REPO / "results" / f"rehearsal_{args.dev_seed}"
         return Runner("rehearsal", args.dev_seed, root, root / "_freeze", allow_battery=args.allow_battery)
-    return Runner("real", EVAL_SEED, REPO / REAL_RUN_REL, REPO / REAL_FREEZE_REL, approve=args.approve_seed_7919, allow_battery=args.allow_battery)
+    existing = find_real_freeze(REPO)
+    if args.command == "write-manifest":
+        if existing is not None:
+            raise Guard(f"{existing.name} already holds a manifest; a manifest is written once")
+        date = today()
+        return Runner("real", EVAL_SEED, REPO / REAL_RUN_REL, REPO / "results" / freeze_name(date), approve=args.approve_seed_7919,
+                      allow_battery=args.allow_battery, freeze_date=date)
+    if existing is None:                                    # nothing is created: no freeze folder, no log
+        raise Guard("no real freeze manifest under results/: run 'python eval/freeze_run.py write-manifest' first")
+    date = json.loads((existing / "freeze_manifest.json").read_text(encoding="utf-8"))["params"]["freeze_date"]
+    return Runner("real", EVAL_SEED, REPO / REAL_RUN_REL, existing, approve=args.approve_seed_7919, allow_battery=args.allow_battery, freeze_date=date)
 
 
 def cmd_tag(args) -> int:
     if args.rehearsal:
         print("rehearsal: no tag is created")
         return 0
-    manifest = REPO / REAL_FREEZE_REL / "freeze_manifest.json"
+    folder = find_real_freeze(REPO)
+    if folder is None:
+        raise Guard("no real freeze manifest under results/: run write-manifest and commit it first")
+    manifest = folder / "freeze_manifest.json"
+    date = json.loads(manifest.read_text(encoding="utf-8"))["params"]["freeze_date"]
+    if folder.name != freeze_name(date):
+        raise Guard(f"freeze folder {folder.name} does not match the manifest date {date}")
+    TAG = tag_name(date)
     rel = manifest.relative_to(REPO).as_posix()
     if subprocess.run(["git", "ls-files", "--error-unmatch", rel], cwd=REPO, capture_output=True).returncode != 0:
         raise Guard(f"{rel} is not committed: commit the manifest first")

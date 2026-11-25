@@ -197,6 +197,90 @@ class B_StageCaps(Base):
         self.assertAlmostEqual(sum(F.B_CAPS["rehearsal"].values()), 1.20)
 
 
+class FreezeDateNaming(Base):
+    """The real freeze folder and tag are named from the manifest date; the rehearsal naming is unchanged."""
+
+    def real(self, date_folder: str, freeze_date: str | None = None, stages=None):
+        return F.Runner("real", F.EVAL_SEED, self.repo / "results" / "eval_7919", self.repo / "results" / date_folder, allow_battery=True,
+                        repo=self.repo, frozen=["frozen.txt"], stages=stages or [(0, "zero", lambda R: {})], call=no_call, log=self.logs.append,
+                        ledger_path=self.repo / "ledger.jsonl", freeze_date=freeze_date)
+
+    def test_names_follow_the_date(self):
+        self.assertEqual(F.freeze_name("2026-11-27"), "freeze_2026-11-27")
+        self.assertEqual(F.tag_name("2026-11-27"), "freeze-2026-11-27")
+        self.assertEqual(F.freeze_name("2026-12-03"), "freeze_2026-12-03")
+        self.assertFalse(hasattr(F, "FREEZE_DATE") or hasattr(F, "TAG") or hasattr(F, "REAL_FREEZE_REL"))      # no fixed date left in the code
+
+    def test_the_manifest_stores_the_date_and_the_tag_follows_it(self):
+        R = self.real("freeze_2026-11-28", "2026-11-28")
+        doc = R.write_manifest()
+        self.assertEqual(doc["params"]["freeze_date"], "2026-11-28")
+        self.assertEqual(doc["tag"], "freeze-2026-11-28")
+        self.assertIn("freeze folder and tag are named from the manifest date", doc["notes"])
+        self.assertEqual(R.manifest()["params"]["freeze_date"], "2026-11-28")        # later stages read it from the manifest
+
+    def test_a_folder_that_does_not_match_the_manifest_date_stops_the_run(self):
+        R = self.real("freeze_2026-11-28", "2026-11-28")
+        R.write_manifest()
+        wrong = self.repo / "results" / "freeze_2026-12-03"
+        wrong.mkdir(parents=True)
+        (wrong / "freeze_manifest.json").write_text((R.manifest_path).read_text(encoding="utf-8"), encoding="utf-8")      # manifest says 11-28
+        R2 = self.real("freeze_2026-12-03", "2026-12-03")
+        with self.assertRaises(F.Guard) as cm:
+            R2.manifest()
+        self.assertIn("does not match the manifest date 2026-11-28", str(cm.exception))
+        with self.assertRaises(F.Guard):
+            R2.run(only=0)
+        self.assertEqual(self.guards_fired(R2) or [], [])           # stopped by the manifest check, before any stage ran
+        self.assertFalse((wrong / "stages").exists())
+
+    def test_the_rehearsal_naming_is_unchanged(self):
+        R = self.runner()
+        self.assertEqual(R.freeze_dir.name, "_freeze")
+        self.assertIsNone(R.write_manifest()["tag"])
+        self.assertEqual(self.runner().mode, "rehearsal")
+
+    def test_find_real_freeze_reads_the_folder_by_its_manifest(self):
+        self.assertIsNone(F.find_real_freeze(self.repo))
+        (self.repo / "results").mkdir()
+        self.real("freeze_2026-11-27", "2026-11-27").write_manifest()
+        self.assertEqual(F.find_real_freeze(self.repo).name, "freeze_2026-11-27")
+        (self.repo / "results" / "freeze_notadate").mkdir()                                      # not a date: ignored
+        self.assertEqual(F.find_real_freeze(self.repo).name, "freeze_2026-11-27")
+
+    def test_two_real_freeze_folders_stop_the_run(self):
+        self.real("freeze_2026-11-27", "2026-11-27").write_manifest()
+        self.real("freeze_2026-12-03", "2026-12-03").write_manifest()
+        with self.assertRaises(F.Guard) as cm:
+            F.find_real_freeze(self.repo)
+        self.assertIn("happens once", str(cm.exception))
+
+    def test_write_manifest_names_the_folder_from_the_day_it_is_written(self):
+        import argparse
+        from unittest import mock
+        args = argparse.Namespace(rehearsal=False, approve_seed_7919=False, allow_battery=False, command="write-manifest", dev_seed=42)
+        (self.repo / "results").mkdir()
+        with mock.patch.object(F, "REPO", self.repo), mock.patch.object(F, "today", lambda: "2026-11-27"):
+            R = F.runner_from_args(args)
+        self.assertEqual(R.freeze_dir.name, "freeze_2026-11-27")
+        self.assertEqual(R.freeze_date, "2026-11-27")
+
+    def test_no_real_manifest_creates_nothing(self):
+        import argparse
+        args = argparse.Namespace(rehearsal=False, approve_seed_7919=False, allow_battery=False, command="run", dev_seed=42)
+        with unittest_mock_patch(F, "REPO", self.repo):
+            (self.repo / "results").mkdir()
+            with self.assertRaises(F.Guard) as cm:
+                F.runner_from_args(args)
+        self.assertIn("write-manifest", str(cm.exception))
+        self.assertEqual(sorted(p.name for p in (self.repo / "results").iterdir()), [])        # no folder, no log written
+
+
+def unittest_mock_patch(obj, name, value):
+    from unittest import mock
+    return mock.patch.object(obj, name, value)
+
+
 class SeedRefusals(Base):
     def real(self, approve):
         return self.runner(mode="real", seed=F.EVAL_SEED, approve=approve, run_dir=self.repo / "results" / "eval_7919",
