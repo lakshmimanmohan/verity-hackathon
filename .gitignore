@@ -29,3 +29,14 @@ results/llm_ledger.jsonl.lock
 # D's full-band decisions (regenerate with options/d_hybrid.py full) and B's raw call log (the freeze keeps a gzipped copy in its b_archive)
 results/**/decisions_fullband*.csv
 results/**/sample5000/calls.jsonl
+# Rehearsal and D-study runs: generated data, truth and the outputs of 1 MB or more (regenerate from the dev seed)
+results/rehearsal_*/orgs_raw*.csv
+results/rehearsal_*/options/a_threshold/decisions.csv
+results/rehearsal_*/options/c_model/*/decisions.csv
+results/rehearsal_*/verity_data/golden_records.csv
+results/rehearsal_*/verity_data/match_candidates.csv
+results/dstudy_*/orgs_raw*.csv
+results/dstudy_*/options/a_threshold/decisions.csv
+results/dstudy_*/options/c_model/*/decisions.csv
+results/dstudy_*/verity_data/golden_records.csv
+results/dstudy_*/verity_data/match_candidates.csv
