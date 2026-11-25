@@ -2,4 +2,4 @@
 # 10,000 records or more). Exact search (--nn-mode exact) needs only requirements.txt.
 # On Windows, building Annoy needs the Microsoft C++ Build Tools.
 #   pip install -r verity/requirements-ann.txt
-annoy
+annoy==1.17.3   # released 2023-06-14 (more than two weeks old); Windows has no wheel, so it builds from source
