@@ -97,7 +97,7 @@ python cost/cost_model.py --results results/<run>
 
 Each run writes its config, metrics and timings to `results/<run>/`, so any number in the results table traces back to a folder.
 
-## Freeze run (Dec 4 only)
+## Freeze run (once)
 
 The evaluation set uses seed 7919 (see Amendments in `protocol.md`). Generate it once, on Dec 4, after every threshold, feature and prompt is fixed. Then run steps 2 to 4 above unchanged.
 

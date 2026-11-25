@@ -1,7 +1,7 @@
 # Verity hackathon repo
 
 Experiment: can Verity (schema-agnostic entity matching) resolve borderline record pairs
-as well as a frontier LLM, at lower cost and latency? Demo is Dec 7, numbers freeze Dec 4.
+as well as a frontier LLM, at lower cost and latency? Demo is Dec 7. Numbers freeze at the single freeze run (target Nov 27 to Nov 28, latest Dec 3).
 The comparison covers options A to D; option E is out of scope per the Nov 25 amendment in protocol.md.
 
 See @README.md for layout and run steps, and @protocol.md for the quality bars,
@@ -13,7 +13,7 @@ to fit results.
 - Verity uses the SQLite record store only (`verity/src/record_store.py`). Never add Neo4j code or dependencies.
 - No column names hardcoded in Verity. Logic works from semantic types (NAME, STREET_ADDRESS, DESCRIPTIVE) assigned by `rule_learner.py`. Reject fixes that break this.
 - Ground truth lives only in the sidecar `*_truth.csv`. Never put an answer-key column in a CSV that Verity reads: the classifier treats an integer label column as content, so it would leak into matching.
-- Evaluation seed is 7919 (changed Nov 23, see the protocol's Amendments). Never tune thresholds or features on data generated with it, and don't generate it until the eval run. 42 (the generator default) and 2026 are development seeds.
+- Evaluation seed is 7919 (changed Nov 23, see the protocol's Amendments). Never tune thresholds or features on data generated with it. Never generate or read data with seed 7919 before the freeze run. 42 (the generator default) and 2026 are development seeds.
 - Every option scores the same candidate pairs on the same held-out test split.
 - Evaluation runs use exact neighbor search (`--nn-mode exact`, see the protocol's Amendments). ANN timing is measured separately, for the cost model only.
 - Run everything with `PYTHONHASHSEED=0`. Without it, scores shift up to 0.0075 between runs.
