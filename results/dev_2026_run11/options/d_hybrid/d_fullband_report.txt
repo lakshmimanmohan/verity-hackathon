@@ -1,7 +1,7 @@
-Option D, exact decisions for all 44,882 test band pairs (lo 0.5, hi 0.9), run dev_2026_run11
-routes: {'c_different': 44529, 'llm': 38, 'c_same': 315}; LLM share 0.00085 (38 pairs: 38 with a B answer)
+Option D, exact decisions for all 44,882 test band pairs (lo 0.005, hi 0.9), run dev_2026_run11
+routes: {'c_different': 44516, 'llm': 51, 'c_same': 315}; LLM share 0.00114 (51 pairs: 51 with a B answer)
 
-Exact errors: 4 false matches, 7 false non-matches
+Exact errors: 4 false matches, 6 false non-matches
 
 False matches (different organizations decided same): 4, all shown
   R0c00b9da4c | Rca78c8d029   decision same, p 1.000, route c_same, tags po_box
@@ -37,7 +37,7 @@ False matches (different organizations decided same): 4, all shown
       state            NY                                           | NY
       website          (missing)                                    | (missing)
 
-False non-matches (same organization decided different): 7, all shown
+False non-matches (same organization decided different): 6, all shown
   R00e1fda85b | R9ac1336475   decision different, p 0.002, route c_different, tags acronym+po_box
       address_line     1310 Main Way Fl 2                           | P.O. Box 99016
       city             Boston                                       | Boston
@@ -70,14 +70,6 @@ False non-matches (same organization decided different): 7, all shown
       postal_code      12280                                        | 12280-6981
       state            NY                                           | NY
       website          riverabrooks.com                             | (missing)
-  R28962deef0 | R366b3ef3c7   decision different, p 0.355, route c_different, tags acronym+case+missing_phone
-      address_line     2304 Park Way                                | 2304 Park Way. Ste 210
-      city             Tampa                                        | Tampa
-      company_name     RPES                                         | REED & PRICE ENERGY SOLUTIONS CO.
-      phone            8074705562                                   | (missing)
-      postal_code      33692-9781                                   | 33692
-      state            FL                                           | FL
-      website          reedprice.com                                | (missing)
   R45d7fc9b8c | Rfda06ecad4   decision different, p 0.002, route c_different, tags po_box+truncation
       address_line     Post Office Box 31275                        | 583 Market St.
       city             Richmond                                     | Richmond
@@ -97,13 +89,13 @@ False non-matches (same organization decided different): 7, all shown
 
 Sample-based estimate (5,000-pair sample, compare_d_vs_b.txt) against the exact full-band numbers
                    sample estimate  sample 95% interval      exact   inside?
-  band F1                   0.9896  [0.9813, 0.9969]        0.9838   yes
-  band precision            1.0000  [1.0000, 1.0000]        0.9881   NO: the interval is degenerate [1.0000, 1.0000] (0 false matches sampled); the zero-error bound (worst-case precision >= 0.9208) contains the exact value
-  band recall               0.9794  [0.9633, 0.9939]        0.9794   yes
-  overall precision: sample 1.0000, exact 0.9988; overall recall: sample 0.5791, exact 0.5791; ECE: sample 0.0002, exact 0.0002
+  band F1                   0.9911  [0.9831, 0.9972]        0.9853   yes
+  band precision            1.0000  [1.0000, 1.0000]        0.9882   NO: the interval is degenerate [1.0000, 1.0000] (0 false matches sampled); the zero-error bound (worst-case precision >= 0.9208) contains the exact value
+  band recall               0.9824  [0.9668, 0.9944]        0.9824   yes
+  overall precision: sample 1.0000, exact 0.9988; overall recall: sample 0.5791, exact 0.5793; ECE: sample 0.0002, exact 0.0002
   why the sample missed the false matches: the 4 exact false matches are 3 sure-same pairs from C (p = 1.0) and 1 the LLM answered same; each non-match has a 1-in-9.56 chance of being sampled, so a handful of false matches can all be missed (the sample's 95% bound allowed up to 29)
 
-Where D and C differ: 15 of 44,882 band pairs (D differs from C only on the LLM-routed pairs)
+Where D and C differ: 16 of 44,882 band pairs (D differs from C only on the LLM-routed pairs)
   R04cc0c5b9d R47be2b4ec3   C same (p 0.801) -> D different   truth different
   R04cc0c5b9d R6a1b2515f9   C same (p 0.801) -> D different   truth different
   R04cc0c5b9d R88620d9b06   C same (p 0.801) -> D different   truth different
@@ -113,20 +105,20 @@ Where D and C differ: 15 of 44,882 band pairs (D differs from C only on the LLM-
   R171901aef3 R46b5065817   C same (p 0.801) -> D different   truth different
   R2698b13b2b R976f49627b   C same (p 0.801) -> D different   truth different
   R26d9e258da R7d9b66f0ab   C same (p 0.801) -> D different   truth same
+  R28962deef0 R366b3ef3c7   C different (p 0.355) -> D same   truth same
   R536d5f80dc Re7f93a5b75   C same (p 0.801) -> D different   truth different
   R6eafbc6c9b Rc98a5407a0   C same (p 0.801) -> D different   truth different
   R7917e06d36 Raa5110878e   C same (p 0.801) -> D different   truth different
   R7917e06d36 Rca7c1b9821   C same (p 0.801) -> D different   truth different
   R976f49627b Red3db1ec19   C same (p 0.801) -> D different   truth different
   R9cc6618d74 Ra9fedabfef   C same (p 0.801) -> D different   truth different
-  of those 15: {'D right': 14, 'D wrong': 1}
+  of those 16: {'D right': 15, 'D wrong': 1}
 
-Where D and B differ: B has an answer for 5,077 band pairs (the 5,000 sampled, 64 decoy-check and routed pairs); they differ on 8 of them; {'D wrong, B right': 6, 'D right, B wrong': 2}. On the 39,805 band pairs B never saw, the comparison is not possible
+Where D and B differ: B has an answer for 5,087 band pairs (the 5,000 sampled, 64 decoy-check and routed pairs); they differ on 7 of them; {'D wrong, B right': 5, 'D right, B wrong': 2}. On the 39,795 band pairs B never saw, the comparison is not possible
   R00e1fda85b R9ac1336475   D different (route c_different, p 0.002)  B same (p_same 0.92)   truth same   acronym+po_box
   R06038804e4 R46b5065817   D different (route c_different, p 0.002)  B same (p_same 0.93)   truth same   po_box+truncation+typo
   R1201db1fc5 Rb3f1ba6816   D different (route c_different, p 0.002)  B same (p_same 0.95)   truth same   po_box+standard+typo
   R22fa661a73 R557e2011f9   D different (route c_different, p 0.000)  B same (p_same 0.88)   truth different   acronym+clean+missing_phone
-  R28962deef0 R366b3ef3c7   D different (route c_different, p 0.355)  B same (p_same 0.97)   truth same   acronym+case+missing_phone
   R45d7fc9b8c Rfda06ecad4   D different (route c_different, p 0.002)  B same (p_same 0.92)   truth same   po_box+truncation
   R90c47540d7 Red42a19bb4   D different (route c_different, p 0.002)  B same (p_same 0.97)   truth same   case+missing_phone+truncation
   Ra4031214fc Rd26638834d   D same (route c_same, p 1.000)  B different (p_same 0.35)   truth same   po_box+typo

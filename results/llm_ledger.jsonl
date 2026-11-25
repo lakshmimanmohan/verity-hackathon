@@ -16767,3 +16767,4 @@
 {"t":"2026-11-25T13:26:35.878267Z","type":"settle","id":"bcfc08af533e444ab5cbf30bc6350e18","run":"dstudy_13/b_llm/openai/lo0005","provider":"openai","model":"gpt-5.4-2026-03-05","usd":0.001471,"reserved_usd":0.00806,"over_reservation":false,"input_tokens":2087,"output_tokens":19}
 {"t":"2026-11-25T13:26:41.321057Z","type":"cache_hits","n":40,"run":"rehearsal_42/b_llm/openai/lo0005","provider":"openai","model":"gpt-5.4-2026-03-05","usd":0.0}
 {"t":"2026-11-25T13:26:45.931515Z","type":"cache_hits","n":51,"run":"rehearsal_2026/b_llm/openai/lo0005","provider":"openai","model":"gpt-5.4-2026-03-05","usd":0.0}
+{"t":"2026-11-25T15:14:25.586457Z","type":"cache_hits","n":51,"run":"dev_2026_run11/b_llm/openai/dfull_v2","provider":"openai","model":"gpt-5.4-2026-03-05","usd":0.0}

@@ -58,17 +58,17 @@ S1 and S2 (same total),63665,50.0,A,,option cheaper everywhere in range
 "S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",63665,50.0,A,,option cheaper everywhere in range
 S1 and S2 (same total),63665,50.0,C,1418,option cheaper above
 "S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",63665,50.0,C,1423,option cheaper above
-S1 and S2 (same total),63665,50.0,D,1643,option cheaper above
+S1 and S2 (same total),63665,50.0,D,1644,option cheaper above
 "S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",63665,50.0,D,1637,option cheaper above
 S1 and S2 (same total),63665,100.0,A,,option cheaper everywhere in range
 "S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",63665,100.0,A,,option cheaper everywhere in range
 S1 and S2 (same total),63665,100.0,C,2836,option cheaper above
 "S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",63665,100.0,C,2846,option cheaper above
-S1 and S2 (same total),63665,100.0,D,3287,option cheaper above
+S1 and S2 (same total),63665,100.0,D,3288,option cheaper above
 "S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",63665,100.0,D,3275,option cheaper above
 S1 and S2 (same total),63665,200.0,A,,option cheaper everywhere in range
 "S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",63665,200.0,A,,option cheaper everywhere in range
 S1 and S2 (same total),63665,200.0,C,5673,option cheaper above
 "S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",63665,200.0,C,5691,option cheaper above
-S1 and S2 (same total),63665,200.0,D,6573,option cheaper above
+S1 and S2 (same total),63665,200.0,D,6575,option cheaper above
 "S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)",63665,200.0,D,6550,option cheaper above

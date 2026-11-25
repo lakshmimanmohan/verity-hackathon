@@ -3,22 +3,22 @@ Paired comparison on the sample: results\dev_2026_run11\options\b_llm\test_sampl
   5,000 sample pairs (340 same-entity), weights sum 44,882.0 = test band pairs; 1000 resamples, seed 0, same resample for both options; percentile 95% intervals
 
 D (hybrid)
-  band F1         0.9896  95% CI [0.9813, 0.9969]
+  band F1         0.9911  95% CI [0.9831, 0.9972]
   band precision  1.0000  95% CI [1.0000, 1.0000]  (degenerate)
-  band recall     0.9794  95% CI [0.9633, 0.9939]
+  band recall     0.9824  95% CI [0.9668, 0.9944]
   zero-error bounds (exact one-sided 95% Clopper-Pearson; the bootstrap interval is degenerate when an error count is 0):
     false matches: 0 of 4,660 false pairs; false-match rate <= 0.00064 (up to 29 false matches on 44,542 false pairs)
-    implied worst case on a band of 340 true and 44,542 false pairs: precision >= 0.9208, recall = 0.9794, F1 >= 0.9492
+    implied worst case on a band of 340 true and 44,542 false pairs: precision >= 0.9211, recall = 0.9824, F1 >= 0.9507
 C v1 LightGBM
   band F1         0.9507  95% CI [0.9031, 0.9920]
   band precision  0.9209  95% CI [0.8353, 1.0000]
   band recall     0.9824  95% CI [0.9676, 0.9942]
 
 Difference (first minus second) = D (hybrid) minus C v1 LightGBM
-  band F1         +0.0389  95% CI [-0.0015, +0.0868]  (width 0.0883)
+  band F1         +0.0404  95% CI [+0.0000, +0.0882]  (width 0.0882)
   band precision  +0.0791  95% CI [+0.0000, +0.1647]  (width 0.1647)
-  band recall     -0.0029  95% CI [-0.0099, +0.0000]  (width 0.0099)
+  band recall     +0.0000  95% CI [-0.0089, +0.0086]  (width 0.0175)
 
-Bar: band F1 difference vs -0.02 (D (hybrid) against C v1 LightGBM as the baseline): +0.0389 [-0.0015, +0.0868] -> PASS  (pass: lower end > -0.02; fail: upper end < -0.02; else inconclusive)
+Bar: band F1 difference vs -0.02 (D (hybrid) against C v1 LightGBM as the baseline): +0.0404 [+0.0000, +0.0882] -> PASS  (pass: lower end > -0.02; fail: upper end < -0.02; else inconclusive)
 
-For reference, unpaired (independent resamples): band F1 difference interval [-0.0011, +0.0871] (width 0.0883) against paired width 0.0883
+For reference, unpaired (independent resamples): band F1 difference interval [+0.0003, +0.0877] (width 0.0874) against paired width 0.0882
