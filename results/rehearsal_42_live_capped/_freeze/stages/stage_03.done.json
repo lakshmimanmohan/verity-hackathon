@@ -1,0 +1,28 @@
+{
+ "stage": 3,
+ "name": "data profile",
+ "mode": "rehearsal",
+ "seed": 42,
+ "ended_utc": "2026-11-25T15:51:51Z",
+ "seconds": 0.2,
+ "ledger_cost_usd": 0.0,
+ "exit": 0,
+ "reads_truth": [
+  "data_profile"
+ ],
+ "guards": [
+  {
+   "time": "2026-11-25T15:51:51Z",
+   "stage": 3,
+   "guard": "frozen files unchanged since the manifest",
+   "fired": false,
+   "detail": "all match"
+  }
+ ],
+ "notes": [],
+ "outputs": {
+  "results/rehearsal_42/data_profile.txt": "96e7afe467ffad81a1ce5399efc1af7da475adb8caf26c912e988eca02b9620d",
+  "results/rehearsal_42/data_profile.csv": "5809d240343f29d2750170adbd0a526de7d18d1d4c641b40728103891724103d"
+ },
+ "manifest_sha256": "d5d907ba5e981899af297b845bb2166d3999cb625b3037576aa8a43d32f78b53"
+}

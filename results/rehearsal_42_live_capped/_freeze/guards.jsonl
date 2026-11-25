@@ -1,0 +1,23 @@
+{"time": "2026-11-25T15:50:02Z", "stage": 0, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T15:50:02Z", "stage": 0, "guard": "rehearsal never uses the evaluation seed", "fired": false, "detail": "seed 42"}
+{"time": "2026-11-25T15:50:02Z", "stage": 0, "guard": "rehearsal seed is a development seed", "fired": false, "detail": "seed 42; allowed (42, 2026)"}
+{"time": "2026-11-25T15:50:02Z", "stage": 0, "guard": "HEAD is the commit the rehearsal manifest recorded", "fired": false, "detail": "manifest 4de6009f7590b673cec303795fabc36622c7b16f, HEAD 4de6009f7590b673cec303795fabc36622c7b16f"}
+{"time": "2026-11-25T15:50:02Z", "stage": 0, "guard": "clean tree (no modified tracked files, no untracked files outside .gitignore)", "fired": false, "detail": "clean"}
+{"time": "2026-11-25T15:50:02Z", "stage": 0, "guard": "AC power", "fired": false, "detail": "power: ac"}
+{"time": "2026-11-25T15:50:02Z", "stage": 0, "guard": "OPENAI_API_KEY is set (value never read out)", "fired": false, "detail": "set"}
+{"time": "2026-11-25T15:50:02Z", "stage": 1, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T15:50:02Z", "stage": 1, "guard": "rehearsal never uses the evaluation seed", "fired": false, "detail": "seed 42"}
+{"time": "2026-11-25T15:50:02Z", "stage": 1, "guard": "rehearsal seed is a development seed", "fired": false, "detail": "seed 42; allowed (42, 2026)"}
+{"time": "2026-11-25T15:50:02Z", "stage": 1, "guard": "the run folder holds no data", "fired": false, "detail": "results/rehearsal_42"}
+{"time": "2026-11-25T15:50:02Z", "stage": 2, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T15:51:51Z", "stage": 2, "guard": "exact neighbor search", "fired": false, "detail": "resolved exact"}
+{"time": "2026-11-25T15:51:51Z", "stage": 2, "guard": "no uncommitted changes in verity/src", "fired": false, "detail": "False"}
+{"time": "2026-11-25T15:51:51Z", "stage": 2, "guard": "PYTHONHASHSEED=0", "fired": false, "detail": "0"}
+{"time": "2026-11-25T15:51:51Z", "stage": 3, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T15:51:51Z", "stage": 4, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T15:52:01Z", "stage": 5, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T15:52:07Z", "stage": 6, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T15:52:36Z", "stage": 7, "guard": "frozen files unchanged since the manifest", "fired": false, "detail": "all match"}
+{"time": "2026-11-25T15:52:36Z", "stage": 7, "guard": "frozen asset fewshot.json matches the manifest", "fired": false, "detail": "results/dev_2026_run11/options/b_llm/fewshot.json -> results/rehearsal_42/options/b_llm/fewshot.json"}
+{"time": "2026-11-25T15:52:36Z", "stage": 7, "guard": "frozen asset frozen_prompt.json matches the manifest", "fired": false, "detail": "results/dev_2026_run11/options/b_llm/frozen_prompt.json -> results/rehearsal_42/options/b_llm/frozen_prompt.json"}
+{"time": "2026-11-25T15:52:36Z", "stage": 7, "guard": "AC power", "fired": false, "detail": "power: ac"}

@@ -1,0 +1,1971 @@
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe verity/src/main.py --nn-mode exact --input C:\verity-hackathon\results\rehearsal_42\orgs_raw.csv   [truth sealed; 2026-11-25T15:50:02Z]
+Data folder: C:\verity-hackathon\results\rehearsal_42\verity_data
+Neighbor search mode: exact (from --nn-mode); Annoy installed: no
+Weight mode: LEARNING from delta file (default)
+Reading `C:\verity-hackathon\results\rehearsal_42\orgs_raw.csv`...
+========================================================================
+  Column classification (metadata vs content)
+========================================================================
+  record_id_column: 'record_id'
+  metadata_columns (2): record_id, source_system
+  content_columns (7): address_line, city, company_name, phone, postal_code, state, website
+------------------------------------------------------------------------
+  Per-column reasoning:
+    address_line: included: 71.9% unique, 7194 distinct; human-readable text signal
+    city: included: 0.3% unique, 26 distinct; human-readable text signal
+    company_name: included: 78.8% unique, 7877 distinct; human-readable text signal
+    phone: included: 75.2% unique, 7524 distinct; no metadata rule matched (entity-describing field)
+    postal_code: included: 32.5% unique, 3251 distinct; no metadata rule matched (entity-describing field)
+    record_id: excluded: [primary_key] primary key (uniqueness ratio 100.00% ≥ 99%) | [system_process_field] system process field (name contains: id; only flagged because values are 100% unique)
+    source_system: excluded: [near_constant_field] near-constant field, 4 distinct values (<5) — system label / category regardless of dataset size
+    state: included: 0.2% unique, 22 distinct; human-readable text signal
+    website: included: 34.3% unique, 3428 distinct; human-readable text signal
+========================================================================
+
+Saved `C:\verity-hackathon\results\rehearsal_42\verity_data\column_classification.json`
+Updated global column list: `C:\verity-hackathon\results\rehearsal_42\verity_data\column_classification_global.json`
+
+========================================================================
+  DISCOVERED SCHEMA
+========================================================================
+  company_name              semantic=NAME              physical=STRING    uniq=0.788  null=0.000
+  address_line              semantic=STREET_ADDRESS    physical=STRING    uniq=0.719  null=0.000
+  city                      semantic=DESCRIPTIVE       physical=STRING    uniq=0.003  null=0.000
+  state                     semantic=DESCRIPTIVE       physical=STRING    uniq=0.002  null=0.000
+  postal_code               semantic=DESCRIPTIVE       physical=STRING    uniq=0.325  null=0.000
+  phone                     semantic=QUASI_IDENTIFIER  physical=STRING    uniq=0.752  null=0.075
+  website                   semantic=DESCRIPTIVE       physical=STRING    uniq=0.343  null=0.193
+========================================================================
+
+Excluded from weight/threshold/reliability learning (classified metadata): record_id, source_system
+
+Saved `C:\verity-hackathon\results\rehearsal_42\verity_data\attribute_weights.json`
+Saved `C:\verity-hackathon\results\rehearsal_42\verity_data\learned_threshold.json`
+Saved plot `C:\verity-hackathon\results\rehearsal_42\verity_data\threshold_similarity_distribution.png`
+Saved `C:\verity-hackathon\results\rehearsal_42\verity_data\learned_rules.md`
+
+Similarity preview (sample):
+  min=0.1718 max=0.7023 mean=0.4228 threshold=0.4540
+Created data folder: C:\verity-hackathon\results\rehearsal_42\verity_data
+Using input file: results\rehearsal_42\orgs_raw.csv  (10000 records found)
+Record label: OrgRecord
+Record store currently contains 0 existing records
+Adding 10000 new records from orgs_raw.csv
+Total after this run: 10000 records
+
+========================================================================
+  Phase complete: 1. Learn rules from data
+  Elapsed:      9.94s
+========================================================================
+
+
+========================================================================
+  Contents of C:\verity-hackathon\results\rehearsal_42\verity_data\learned_rules.md
+========================================================================
+# Learned matching rules
+Source file: `C:\verity-hackathon\results\rehearsal_42\orgs_raw.csv`  
+Rows analyzed: `10000`
+
+> **Excluded from learning** (hold-out / label-like columns): `record_id`, `source_system`.  
+
+## Schema discovery
+Columns were typed from value patterns (dates, emails, numeric parse rates, name-like strings) and cardinality tiers (identifiers vs quasi-identifiers vs descriptive fields). The weight table lists **columns used for learning** (evaluation / label-like fields removed).
+
+| Column | Semantic type | Physical kind | Uniq. ratio | Null % | Weight (disc.) |
+|--------|----------------|---------------|------------|-------|----------------|
+| `company_name` | NAME | STRING | 0.788 | 0.0% | 0.280 |
+| `address_line` | STREET_ADDRESS | STRING | 0.719 | 0.0% | 0.256 |
+| `phone` | QUASI_IDENTIFIER | STRING | 0.752 | 7.5% | 0.248 |
+| `postal_code` | DESCRIPTIVE | STRING | 0.325 | 0.0% | 0.116 |
+| `website` | DESCRIPTIVE | STRING | 0.343 | 19.3% | 0.098 |
+| `city` | DESCRIPTIVE | STRING | 0.003 | 0.0% | 0.001 |
+| `state` | DESCRIPTIVE | STRING | 0.002 | 0.0% | 0.001 |
+
+## Discriminative weights
+Each column receives `discriminative_score = uniqueness_ratio * (1 - null_rate)`. Values are normalized to sum to **1.0** so they act as data-driven attribute weights **without manual tuning**.
+
+### Strongest signals
+- **`company_name`** normalized weight **0.280**: 78.8% unique values, 0.0% null — classified as **NAME**.
+- **`address_line`** normalized weight **0.256**: 71.9% unique values, 0.0% null — classified as **STREET_ADDRESS**.
+- **`phone`** normalized weight **0.248**: 75.2% unique values, 7.5% null — classified as **QUASI_IDENTIFIER**.
+- **`postal_code`** normalized weight **0.116**: 32.5% unique values, 0.0% null — classified as **DESCRIPTIVE**.
+- **`website`** normalized weight **0.098**: 34.3% unique values, 19.3% null — classified as **DESCRIPTIVE**.
+
+## Similarity aggregation
+- DESCRIPTIVE / NAME string columns: 65% cosine (record embedding) + 35% character-set Jaccard; falls back to Jaccard when embeddings are missing  
+- Other strings: character-set Jaccard similarity  
+- Numbers: min–max normalization per column; similarity `1 − |Δ_scaled|`  
+- Dates: ordinal distance scaled to ~10 years  
+- Email: separate Jaccard on local-part and domain, then averaged  
+
+Random **1000** row pairs were scored with the normalized weights.
+
+## Learned match threshold
+Pooled weighted similarity was clustered with **`KMeans(n_clusters=2)`** (separating a low cluster from a high cluster).
+
+- Lower cluster: **`489`** pairs, mean **`0.3636`**, sd **`0.0452`**  
+- Lower cluster center: **`0.3636`**  
+- Upper cluster center: **`0.4794`**  
+- **`threshold = low mean + 2 x sd = 0.4540`** — pairs above this are treated as plausible matches.  
+- Centroid midpoint (earlier rule, for reference): **`0.4215`**
+
+See **`data/threshold_similarity_distribution.png`** for the histogram with the cutoff.
+
+## Field reliability
+When pairs already agree on strongly weighted columns but disagree elsewhere, the conflicting field accumulates penalties; fields that consistently co-agree with anchors gain higher **`reliability_score`**.
+
+| Column | Reliability |
+|--------|------------|
+| `state` | 1.000 |
+| `city` | 0.881 |
+| `company_name` | 0.100 |
+| `address_line` | 0.100 |
+| `postal_code` | 0.100 |
+| `phone` | 0.100 |
+| `website` | 0.100 |
+
+## Composite suggestion
+`composite_weight` (normalized) blends discriminative uniqueness with reliability — useful when some fields drift (addresses) while others stay stable (email/phone).
+
+Skipping metadata columns: ['record_id', 'source_system']
+Loading 10000 OrgRecord rows into the record store (verity_store.sqlite)…
+Done.
+
+========================================================================
+  Phase complete: 2. build_graph
+  Elapsed:      1.01s
+========================================================================
+
+Global store: 0 existing records
+Memory at start: 439.6 RSS MB (psutil)
+Pass 1: paginated record store scan (5000 rows per page) for OrgRecord…
+  … indexed 10000 OrgRecord nodes
+Schema change detected — recomputing all embeddings
+  … document frequency over 27973 distinct (attribute, value) pairs
+Loading sentence-transformers model 'all-MiniLM-L6-v2'…
+
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]
+Loading weights: 100%|██████████| 103/103 [00:00<00:00, 3377.69it/s]
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+C:\verity-hackathon\verity\src\embed.py:458: FutureWarning: The `get_sentence_embedding_dimension` method has been renamed to `get_embedding_dimension`.
+  dim = int(model.get_sentence_embedding_dimension())
+Recomputing embeddings for 10000 records
+Computing IDF-weighted record embeddings (paginated)…
+  … page 1: encode 16997 segment(s) for 5000 record(s)
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.27it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.27it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.60it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.59it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.57it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.57it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.80it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.80it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.30it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.30it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.78it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.78it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.87it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.87it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.29it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.29it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.59it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.59it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.05it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.05it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.37it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.37it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.44it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.44it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.32it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.32it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.39it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.39it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.64it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.64it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.78it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.78it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.37it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.37it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.03it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.03it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.72it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.72it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.33it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.33it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.74it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.74it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.28it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.28it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.07it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.07it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.76it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.76it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.04it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.04it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.03it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.03it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.27it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.27it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.60it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.60it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.99it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.99it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.80it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.80it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.61it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.61it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.93it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.93it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.96it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.96it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00, 11.29it/s]
+  … fused 100 / 10000 records
+  … fused 200 / 10000 records
+  … fused 300 / 10000 records
+  … fused 400 / 10000 records
+  … fused 500 / 10000 records
+  … fused 600 / 10000 records
+  … fused 700 / 10000 records
+  … fused 800 / 10000 records
+  … fused 900 / 10000 records
+  … fused 1000 / 10000 records
+  … fused 1100 / 10000 records
+  … fused 1200 / 10000 records
+  … fused 1300 / 10000 records
+  … fused 1400 / 10000 records
+  … fused 1500 / 10000 records
+  … fused 1600 / 10000 records
+  … fused 1700 / 10000 records
+  … fused 1800 / 10000 records
+  … fused 1900 / 10000 records
+  … fused 2000 / 10000 records
+  … fused 2100 / 10000 records
+  … fused 2200 / 10000 records
+  … fused 2300 / 10000 records
+  … fused 2400 / 10000 records
+  … fused 2500 / 10000 records
+  … fused 2600 / 10000 records
+  … fused 2700 / 10000 records
+  … fused 2800 / 10000 records
+  … fused 2900 / 10000 records
+  … fused 3000 / 10000 records
+  … fused 3100 / 10000 records
+  … fused 3200 / 10000 records
+  … fused 3300 / 10000 records
+  … fused 3400 / 10000 records
+  … fused 3500 / 10000 records
+  … fused 3600 / 10000 records
+  … fused 3700 / 10000 records
+  … fused 3800 / 10000 records
+  … fused 3900 / 10000 records
+  … fused 4000 / 10000 records
+  … fused 4100 / 10000 records
+  … fused 4200 / 10000 records
+  … fused 4300 / 10000 records
+  … fused 4400 / 10000 records
+  … fused 4500 / 10000 records
+  … fused 4600 / 10000 records
+  … fused 4700 / 10000 records
+  … fused 4800 / 10000 records
+  … fused 4900 / 10000 records
+  … fused 5000 / 10000 records
+  … page 2: encode 17012 segment(s) for 5000 record(s)
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.16it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.16it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.85it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.85it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.54it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.54it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.78it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.78it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.49it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.49it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.81it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.81it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.66it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.66it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.55it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.55it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.28it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.28it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.18it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.18it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.21it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.21it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.67it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.67it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.13it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.13it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.37it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.37it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.23it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.23it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.10it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.10it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.35it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.35it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.77it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.77it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.44it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.44it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.30it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.30it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.10it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.10it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.30it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.30it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.13it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.13it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.99it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.99it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.03it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.03it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.20it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  2.20it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.99it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.99it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.87it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.87it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.96it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.96it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.77it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.77it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.81it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.81it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.82it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.82it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.69it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  1.69it/s]
+
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  9.08it/s]
+Batches: 100%|██████████| 1/1 [00:00<00:00,  9.06it/s]
+  … fused 5100 / 10000 records
+  … fused 5200 / 10000 records
+  … fused 5300 / 10000 records
+  … fused 5400 / 10000 records
+  … fused 5500 / 10000 records
+  … fused 5600 / 10000 records
+  … fused 5700 / 10000 records
+  … fused 5800 / 10000 records
+  … fused 5900 / 10000 records
+  … fused 6000 / 10000 records
+  … fused 6100 / 10000 records
+  … fused 6200 / 10000 records
+  … fused 6300 / 10000 records
+  … fused 6400 / 10000 records
+  … fused 6500 / 10000 records
+  … fused 6600 / 10000 records
+  … fused 6700 / 10000 records
+  … fused 6800 / 10000 records
+  … fused 6900 / 10000 records
+  … fused 7000 / 10000 records
+  … fused 7100 / 10000 records
+  … fused 7200 / 10000 records
+  … fused 7300 / 10000 records
+  … fused 7400 / 10000 records
+  … fused 7500 / 10000 records
+  … fused 7600 / 10000 records
+  … fused 7700 / 10000 records
+  … fused 7800 / 10000 records
+  … fused 7900 / 10000 records
+  … fused 8000 / 10000 records
+  … fused 8100 / 10000 records
+  … fused 8200 / 10000 records
+  … fused 8300 / 10000 records
+  … fused 8400 / 10000 records
+  … fused 8500 / 10000 records
+  … fused 8600 / 10000 records
+  … fused 8700 / 10000 records
+  … fused 8800 / 10000 records
+  … fused 8900 / 10000 records
+  … fused 9000 / 10000 records
+  … fused 9100 / 10000 records
+  … fused 9200 / 10000 records
+  … fused 9300 / 10000 records
+  … fused 9400 / 10000 records
+  … fused 9500 / 10000 records
+  … fused 9600 / 10000 records
+  … fused 9700 / 10000 records
+  … fused 9800 / 10000 records
+  … fused 9900 / 10000 records
+  … fused 10000 / 10000 records
+Memory after embedding: 907.8 RSS MB (psutil)
+Global store updated: 10000 total records
+Summary: full recompute of 10000 record(s); 10000 vectors saved.
+Done.
+
+========================================================================
+  Phase complete: 3. embed
+  Elapsed:      40.17s
+========================================================================
+
+Warning: file-scoped column classification not found at C:\verity-hackathon\results\rehearsal_42\verity_data\orgs_raw\column_classification.json — falling back to C:\verity-hackathon\results\rehearsal_42\verity_data\column_classification.json
+Run mode: FULL — 10000 records
+Loaded column classification: C:\verity-hackathon\results\rehearsal_42\verity_data\column_classification.json
+  content_columns (7): address_line, city, company_name, phone, postal_code, state, website
+  metadata_columns (2): record_id, source_system
+  CSV row union for evidence / fallback (10000 ids): C:\verity-hackathon\results\rehearsal_42\orgs_raw.csv
+========================================================================
+  match.py — loaded configuration (data-driven)
+========================================================================
+  attribute_weights: C:\verity-hackathon\results\rehearsal_42\verity_data\attribute_weights.json
+  learned_threshold: C:\verity-hackathon\results\rehearsal_42\verity_data\learned_threshold.json
+  Learned threshold: 0.454 (effective = max(learned, 0.82))
+  applied cosine vs field blend (embedding≤0.65, field≥0.35): embed=0.6500, field=0.3500
+  discriminative_score (raw from JSON; share = raw / sum(raw)):
+    address_line              raw=0.719400  share=0.256044
+    city                      raw=0.002600  share=0.000925
+    company_name              raw=0.787700  share=0.280352
+    phone                     raw=0.695970  share=0.247705
+    postal_code               raw=0.325100  share=0.115707
+    state                     raw=0.002200  share=0.000783
+    website                   raw=0.276708  share=0.098484
+========================================================================
+
+identity_fields: [phone]
+descriptive_fields: [address_line, city, postal_code, state, website]
+top_discriminative_fields: [company_name, address_line, phone, postal_code, website]
+evidence gates: min_descriptive_fields=2, min_evidence_mass=0.350, max_conflict_mass=0.250
+Exact-duplicate pairs (composite name+location key): 667
+Building neighbour index from 10000 global records
+  Source breakdown (id-prefix heuristic; for per-file counts add embeddings_file_registry.json with a top-level "files" object mapping labels to lists of record ids):
+    prefix:R: 6254
+    prefix:Rd: 437
+    prefix:Re: 392
+    prefix:Rc: 387
+    prefix:Rf: 385
+    prefix:Ra: 378
+    prefix:Rb: 377
+    prefix:Rce: 37
+    prefix:Rfd: 35
+    prefix:Rcb: 32
+    prefix:Rdb: 32
+    prefix:Rbb: 31
+    prefix:Rbc: 31
+    prefix:Rcc: 30
+    prefix:Raf: 29
+    prefix:Rdd: 29
+    prefix:Rae: 28
+    prefix:Ref: 28
+    prefix:Rba: 26
+    prefix:Ree: 26
+    prefix:Rff: 26
+    prefix:Rac: 25
+    prefix:Rda: 25
+    prefix:Rec: 25
+    prefix:Rfc: 25
+    prefix:Raa: 24
+    prefix:Reb: 23
+    prefix:Rfa: 23
+    prefix:Rab: 22
+    prefix:Rad: 22
+    prefix:Rde: 22
+    prefix:Rdf: 22
+    prefix:Rfe: 22
+    prefix:Rbe: 21
+    prefix:Rca: 21
+    prefix:Rbd: 20
+    prefix:Rcd: 20
+    prefix:Rfb: 20
+    prefix:Rbf: 19
+    prefix:Red: 18
+    prefix:Rcf: 16
+    prefix:Rea: 16
+    prefix:Rdc: 14
+    prefix:Raab: 6
+    prefix:Rbdc: 5
+    prefix:Rdcf: 5
+    prefix:Raaa: 4
+    prefix:Racf: 4
+    prefix:Radb: 4
+    prefix:Raed: 4
+    prefix:Rafb: 4
+    prefix:Rbbb: 4
+    prefix:Rbea: 4
+    prefix:Rbfa: 4
+    prefix:Rdfb: 4
+    prefix:Rabac: 3
+    prefix:Radc: 3
+    prefix:Radd: 3
+    prefix:Rbab: 3
+    prefix:Rbbc: 3
+    prefix:Rbcb: 3
+    prefix:Rbcc: 3
+    prefix:Rbdf: 3
+    prefix:Rcab: 3
+    prefix:Rcdd: 3
+    prefix:Rdaa: 3
+    prefix:Rdbc: 3
+    prefix:Rdbf: 3
+    prefix:Rdcd: 3
+    prefix:Rdce: 3
+    prefix:Rddc: 3
+    prefix:Rdfa: 3
+    prefix:Rdfc: 3
+    prefix:Rdfd: 3
+    prefix:Reab: 3
+    prefix:Reaf: 3
+    prefix:Rebd: 3
+    prefix:Reeb: 3
+    prefix:Reec: 3
+    prefix:Rfab: 3
+    prefix:Rfba: 3
+    prefix:Rfec: 3
+    prefix:Rffc: 3
+    prefix:Raad: 2
+    prefix:Raae: 2
+    prefix:Rabc: 2
+    prefix:Racd: 2
+    prefix:Raef: 2
+    prefix:Rafc: 2
+    prefix:Rbbe: 2
+    prefix:Rbbf: 2
+    prefix:Rbeb: 2
+    prefix:Rbfc: 2
+    prefix:Rbfd: 2
+    prefix:Rbfe: 2
+    prefix:Rcac: 2
+    prefix:Rcad: 2
+    prefix:Rcbb: 2
+    prefix:Rcbd: 2
+    prefix:Rcca: 2
+    prefix:Rccf: 2
+    prefix:Rcda: 2
+    prefix:Rceb: 2
+    prefix:Rcfd: 2
+    prefix:Rdad: 2
+    prefix:Rdae: 2
+    prefix:Rdbb: 2
+    prefix:Rdcce: 2
+    prefix:Rdea: 2
+    prefix:Rdeb: 2
+    prefix:Rdec: 2
+    prefix:Rded: 2
+    prefix:Read: 2
+    prefix:Rebc: 2
+    prefix:Rebf: 2
+    prefix:Reda: 2
+    prefix:Rede: 2
+    prefix:Redf: 2
+    prefix:Reef: 2
+    prefix:Reefe: 2
+    prefix:Refa: 2
+    prefix:Refe: 2
+    prefix:Rfaa: 2
+    prefix:Rfad: 2
+    prefix:Rfbc: 2
+    prefix:Rfbe: 2
+    prefix:Rfdc: 2
+    prefix:Rfdf: 2
+    prefix:Rfeb: 2
+    prefix:Rfebf: 2
+    prefix:Rfee: 2
+    prefix:Rfef: 2
+    prefix:Rffd: 2
+    prefix:Rffe: 2
+    prefix:Raabc: 1
+    prefix:Raabd: 1
+    prefix:Raac: 1
+    prefix:Raaebcf: 1
+    prefix:Raaf: 1
+    prefix:Raafc: 1
+    prefix:Raba: 1
+    prefix:Rabd: 1
+    prefix:Rabe: 1
+    prefix:Rabeece: 1
+    prefix:Rabf: 1
+    prefix:Rabfda: 1
+    prefix:Raca: 1
+    prefix:Racb: 1
+    prefix:Racbbb: 1
+    prefix:Racbf: 1
+    prefix:Racdfea: 1
+    prefix:Racee: 1
+    prefix:Racfd: 1
+    prefix:Radaa: 1
+    prefix:Radbc: 1
+    prefix:Radbfe: 1
+    prefix:Radced: 1
+    prefix:Raddb: 1
+    prefix:Rade: 1
+    prefix:Radf: 1
+    prefix:Raea: 1
+    prefix:Raeb: 1
+    prefix:Raebcd: 1
+    prefix:Raecc: 1
+    prefix:Raeda: 1
+    prefix:Raee: 1
+    prefix:Raeef: 1
+    prefix:Rafadd: 1
+    prefix:Rafbd: 1
+    prefix:Rafbe: 1
+    prefix:Rafcb: 1
+    prefix:Rafcd: 1
+    prefix:Rafd: 1
+    prefix:Rafdce: 1
+    prefix:Raff: 1
+    prefix:Rbaa: 1
+    prefix:Rbaaef: 1
+    prefix:Rbaba: 1
+    prefix:Rbac: 1
+    prefix:Rbaccb: 1
+    prefix:Rbad: 1
+    prefix:Rbaddf: 1
+    prefix:Rbadeaf: 1
+    prefix:Rbae: 1
+    prefix:Rbaf: 1
+    prefix:Rbafa: 1
+    prefix:Rbafc: 1
+    prefix:Rbaff: 1
+    prefix:Rbba: 1
+    prefix:Rbbce: 1
+    prefix:Rbbceba: 1
+    prefix:Rbbec: 1
+    prefix:Rbbfab: 1
+    prefix:Rbca: 1
+    prefix:Rbcad: 1
+    prefix:Rbcbb: 1
+    prefix:Rbccac: 1
+    prefix:Rbcdad: 1
+    prefix:Rbce: 1
+    prefix:Rbcef: 1
+    prefix:Rbcf: 1
+    prefix:Rbcfdcc: 1
+    prefix:Rbdac: 1
+    prefix:Rbdacd: 1
+    prefix:Rbdb: 1
+    prefix:Rbdbb: 1
+    prefix:Rbdbcdb: 1
+    prefix:Rbdec: 1
+    prefix:Rbdfa: 1
+    prefix:Rbeaca: 1
+    prefix:Rbeadc: 1
+    prefix:Rbecc: 1
+    prefix:Rbed: 1
+    prefix:Rbeece: 1
+    prefix:Rbef: 1
+    prefix:Rbfac: 1
+    prefix:Rbfbee: 1
+    prefix:Rbfda: 1
+    prefix:Rbfdb: 1
+    prefix:Rbfdbe: 1
+    prefix:Rbfea: 1
+    prefix:Rbffd: 1
+    prefix:Rcaa: 1
+    prefix:Rcaaac: 1
+    prefix:Rcacdd: 1
+    prefix:Rcae: 1
+    prefix:Rcaeab: 1
+    prefix:Rcbaca: 1
+    prefix:Rcbbbc: 1
+    prefix:Rcbbc: 1
+    prefix:Rcbbf: 1
+    prefix:Rcbc: 1
+    prefix:Rcbdbd: 1
+    prefix:Rcbf: 1
+    prefix:Rcbfd: 1
+    prefix:Rccb: 1
+    prefix:Rccba: 1
+    prefix:Rccbcca: 1
+    prefix:Rccd: 1
+    prefix:Rcceb: 1
+    prefix:Rcced: 1
+    prefix:Rcdaa: 1
+    prefix:Rcdb: 1
+    prefix:Rcdbbd: 1
+    prefix:Rcde: 1
+    prefix:Rcdea: 1
+    prefix:Rcdeda: 1
+    prefix:Rcdee: 1
+    prefix:Rcdffb: 1
+    prefix:Rcea: 1
+    prefix:Rceaf: 1
+    prefix:Rceba: 1
+    prefix:Rcebbc: 1
+    prefix:Rcec: 1
+    prefix:Rceccf: 1
+    prefix:Rced: 1
+    prefix:Rceea: 1
+    prefix:Rceeef: 1
+    prefix:Rcef: 1
+    prefix:Rcfb: 1
+    prefix:Rcfbd: 1
+    prefix:Rcfbdc: 1
+    prefix:Rcfbddb: 1
+    prefix:Rcfc: 1
+    prefix:Rcfceb: 1
+    prefix:Rcfdb: 1
+    prefix:Rcfdc: 1
+    prefix:Rcfe: 1
+    prefix:Rcffa: 1
+    prefix:Rcffb: 1
+    prefix:Rcffd: 1
+    prefix:Rdaaa: 1
+    prefix:Rdaab: 1
+    prefix:Rdabf: 1
+    prefix:Rdaccc: 1
+    prefix:Rdadc: 1
+    prefix:Rdaea: 1
+    prefix:Rdaf: 1
+    prefix:Rdba: 1
+    prefix:Rdbac: 1
+    prefix:Rdbe: 1
+    prefix:Rdbfb: 1
+    prefix:Rdca: 1
+    prefix:Rdcbb: 1
+    prefix:Rdcccba: 1
+    prefix:Rdcfd: 1
+    prefix:Rdda: 1
+    prefix:Rddade: 1
+    prefix:Rddb: 1
+    prefix:Rddbe: 1
+    prefix:Rddd: 1
+    prefix:Rdddb: 1
+    prefix:Rddde: 1
+    prefix:Rdddf: 1
+    prefix:Rdde: 1
+    prefix:Rddeb: 1
+    prefix:Rddebc: 1
+    prefix:Rddf: 1
+    prefix:Rdeabe: 1
+    prefix:Rdebdc: 1
+    prefix:Rdebee: 1
+    prefix:Rdeddea: 1
+    prefix:Rdedebd: 1
+    prefix:Rdeef: 1
+    prefix:Rdeffa: 1
+    prefix:Rdfbad: 1
+    prefix:Rdfe: 1
+    prefix:Rdfed: 1
+    prefix:Rdff: 1
+    prefix:Rdffc: 1
+    prefix:Rdffca: 1
+    prefix:Rdfff: 1
+    prefix:Reaa: 1
+    prefix:Reabb: 1
+    prefix:Reabf: 1
+    prefix:Reac: 1
+    prefix:Reacd: 1
+    prefix:Readc: 1
+    prefix:Readd: 1
+    prefix:Readeac: 1
+    prefix:Readfba: 1
+    prefix:Reba: 1
+    prefix:Rebac: 1
+    prefix:Rebbafd: 1
+    prefix:Rebbdf: 1
+    prefix:Rebbe: 1
+    prefix:Rebde: 1
+    prefix:Rebe: 1
+    prefix:Rebea: 1
+    prefix:Reca: 1
+    prefix:Recb: 1
+    prefix:Recbd: 1
+    prefix:Recc: 1
+    prefix:Reccc: 1
+    prefix:Recd: 1
+    prefix:Redb: 1
+    prefix:Redbfa: 1
+    prefix:Redc: 1
+    prefix:Redd: 1
+    prefix:Reddaa: 1
+    prefix:Redef: 1
+    prefix:Redfb: 1
+    prefix:Redfe: 1
+    prefix:Reea: 1
+    prefix:Reed: 1
+    prefix:Reedae: 1
+    prefix:Reee: 1
+    prefix:Reeeb: 1
+    prefix:Reefa: 1
+    prefix:Reefabc: 1
+    prefix:Reefdaa: 1
+    prefix:Refbabe: 1
+    prefix:Refc: 1
+    prefix:Refcd: 1
+    prefix:Refd: 1
+    prefix:Refea: 1
+    prefix:Refed: 1
+    prefix:Refee: 1
+    prefix:Rfaaa: 1
+    prefix:Rfaba: 1
+    prefix:Rfae: 1
+    prefix:Rfaeddbcf: 1
+    prefix:Rfaeea: 1
+    prefix:Rfbaba: 1
+    prefix:Rfbad: 1
+    prefix:Rfbb: 1
+    prefix:Rfbccb: 1
+    prefix:Rfbd: 1
+    prefix:Rfbf: 1
+    prefix:Rfcacb: 1
+    prefix:Rfcb: 1
+    prefix:Rfcbdd: 1
+    prefix:Rfcc: 1
+    prefix:Rfccb: 1
+    prefix:Rfcda: 1
+    prefix:Rfce: 1
+    prefix:Rfcee: 1
+    prefix:Rfcfe: 1
+    prefix:Rfda: 1
+    prefix:Rfdb: 1
+    prefix:Rfdbd: 1
+    prefix:Rfdd: 1
+    prefix:Rfddfaa: 1
+    prefix:Rfde: 1
+    prefix:Rfdea: 1
+    prefix:Rfdff: 1
+    prefix:Rfeac: 1
+    prefix:Rfece: 1
+    prefix:Rfecef: 1
+    prefix:Rfed: 1
+    prefix:Rfedf: 1
+    prefix:Rfeed: 1
+    prefix:Rffae: 1
+    prefix:Rffb: 1
+    prefix:Rffdc: 1
+    prefix:Rffdff: 1
+    prefix:Rffeda: 1
+    prefix:Rffeeb: 1
+    prefix:Rfff: 1
+    prefix:Rfffde: 1
+    prefix:Rfffe: 1
+Neighbor search: exact (sklearn NearestNeighbors, cosine, brute), n=10000 (mode exact)
+Neighbor index build time: 0.020s
+Neighbor graph: 10000 global records, unique undirected pairs from top-30 NN: 215731
+DEBUG shared_keys=frozenset({'state'}), types={'state': 'DESCRIPTIVE'}
+DEBUG shared_keys=frozenset({'state'}), types={'state': 'DESCRIPTIVE'}
+DEBUG shared_keys=frozenset({'city', 'state'}), types={'city': 'DESCRIPTIVE', 'state': 'DESCRIPTIVE'}
+DEBUG shared_keys=frozenset({'company_name', 'city', 'postal_code', 'website', 'state'}), types={'company_name': 'NAME', 'city': 'DESCRIPTIVE', 'postal_code': 'DESCRIPTIVE', 'website': 'DESCRIPTIVE', 'state': 'DESCRIPTIVE'}
+DEBUG shared_keys=frozenset({'state'}), types={'state': 'DESCRIPTIVE'}
+Effective score threshold: 0.8200 (max(learned=0.4540, floor=0.82))
+Embedding-only score threshold: 0.4540 (learned threshold from learned_threshold.json, no floor)
+========================================================================
+  Match score distribution (all neighbor pairs)
+========================================================================
+  Total pairs found: 215731
+  Min score: 0.724016
+  Max score: 1.000000
+  Average score: 0.823582
+  Pairs in score bands:
+    [0.65, 0.70): 0
+    [0.70, 0.80): 42670
+    [0.80, 0.90): 163436
+    [0.90, 1.00]: 9625
+========================================================================
+
+Dropped 176482 pairs — insufficient schema-agnostic evidence
+ (identity_fields used: [phone]
+  descriptive_fields used: [address_line, city, postal_code, state, website]
+  top_discriminative_fields: [company_name, address_line, phone, postal_code, website])
+Cross-file pairs (registry origin): 0
+Same-file pairs (registry origin): 215731
+Unknown-lineage pairs (missing registry ids or map): 0
+Exact-duplicate pairs also found by neighbor search: 626 (one row kept per pair)
+Scores for merge-quality pairs only (match_type full_signal or weak_signal): 6373 (effective threshold 0.820000)
+Match type counts (unique undirected pairs):
+  below_threshold: 32876
+  full_signal: 4321
+  insufficient_evidence: 176482
+  weak_signal: 2052
+Score stats — min: 0.8290, max: 1.0000, mean: 0.9527, std: 0.0298
+  p10: 0.9113
+  p25: 0.9344
+  p50: 0.9555
+  p75: 0.9754
+  p90: 0.9903
+Histogram (effective-threshold-aware bins):
+  [0.738, 0.771): 0
+  [0.771, 0.803): 0
+  [0.803, 0.836): 2
+  [0.836, 0.869): 41
+  [0.869, 0.902): 344
+  [0.902, 0.934): 1216
+  [0.934, 0.967): 2634
+  [0.967, 1.000): 2136
+Kept 4725 full_signal pairs
+Kept 1689 weak_signal pairs
+Dropped 176482 insufficient_evidence pairs
+Dropped 32876 below_threshold pairs
+Wrote 6414 row(s) to match_candidates.csv
+Wrote 215731 row(s) to scored_pairs.csv (0 exact-duplicate pair(s) not found by neighbor search)
+Done.
+
+========================================================================
+  Phase complete: 4. match
+  Elapsed:      48.58s
+========================================================================
+
+Loaded attribute_weights: C:\verity-hackathon\results\rehearsal_42\verity_data\attribute_weights.json
+Loaded column_classification: C:\verity-hackathon\results\rehearsal_42\verity_data\column_classification.json
+  record_id_column='record_id', content=7, metadata=2
+Using 6414 merged pair keys from CSV (0 insufficient_evidence rows); graph has 6414 edges between records
+Graph: 10000 nodes, 6414 edges (from match_candidates.csv, streamed with csv.DictReader + nx.add_edge)
+Memory before community detection: 665.8 MiB RSS
+Community detection: greedy_modularity_communities (10000 nodes <= 50000: modularity optimization fits this graph size.)
+Memory after community detection: 667.1 MiB RSS
+Communities (greedy modularity): 5618 raw; 5618 after max-15 member sanity pass
+Wrote 5618 golden rows -> C:\verity-hackathon\results\rehearsal_42\verity_data\golden_records.csv
+
+Pairwise merge quality vs ground-truth labels: skipped (no column with semantic_type ANSWER_KEY or answer_key in classification reasoning)
+Done.
+
+========================================================================
+  Phase complete: 5. merge
+  Elapsed:      1.31s
+========================================================================
+
+Wrote C:\verity-hackathon\results\rehearsal_42\verity_data\match_explorer.html (200 cards sampled, 6414 unique pairs in source)
+Match explorer saved to: C:\verity-hackathon\results\rehearsal_42\verity_data\match_explorer.html
+Open this file in your browser to review matches.
+
+========================================================================
+  Phase complete: 6. explore matches
+  Elapsed:      0.08s
+========================================================================
+
+INFO: component of 4 members re-clustered — name divergence 0.85 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 7 members re-clustered — name divergence 0.84 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 7 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.90 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 7 members re-clustered — name divergence 0.81 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.69 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.69 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.74 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.87 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.75 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.77 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.96 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.85 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.69 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.88 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.88 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.89 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.75 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.74 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.87 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.69 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.76 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.66 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.66 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.76 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 7 members re-clustered — name divergence 0.71 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.85 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.92 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.86 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.76 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.79 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.80 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.77 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.75 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.76 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.74 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.88 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.87 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.82 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.87 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.77 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 7 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.87 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.89 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.76 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.71 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.75 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.70 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.73 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.90 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.71 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.89 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.77 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.71 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.90 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.81 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.81 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.82 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.88 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.80 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.69 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.72 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.82 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.87 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.96 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.70 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.80 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.70 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.74 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.95 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.70 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.89 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.71 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.87 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.88 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.76 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.90 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.70 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.74 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.80 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.89 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.71 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.76 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.89 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.89 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.75 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.66 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.79 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.71 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.85 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.92 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.95 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.88 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.71 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.85 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.71 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.79 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.82 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.75 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.77 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.70 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.73 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.74 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — address cohesion 0.33 < 0.5 (component spans too many distinct normalized addresses).
+INFO: component of 4 members re-clustered — name divergence 0.71 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.70 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 7 members re-clustered — name divergence 0.76 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.87 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.87 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.75 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.89 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.81 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.87 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.80 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.74 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 7 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.73 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.86 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.82 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 7 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.71 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.73 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.74 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.80 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.75 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.81 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.71 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.90 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.77 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.88 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.71 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.75 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.68 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.82 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.76 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.74 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.81 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — address cohesion 0.33 < 0.5 (component spans too many distinct normalized addresses).
+INFO: component of 4 members re-clustered — name divergence 0.70 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.92 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.73 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.89 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.87 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.72 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.75 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.84 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.82 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.82 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.88 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.89 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.71 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.75 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.87 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.96 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 7 members re-clustered — name divergence 0.73 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.71 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.82 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 7 members re-clustered — name divergence 0.91 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.79 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.86 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.88 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.68 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.76 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.88 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.76 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.77 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.80 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.91 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 7 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.90 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.89 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.86 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.71 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.70 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.88 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.82 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.80 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.92 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.86 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.77 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.82 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.71 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.86 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.77 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.70 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.87 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.84 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.74 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.89 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.86 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 7 members re-clustered — name divergence 0.70 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.77 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.86 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.88 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.87 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.71 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.82 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.81 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.69 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.86 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.84 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.77 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.80 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.69 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.75 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.77 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.75 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.70 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.79 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.84 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.85 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.80 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.69 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.89 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.87 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.79 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.85 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.96 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.82 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.77 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.74 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.79 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.80 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.90 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.86 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.71 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.74 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.70 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.97 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 7 members re-clustered — name divergence 0.87 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.91 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.89 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.74 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.76 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.76 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.82 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.90 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.66 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.91 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.88 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.73 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.70 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.74 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — address cohesion 0.33 < 0.5 (component spans too many distinct normalized addresses).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.85 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.89 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.72 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.87 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.70 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.87 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.82 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.79 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.90 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.68 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.85 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.80 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.71 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.76 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.87 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.69 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.80 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.82 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.71 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.70 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.92 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.82 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.96 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.88 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.86 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.82 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.79 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.86 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.77 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.81 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.77 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.90 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.73 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.77 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.69 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.86 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.95 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.86 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.89 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.86 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.73 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.90 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.79 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.71 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.68 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.82 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.79 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.74 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.70 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.89 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.96 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.89 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.73 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.71 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.87 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.86 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.80 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.69 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.87 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 7 members re-clustered — name divergence 0.82 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.80 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.90 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.75 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.73 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.86 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.89 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.79 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.74 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.84 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.71 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.86 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.96 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — address cohesion 0.33 < 0.5 (component spans too many distinct normalized addresses).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.91 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.86 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.86 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.96 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.76 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.80 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.86 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.91 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.81 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.96 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.82 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.89 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.90 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.85 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.76 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.90 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.88 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.96 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.69 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — address cohesion 0.33 < 0.5 (component spans too many distinct normalized addresses).
+INFO: component of 5 members re-clustered — name divergence 0.82 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.82 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.86 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.89 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.89 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.90 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.86 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.80 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.82 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.76 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.86 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.89 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.70 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.71 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.82 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.72 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.82 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.75 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.91 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.87 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — address cohesion 0.33 < 0.5 (component spans too many distinct normalized addresses).
+INFO: component of 4 members re-clustered — name divergence 0.86 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.71 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.92 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.86 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.86 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.69 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.68 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.70 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.82 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.82 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.86 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.84 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.73 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.88 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.74 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.91 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.79 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.70 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.82 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.84 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.88 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.89 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.78 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.76 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 6 members re-clustered — name divergence 0.89 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.90 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — address cohesion 0.33 < 0.5 (component spans too many distinct normalized addresses).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.74 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.89 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.86 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 5 members re-clustered — name divergence 0.75 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.91 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.93 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.83 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.89 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 4 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.67 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.86 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 1.00 > 0.65 (shared address, but names indicate separate entities).
+INFO: component of 3 members re-clustered — name divergence 0.82 > 0.65 (shared address, but names indicate separate entities).
+Wrote C:\verity-hackathon\results\rehearsal_42\verity_data\match_summary.csv — 10000 records, 4232 in matched groups, 1871 match groups, 5768 unmatched singletons
+Match summary saved to: C:\verity-hackathon\results\rehearsal_42\verity_data\match_summary.csv
+
+========================================================================
+  Phase complete: 6b. match summary
+  Elapsed:      0.25s
+========================================================================
+
+
+========================================================================
+  PIPELINE SUMMARY
+========================================================================
+  Total raw records:           10000
+  Total golden records:        5618
+  Precision / Recall / F1:     (skipped — no ground-truth column in classification)
+  Average community size:    1.78
+  Top golden records by input-file diversity (most input files):
+    1. golden_id=13ddbad0-419b-44d6-9367-fbde3f9fd02d  files=1  [orgs_raw.csv]  members=7
+    2. golden_id=14651397-2411-4f4b-ae6e-feece6351b26  files=1  [orgs_raw.csv]  members=7
+    3. golden_id=222ed84b-b1c5-442b-b515-9f9914920d1d  files=1  [orgs_raw.csv]  members=7
+    4. golden_id=245bef4a-247c-49e6-ad1c-2f6cc18a065a  files=1  [orgs_raw.csv]  members=7
+    5. golden_id=2a7d0765-6478-4bb1-acbf-8dcbd660ffca  files=1  [orgs_raw.csv]  members=7
+========================================================================
+
+Total wall time (all phases): 101.38s

@@ -1,0 +1,53 @@
+{
+ "stage": 1,
+ "name": "generate",
+ "mode": "rehearsal",
+ "seed": 42,
+ "ended_utc": "2026-11-25T15:50:02Z",
+ "seconds": 0.4,
+ "ledger_cost_usd": 0.0,
+ "exit": 0,
+ "reads_truth": [
+  "generate (writes the truth file)"
+ ],
+ "guards": [
+  {
+   "time": "2026-11-25T15:50:02Z",
+   "stage": 1,
+   "guard": "frozen files unchanged since the manifest",
+   "fired": false,
+   "detail": "all match"
+  },
+  {
+   "time": "2026-11-25T15:50:02Z",
+   "stage": 1,
+   "guard": "rehearsal never uses the evaluation seed",
+   "fired": false,
+   "detail": "seed 42"
+  },
+  {
+   "time": "2026-11-25T15:50:02Z",
+   "stage": 1,
+   "guard": "rehearsal seed is a development seed",
+   "fired": false,
+   "detail": "seed 42; allowed (42, 2026)"
+  },
+  {
+   "time": "2026-11-25T15:50:02Z",
+   "stage": 1,
+   "guard": "the run folder holds no data",
+   "fired": false,
+   "detail": "results/rehearsal_42"
+  }
+ ],
+ "notes": [
+  "10,000 rows, csv sha256 c209dd09e9806d64..., truth sha256 927560c4bfcadf9b..."
+ ],
+ "outputs": {
+  "results/rehearsal_42/orgs_raw.csv": "c209dd09e9806d6411721864f9ea0aabcf721cf1cf8065723dc80b8b7044ff34",
+  "results/rehearsal_42/orgs_raw_truth.csv": "927560c4bfcadf9b23e52ed044b044ac295564fb013ea9dfd19bfef296a62a9d",
+  "results/rehearsal_42/_freeze/data_manifest.json": "87fc43627da6197a06206e7ee27c0707633f108ac87955610c423079fb5b867a",
+  "results/rehearsal_42/_freeze/generation_record.json": "c180bd522b6dfade714d9daf04f6b6fdc5379439aa95eb8ed0c74afa6f25a629"
+ },
+ "manifest_sha256": "d5d907ba5e981899af297b845bb2166d3999cb625b3037576aa8a43d32f78b53"
+}
