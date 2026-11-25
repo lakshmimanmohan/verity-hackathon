@@ -1,0 +1,19 @@
+concurrency test, start 2026-11-24 19:05:57 local (01:05:57Z)
+power plan: Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)
+AC status: ac
+fresh train band pairs: 61,271 in the pool after excluding 7,074 earlier or few-shot pairs; using 300 (seed 3); 16 cache keys round-robin, per-key limiter off; prompt hash 857de291325e
+
+level 2 workers: 100 calls, start 19:05:58
+  completed 100/100; wall 63.4 s; 94.6 calls per minute (98.6 after the solo first call)
+  latency p50 1.019 s, p95 1.436 s, max 3.148 s; hit ratio excluding first calls 0.852 (overall 0.8095); errors 0; spent $0.1712
+
+level 5 workers: 100 calls, start 19:07:02
+  completed 100/100; wall 25.6 s; 234.2 calls per minute (242.3 after the solo first call)
+  latency p50 1.004 s, p95 1.22 s, max 2.043 s; hit ratio excluding first calls 0.8419 (overall 0.835); errors 0; spent $0.1592
+
+level 10 workers: 100 calls, start 19:07:27
+  completed 100/100; wall 15.0 s; 399.0 calls per minute (419.5 after the solo first call)
+  latency p50 1.041 s, p95 1.32 s, max 1.37 s; hit ratio excluding first calls 0.8319 (overall 0.818); errors 0; spent $0.1672
+
+end 2026-11-24 19:07:42 local; total 1.8 minutes; last clean level: 10
+ledger total $11.4825; this test $0.4976

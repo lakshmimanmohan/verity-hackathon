@@ -1,0 +1,103 @@
+DRAFT: effort log incomplete, one-time costs for B and D undercounted
+
+Effort log: 26 rows with hours, 2026-11-23 to 2026-11-24
+Hours by bucket (total / production needed / other):
+  A            1 /     1 /     0
+  B         3.75 /   1.5 /  2.25
+  C          1.5 /   0.5 /     1
+  D          0.5 /   0.5 /     0
+  eval       6.5 /     0 /   6.5
+  verity       4 /   3.5 /   0.5
+  Production hours logged: B 1.5, D 0.5. Building B (code, tuning rounds, final run) and D (routing, sweep, full-band run) is only partly in the log, so one-time costs for B and D are undercounted until the log is completed (use --effort-log-complete once it is).
+
+Ledger spend by class: B development $3.7121, evaluation $7.7704
+  cache_diagnostic             $  0.0868  B development
+  cache_diagnostic_r2          $  0.0213  B development
+  cache_diagnostic_r3          $  0.0065  B development
+  concurrency                  $  0.4976  B development
+  decoycheck                   $  0.1168  evaluation
+  dfull                        $  0.0316  evaluation
+  sample5000                   $  7.6220  evaluation
+  smoke5                       $  0.0241  B development
+  tune1                        $  1.5304  B development
+  tune2                        $  1.5454  B development
+
+Labeling for C and D, next to B's zero labels (hours at 5 h per 1,000 pairs, measured from the hand check; sensitivity 2 and 10)
+    labels  mean band F1   hours       $50/h      $100/h      $200/h
+       500        0.7771     2.5         125         250         500
+     1,000        0.8376     5.0         250         500       1,000
+     2,000        0.8999    10.0         500       1,000       2,000
+    63,665        0.9653   318.3      15,916      31,832      63,665
+      B: 0                     0           0           0           0   (B needs no labeled training pairs to run)
+  The 63,665 row is what the dev result for C used (every train band pair, F1 0.9653); it is not a recommended budget. On the dev data the labels came free from the generator. The 500 to 2,000 rows are the mean band F1 over 5 sampling seeds of the learning curve (lc_v2); the spread between seeds is large (see learning_curve.csv). B's development also used labeled train pairs (8 few-shot examples and 2,000 tuning pairs, free from the generator); that is not charged as labeling here.
+
+Monthly cost at the base case (hourly rate $100, labels 2,000, standard prices with cache, hit ratio 0.849), USD per month
+   records/day option         LLM   hosting  operations  one-time/12       total   BYOK: Precisely / customer
+       100,000      A           0         4         100        1,538       1,642   1,642 / 0
+       100,000      B      93,217         4         600        1,542      95,364   2,146 / 93,217
+       100,000      C           0         5         600        1,617       2,221   2,221 / 0
+       100,000      D          79         5       1,000        1,634       2,717   2,638 / 79
+       100,000      E  not run
+     1,000,000      A           0        36         100        1,538       1,674   1,674 / 0
+     1,000,000      B     932,175        36         600        1,542     934,353   2,178 / 932,175
+     1,000,000      C           0        40         600        1,617       2,257   2,257 / 0
+     1,000,000      D         789        40       1,000        1,634       3,463   2,674 / 789
+     1,000,000      E  not run
+    10,000,000      A           0       365         100        1,538       2,002   2,002 / 0
+    10,000,000      B   9,321,746       365         600        1,542   9,324,253   2,507 / 9,321,746
+    10,000,000      C           0       401         600        1,617       2,618   2,618 / 0
+    10,000,000      D       7,892       401       1,000        1,634      10,927   3,035 / 7,892
+    10,000,000      E  not run
+  (hosting is the cheaper of always-on and serverless; shared Verity pipeline per record is in every row: 42.0 ms of one core per record, NOT FOR QUOTING)
+
+Throughput: B at 100K records/day needs 2,008,540 calls a day = 1,395 calls per minute (23.2 per second; about 22 requests in flight at the measured p50 latency of 0.95 s). 1M and 10M records/day need 10x and 100x that. D needs 118 calls per minute at 10M records/day.
+
+Measured concurrency (16 cache keys, per-key limiter off, 100 calls per level, Balanced power plan, on AC):
+   2 workers:   94.6 calls per minute, latency p50 1.019 s, p95 1.436 s, max 3.148 s, hit ratio excluding first calls 0.852, errors 0
+   5 workers:  234.2 calls per minute, latency p50 1.004 s, p95 1.22 s, max 2.043 s, hit ratio excluding first calls 0.8419, errors 0
+  10 workers:  399.0 calls per minute, latency p50 1.041 s, p95 1.32 s, max 1.37 s, hit ratio excluding first calls 0.8319, errors 0
+  Highest clean level: 10 workers = 399 calls per minute (no 429 or other error at any level; the SDK retries a 429 twice before it would show). B at 100K records/day needs 1,395 calls per minute, 3.5x that; at the measured near-linear scaling (about 40 calls per minute per worker) that is about 35 workers, UNTESTED above 10. 1M and 10M records/day need 10x and 100x more and would need a higher rate limit from the provider (not measured).
+
+Break-even against B (total over 12 months equal; labels 2,000; volume range 1,000 to 100,000,000 records per day)
+  A at $50/h: option cheaper everywhere in range
+  C at $50/h: option cheaper everywhere in range
+  D at $50/h: option cheaper everywhere in range
+  A at $100/h: option cheaper everywhere in range
+  C at $100/h: option cheaper everywhere in range
+  D at $100/h: option cheaper everywhere in range
+  A at $200/h: option cheaper everywhere in range
+  C at $200/h: option cheaper everywhere in range
+  D at $200/h: 1,056 records per day (option cheaper above)
+  -> D at $200/h: B is cheaper overall below 1,056 records per day; D is cheaper above
+  Where no break-even is listed for an option, it is cheaper than B overall at every volume in the range: A at $50/h, C at $50/h, D at $50/h, A at $100/h, C at $100/h, D at $100/h, A at $200/h, C at $200/h. At the measured price B costs about $31 per 1,000 records in LLM calls alone, so any one-time saving is spent within days.
+
+Sensitivity at 1,000,000 records per day, $100/h, 2,000 labels: total over 12 months, USD (sensitivity.csv has the pieces)
+  factor                         value             A             B             C             D
+  base case                                   20,088    11,212,237        27,083        41,558
+  hourly rate                     50.0        10,263    11,199,387        13,783        25,758
+  hourly rate                    100.0        20,088    11,212,237        27,083        41,558
+  hourly rate                    200.0        39,738    11,237,937        53,683        73,158
+  band pairs per record              5        20,088     2,810,775        27,049        34,410
+  band pairs per record             10        20,088     5,595,409        27,060        36,779
+  band pairs per record             20        20,088    11,164,676        27,083        41,517
+  band pairs per record          20.09        20,088    11,214,799        27,083        41,560
+  D routed share                 0.001        20,088    11,212,237        27,083        43,273
+  D routed share                  0.01        20,088    11,212,237        27,083       143,948
+  D routed share                  0.05        20,088    11,212,237        27,083       591,392
+  D routed share                   0.2        20,088    11,212,237        27,083     2,269,306
+  LLM price factor                 0.5        20,088     5,619,189        27,083        36,822
+  LLM price factor                 1.0        20,088    11,212,237        27,083        41,558
+  LLM price factor                 1.5        20,088    16,805,285        27,083        46,293
+  hit ratio                        0.0        20,088    40,636,984        27,083        66,471
+  hit ratio                       0.85        20,088    11,167,192        27,083        41,520
+  retrainings per month           4.33        20,088    11,212,237        43,067        57,542
+  retrainings per month            1.0        20,088    11,212,237        27,083        41,558
+  retrainings per month           0.33        20,088    11,212,237        23,867        38,342
+  labeling hours per 1,000           2        20,088    11,212,237        26,483        40,958
+  labeling hours per 1,000           5        20,088    11,212,237        27,083        41,558
+  labeling hours per 1,000          10        20,088    11,212,237        28,083        42,558
+  batch prices (cache hits)                   20,088     5,684,578        27,083        36,878
+  batch prices (no hits)                      20,088    20,331,563        27,083        49,279
+  standard, no caching                        20,088    40,636,984        27,083        66,471
+
+Option E: not run (no results; no numbers).

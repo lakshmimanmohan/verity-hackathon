@@ -1,0 +1,65 @@
+# DRAFT: effort log incomplete, one-time costs for B and D undercounted
+name,value,unit,status,source,note
+B calls in the final run,4993,calls,measured,results/dev_2026_run11/options/b_llm/openai/sample5000/run_meta.json,
+B input tokens per call,2103.0,tokens,measured,results/dev_2026_run11/options/b_llm/openai/sample5000/sample_report.txt,
+B output tokens per call,19.0,tokens,measured,results/dev_2026_run11/options/b_llm/openai/sample5000/sample_report.txt,
+B prompt-cache hit ratio (cached / input tokens),0.8487,ratio,measured,results/dev_2026_run11/options/b_llm/openai/sample5000/run_meta.json,sensitivity 0 and 0.85
+"B cost per call, from the ledger run",0.001527,USD,measured,results/dev_2026_run11/options/b_llm/openai/sample5000/run_meta.json,
+B latency p50,0.952,s,measured,results/dev_2026_run11/options/b_llm/openai/sample5000/timings.json,
+B latency p95,1.197,s,measured,results/dev_2026_run11/options/b_llm/openai/sample5000/timings.json,
+"B throughput in the final run (8 keys, 12 requests per minute per key, 2 workers)",95.1,calls per minute,measured,results/dev_2026_run11/options/b_llm/openai/sample5000/run_meta.json,"limited by the per-key limiter, not the API"
+gpt-5.4 input price,2.5,USD per million tokens,measured,"options/prices.json (provider price page, 2026-11-24)",
+gpt-5.4 cached input price,0.25,USD per million tokens,measured,"options/prices.json (provider price page, 2026-11-24)",
+gpt-5.4 output price,15.0,USD per million tokens,measured,"options/prices.json (provider price page, 2026-11-24)",
+gpt-5.4 batch input price,1.25,USD per million tokens,measured,"options/prices.json (provider price page, 2026-11-24)",batch cache hits are undocumented
+gpt-5.4 batch cached input price,0.13,USD per million tokens,measured,"options/prices.json (provider price page, 2026-11-24)",
+gpt-5.4 batch output price,7.5,USD per million tokens,measured,"options/prices.json (provider price page, 2026-11-24)",
+LLM price factor,1.0,x,assumed,model parameter,sensitivity 0.5 and 1.5
+"D routed share (exact, full test band)",0.000847,ratio,measured,results/.../options/d_hybrid/routed_fullband_pairs.csv and c_v1_lgbm/decisions.csv,"38 of 44,882 band pairs; sensitivity 0.001, 0.01, 0.05, 0.20"
+band pairs per record,20.0854,pairs,measured,dev_2026_run11/README.txt,"200,854 / 10,000; sensitivity 5, 10, 20"
+"C per-pair CPU time, mean",0.186,ms,measured,options/c_model/c_v1_lgbm/timings.json,"one core, one pair at a time; features + predict + calibrate"
+"C per-pair CPU time, p95",0.3279,ms,measured,options/c_model/c_v1_lgbm/timings.json,
+D per-pair CPU time,0.186,ms,assumed,derived from C,D runs C on every band pair; the routing test is negligible; D has no timing file of its own
+A per-pair CPU time,0.0,ms,assumed,not measured,a threshold test; treated as zero
+"Verity pipeline time per record, one thread",41.97,ms,measured,"results/dev_2026_run10_1core/verity_data/run_info.json (verity.total / 10,000 records)","NOT FOR QUOTING until a controlled run exists: uncontrolled laptop state; includes 14 s of startup; shared by every option, B included"
+"labeling hours per 1,000 pairs",5.0,hours,measured,cost/effort_log.csv row 'Hand check of 100 pairs' (0.5 h),"sensitivity 2 and 10; the hand check was blind agreement checking, not a labeling workflow"
+"effort-log hours, bucket A","1 total, 1 production needed",hours,measured,cost/effort_log.csv,
+"effort-log hours, bucket B","3.75 total, 1.5 production needed",hours,measured,cost/effort_log.csv,
+"effort-log hours, bucket C","1.5 total, 0.5 production needed",hours,measured,cost/effort_log.csv,
+"effort-log hours, bucket D","0.5 total, 0.5 production needed",hours,measured,cost/effort_log.csv,
+"effort-log hours, bucket eval","6.5 total, 0 production needed",hours,measured,cost/effort_log.csv,eval is never charged to an option; verity is shared by every option
+"effort-log hours, bucket verity","4 total, 3.5 production needed",hours,measured,cost/effort_log.csv,eval is never charged to an option; verity is shared by every option
+Verity pre-existing build,80.0,hours,assumed,cost/verity_preexisting_cost.csv (your estimate),
+Verity productization,100.0,hours,assumed,stated by you (--productization-hours),
+ledger classification rule,"tuning rounds (tune*), caching diagnostics (cache_diagnostic*), the smoke test (smoke*) and the concurrency test = B one-time development (production needed); sample5000, decoycheck, dfull (D routed pairs) and the coming Dec 4 runs (final*, dec4*) = evaluation, counted once and charged to no option",,assumed,your instruction; cost/cost_model.py classify_ledger_label,the concurrency test is my classification (a capacity measurement for B)
+"ledger spend, run cache_diagnostic",0.0868,USD,measured,results/llm_ledger.jsonl,B development
+"ledger spend, run cache_diagnostic_r2",0.0213,USD,measured,results/llm_ledger.jsonl,B development
+"ledger spend, run cache_diagnostic_r3",0.0065,USD,measured,results/llm_ledger.jsonl,B development
+"ledger spend, run concurrency",0.4976,USD,measured,results/llm_ledger.jsonl,B development
+"ledger spend, run decoycheck",0.1168,USD,measured,results/llm_ledger.jsonl,evaluation
+"ledger spend, run dfull",0.0316,USD,measured,results/llm_ledger.jsonl,evaluation
+"ledger spend, run sample5000",7.622,USD,measured,results/llm_ledger.jsonl,evaluation
+"ledger spend, run smoke5",0.0241,USD,measured,results/llm_ledger.jsonl,B development
+"ledger spend, run tune1",1.5304,USD,measured,results/llm_ledger.jsonl,B development
+"ledger spend, run tune2",1.5454,USD,measured,results/llm_ledger.jsonl,B development
+ledger: B one-time development API spend,3.7121,USD,measured,results/llm_ledger.jsonl,charged to B and to D (D uses B's prompt)
+ledger: evaluation API spend (counted once),7.7704,USD,measured,results/llm_ledger.jsonl,charged to no option
+"concurrency test, 2 workers: calls per minute",94.6,calls per minute,measured,results/dev_2026_run11/options/b_llm/openai/concurrency/concurrency.json,"latency p50 1.019 s, p95 1.436 s, max 3.148 s; hit ratio excl. first calls 0.852; errors 0; 16 keys, no limiter"
+"concurrency test, 5 workers: calls per minute",234.2,calls per minute,measured,results/dev_2026_run11/options/b_llm/openai/concurrency/concurrency.json,"latency p50 1.004 s, p95 1.22 s, max 2.043 s; hit ratio excl. first calls 0.8419; errors 0; 16 keys, no limiter"
+"concurrency test, 10 workers: calls per minute",399.0,calls per minute,measured,results/dev_2026_run11/options/b_llm/openai/concurrency/concurrency.json,"latency p50 1.041 s, p95 1.32 s, max 1.37 s; hit ratio excl. first calls 0.8319; errors 0; 16 keys, no limiter"
+concurrency test: last clean level,10,workers,measured,results/dev_2026_run11/options/b_llm/openai/concurrency/concurrency.json,no error at any level
+hosting: always-on price,0.05,USD per core-hour,assumed,"generic cloud list price, replace with a quote",
+hosting: serverless price,0.12,USD per core-hour of use,assumed,"generic cloud list price, replace with a quote",
+hosting: always-on utilisation,0.5,ratio,assumed,model parameter,
+operations: monitoring,2.0,hours per month,assumed,model parameter,
+"operations: retraining, per run",4.0,hours,assumed,model parameter,"sensitivity: weekly 4.33, monthly 1, quarterly 0.33"
+operations: retraining runs per month,1.0,runs,assumed,model parameter,"sensitivity: weekly 4.33, monthly 1, quarterly 0.33"
+"operations: LLM upkeep (model retirements, prompt re-validation)",4.0,hours per month,assumed,model parameter,
+operations: option A operations,1.0,hours per month,assumed,model parameter,
+"volume 100,000 records per day",100000,records per day,assumed,protocol.md,
+"volume 1,000,000 records per day",1000000,records per day,assumed,protocol.md,
+"volume 10,000,000 records per day",10000000,records per day,assumed,protocol.md,
+hourly rates,"50, 100, 200",USD per hour,assumed,your instruction,
+days per month,30.4,days,assumed,model parameter,
+horizon,12,months,assumed,one-time cost is amortized and totals are taken over this horizon,
+option E,not run,,measured,options/e_slm.py has no results,no numbers are invented
