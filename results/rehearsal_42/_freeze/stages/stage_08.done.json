@@ -1,0 +1,99 @@
+{
+ "stage": 8,
+ "name": "option D",
+ "mode": "rehearsal",
+ "seed": 42,
+ "ended_utc": "2026-11-25T16:08:11Z",
+ "seconds": 108.1,
+ "ledger_cost_usd": 0.045,
+ "exit": 0,
+ "reads_truth": [
+  "score D, LLM fallback off (full band)",
+  "score D. hybrid, exact full test band",
+  "score D. hybrid (C + LLM) (sample)",
+  "score D (original rule), exact full test band",
+  "score D (original rule) (C + LLM) (sample)",
+  "score D (forced reading), exact full test band",
+  "score D (forced reading) (C + LLM) (sample)"
+ ],
+ "guards": [
+  {
+   "time": "2026-11-25T16:06:23Z",
+   "stage": 8,
+   "guard": "frozen files unchanged since the manifest",
+   "fired": false,
+   "detail": "all match"
+  },
+  {
+   "time": "2026-11-25T16:06:23Z",
+   "stage": 8,
+   "guard": "frozen asset selection_rule.txt matches the manifest",
+   "fired": false,
+   "detail": "results/dev_2026_run11/options/d_hybrid/selection_rule.txt -> results/rehearsal_42/options/d_hybrid/selection_rule.txt"
+  },
+  {
+   "time": "2026-11-25T16:06:23Z",
+   "stage": 8,
+   "guard": "frozen asset frozen_settings.json matches the manifest",
+   "fired": false,
+   "detail": "results/dev_2026_run11/options/d_hybrid/frozen_settings.json -> results/rehearsal_42/options/d_hybrid/frozen_settings.json"
+  },
+  {
+   "time": "2026-11-25T16:06:23Z",
+   "stage": 8,
+   "guard": "frozen asset selection_rule_v2.txt matches the manifest",
+   "fired": false,
+   "detail": "results/dev_2026_run11/options/d_hybrid/selection_rule_v2.txt -> results/rehearsal_42/options/d_hybrid/selection_rule_v2.txt"
+  },
+  {
+   "time": "2026-11-25T16:06:23Z",
+   "stage": 8,
+   "guard": "frozen asset frozen_settings_v2.json matches the manifest",
+   "fired": false,
+   "detail": "results/dev_2026_run11/options/d_hybrid/frozen_settings_v2.json -> results/rehearsal_42/options/d_hybrid/frozen_settings_v2.json"
+  },
+  {
+   "time": "2026-11-25T16:06:24Z",
+   "stage": 8,
+   "guard": "AC power",
+   "fired": false,
+   "detail": "power: ac"
+  }
+ ],
+ "notes": [
+  "40 test band pairs routed to the LLM by v2; 0 by the original rule",
+  "B dfull: per-run cap $0.2000 = ledger spend already held for run id rehearsal_42/b_llm/openai/dfull ($0.0000) + allowance $0.20",
+  "pairs: 40 (sample file routed_fullband_pairs.csv); distinct prompts 40 (0 pairs repeat another pair's exact record content and share its answer); already answered in the local cache: 10; calls to make: 30",
+  "projection: about $0.05 at the pilot's $0.001545 per call; about 0 minutes at 95.3 calls per minute (8 keys x 12 per minute, 2 workers; the pilot measured 95.3); run cap --max-usd $0.20",
+  "cost gate: 30 pairs to call x $0.001545 (pilot cost per call) x 1.3 = $0.06; ledger total $13.7927, remaining under the $45 cap $31.21; platform limit $30 - ledger total = $16.21 -> PASS",
+  "fallback off: C's cutoff 1.0000, [lo, hi) = [0.005, 0.9): outside [lo, hi): computed and scored; 0 pairs differ from C",
+  "original rule: lo 0.5, hi 0.9: 0 routed pairs; scored as the secondary row",
+  "literal vs forced reading (v2, lo 0.005, hi 0.9): 0 of 44,985 test band pairs differ",
+  "literal vs forced reading (original, lo 0.5, hi 0.9): 0 of 44,985 test band pairs differ"
+ ],
+ "outputs": {
+  "results/rehearsal_42/options/d_hybrid/selection_rule.txt": "74964ba785815b63cbde4e15f9b8c555545d8853a385ccaeba0cd53fa5e9b3f8",
+  "results/rehearsal_42/options/d_hybrid/frozen_settings.json": "271f25b4e8367b55c1fd60226c855fab0feb993c5d49caed17b2a7e9a0ac039f",
+  "results/rehearsal_42/options/d_hybrid/selection_rule_v2.txt": "9d76bede9e14a00cc89f55baa56530277784c8757730f27d59fc262a0412d51a",
+  "results/rehearsal_42/options/d_hybrid/frozen_settings_v2.json": "f8c88ffdd3d86e4866bb5db6e23a0adb2f28704d1cc48a4bbe83332dd1df8673",
+  "results/rehearsal_42/options/d_hybrid/routed_fullband_pairs.csv": "dd76ae7d0f776b4425b9f2688ec1272a1a0b692e3ed898bfa959d5389ef6b2e7",
+  "results/rehearsal_42/options/d_hybrid/routed_fullband_pairs_original.csv": "3e2c9d781d33eddc96c97d2e1f1c1cf0068de70ca84c406bc2f78500a4023c0a",
+  "results/rehearsal_42/options/d_hybrid/decisions_fullband.csv": "a17b3fb7d6cc9253044a40c6158caa5b8f33180743f12ae4b6910382a28e711c",
+  "results/rehearsal_42/options/d_hybrid/decisions_fullband_original.csv": "fdc5688bc46965621067cccafddacd4eaa498b352c57ca33944f2a501969a8d8",
+  "results/rehearsal_42/options/d_hybrid/fallback_off_check.json": "8b59f9d1b8cd63bcdd6c1341f1524d6e9e2fcd7c899a7e3f8e2414ec4d4557f5",
+  "results/rehearsal_42/options/d_hybrid/decisions.csv": "0717425a40be64478e6bf5a56a7976938e1b53245568bc3a9ece74f343877c5f",
+  "results/rehearsal_42/options/d_hybrid/decisions_original.csv": "e231f948abef9247a4bbe331f20347fa1de10456cacb5147cb03d44fee5a318f",
+  "results/rehearsal_42/options/latency/latency_summary.json": "ba3c1c0fd3e4ba88a221b16ac8a153df6bd47b47b6a3fd32c7872121432b729c",
+  "results/rehearsal_42/options/d_hybrid/score_report_fullband.txt": "5228ab658d067f655f8d971c869ba9a4909b0f4c8a2d274a9d7e82fc40c7ec16",
+  "results/rehearsal_42/options/d_hybrid/score_report_sample5000.txt": "2898cb85c6b4c41a191bf6bd2a49c6e031ba05989d4874915acd1441883f1331",
+  "results/rehearsal_42/options/d_hybrid/score_report_fullband_original.txt": "41932bc2d65392c6e07df0c2e5a3c643fd6437a588048c58ad909cd5b9293302",
+  "results/rehearsal_42/options/d_hybrid/score_report_sample5000_original.txt": "2b6645cd5fbadfda1babd55caecf3a807af40ded8f1b747d83f54f4e3e46c15f",
+  "results/rehearsal_42/options/d_hybrid/score_report_fullband_forced.txt": "73d3102833c91db3251e12dfc74258555362b2d3d55f2df926dc35038f5c25bb",
+  "results/rehearsal_42/options/d_hybrid/score_report_sample5000_forced.txt": "0638d3464d2f2a2aebe737fb4d52f2ba30c0ac32fef2f5be9b60297ac6e678fe",
+  "results/rehearsal_42/options/d_hybrid/readings_diff.json": "884c85e7eb7d1cb09615b1a78685cc5938ab26bff58026b1c1f2211526547de0",
+  "results/rehearsal_42/options/d_hybrid/readings_diff_original.json": "e9acf443c27eb33a95c092f6f2a224ab2e48af560657400446781e6ec48138b8",
+  "results/rehearsal_42/options/d_hybrid/decisions_fullband_forced.csv": "a17b3fb7d6cc9253044a40c6158caa5b8f33180743f12ae4b6910382a28e711c",
+  "results/rehearsal_42/options/d_hybrid/decisions_forced.csv": "0717425a40be64478e6bf5a56a7976938e1b53245568bc3a9ece74f343877c5f"
+ },
+ "manifest_sha256": "256b01c2939c54e6d9b02be2084469b627af8e05a2d712f989e5b151daa842cf"
+}

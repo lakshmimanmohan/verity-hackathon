@@ -1,0 +1,27 @@
+Paired comparison on the sample: C:\verity-hackathon\results\rehearsal_42\options\b_llm\test_sample5000.csv
+  run C:\verity-hackathon\results\rehearsal_42
+  393 sample pairs (333 same-entity), weights sum 44,985.0 = test band pairs; 1000 resamples, seed 0, same resample for both options; percentile 95% intervals
+
+D (original rule)
+  band F1         0.9817  95% CI [0.9701, 0.9908]
+  band precision  1.0000  95% CI [1.0000, 1.0000]  (degenerate)
+  band recall     0.9640  95% CI [0.9420, 0.9818]
+  zero-error bounds (exact one-sided 95% Clopper-Pearson; the bootstrap interval is degenerate when an error count is 0):
+    false matches: 0 of 60 false pairs; false-match rate <= 0.04870 (up to 2175 false matches on 44,652 false pairs)
+    implied worst case on a band of 333 true and 44,652 false pairs: precision >= 0.1286, recall = 0.9640, F1 >= 0.2270
+B (frontier LLM)
+  band F1         0.9970  95% CI [0.9923, 1.0000]
+  band precision  1.0000  95% CI [1.0000, 1.0000]  (degenerate)
+  band recall     0.9940  95% CI [0.9847, 1.0000]
+  zero-error bounds (exact one-sided 95% Clopper-Pearson; the bootstrap interval is degenerate when an error count is 0):
+    false matches: 0 of 60 false pairs; false-match rate <= 0.04870 (up to 2175 false matches on 44,652 false pairs)
+    implied worst case on a band of 333 true and 44,652 false pairs: precision >= 0.1321, recall = 0.9940, F1 >= 0.2332
+
+Difference (first minus second) = D (original rule) minus B (frontier LLM)
+  band F1         -0.0153  95% CI [-0.0274, -0.0059]  (width 0.0214)
+  band precision  +0.0000  95% CI [+0.0000, +0.0000]  (width 0.0000)
+  band recall     -0.0300  95% CI [-0.0531, -0.0116]  (width 0.0415)
+
+Bar: band F1 difference vs -0.02 (D (original rule) against B (frontier LLM) as the baseline): -0.0153 [-0.0274, -0.0059] -> INCONCLUSIVE  (pass: lower end > -0.02; fail: upper end < -0.02; else inconclusive)
+
+For reference, unpaired (independent resamples): band F1 difference interval [-0.0275, -0.0060] (width 0.0216) against paired width 0.0214

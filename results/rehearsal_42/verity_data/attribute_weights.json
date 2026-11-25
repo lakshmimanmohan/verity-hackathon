@@ -1,0 +1,83 @@
+{
+  "source_csv": "C:\\verity-hackathon\\results\\rehearsal_42\\orgs_raw.csv",
+  "n_rows": 10000,
+  "column_classification_path": "C:\\verity-hackathon\\results\\rehearsal_42\\verity_data\\column_classification.json",
+  "columns_excluded_from_learning": [
+    "record_id",
+    "source_system"
+  ],
+  "n_pairs_sampled": 1000,
+  "columns": {
+    "company_name": {
+      "semantic_type": "NAME",
+      "physical_kind": "STRING",
+      "uniqueness_ratio": 0.7877,
+      "null_rate": 0.0,
+      "discriminative_score": 0.7877,
+      "normalized_discriminative_weight": 0.280352,
+      "reliability_score": 0.1,
+      "composite_weight": 0.276408
+    },
+    "address_line": {
+      "semantic_type": "STREET_ADDRESS",
+      "physical_kind": "STRING",
+      "uniqueness_ratio": 0.7194,
+      "null_rate": 0.0,
+      "discriminative_score": 0.7194,
+      "normalized_discriminative_weight": 0.256044,
+      "reliability_score": 0.1,
+      "composite_weight": 0.252441
+    },
+    "city": {
+      "semantic_type": "DESCRIPTIVE",
+      "physical_kind": "STRING",
+      "uniqueness_ratio": 0.0026,
+      "null_rate": 0.0,
+      "discriminative_score": 0.0026,
+      "normalized_discriminative_weight": 0.000925,
+      "reliability_score": 0.880723,
+      "composite_weight": 0.008035
+    },
+    "state": {
+      "semantic_type": "DESCRIPTIVE",
+      "physical_kind": "STRING",
+      "uniqueness_ratio": 0.0022,
+      "null_rate": 0.0,
+      "discriminative_score": 0.0022,
+      "normalized_discriminative_weight": 0.000783,
+      "reliability_score": 1.0,
+      "composite_weight": 0.00772
+    },
+    "postal_code": {
+      "semantic_type": "DESCRIPTIVE",
+      "physical_kind": "STRING",
+      "uniqueness_ratio": 0.3251,
+      "null_rate": 0.0,
+      "discriminative_score": 0.3251,
+      "normalized_discriminative_weight": 0.115707,
+      "reliability_score": 0.1,
+      "composite_weight": 0.114079
+    },
+    "phone": {
+      "semantic_type": "QUASI_IDENTIFIER",
+      "physical_kind": "STRING",
+      "uniqueness_ratio": 0.7524,
+      "null_rate": 0.075,
+      "discriminative_score": 0.69597,
+      "normalized_discriminative_weight": 0.247705,
+      "reliability_score": 0.1,
+      "composite_weight": 0.244219
+    },
+    "website": {
+      "semantic_type": "DESCRIPTIVE",
+      "physical_kind": "STRING",
+      "uniqueness_ratio": 0.3428,
+      "null_rate": 0.1928,
+      "discriminative_score": 0.276708,
+      "normalized_discriminative_weight": 0.098484,
+      "reliability_score": 0.1,
+      "composite_weight": 0.097098
+    }
+  },
+  "notes": "discriminative_score = uniqueness_ratio * (1 - null_rate); normalized_discriminative_weight sums to 1. composite_weight merges discriminative weight with empirical cross-field reliability."
+}

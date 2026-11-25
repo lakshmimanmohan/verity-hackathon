@@ -1,0 +1,35 @@
+{
+ "stage": 6,
+ "name": "option C",
+ "mode": "rehearsal",
+ "seed": 42,
+ "ended_utc": "2026-11-25T16:01:46Z",
+ "seconds": 35.9,
+ "ledger_cost_usd": 0.0,
+ "exit": 0,
+ "reads_truth": [
+  "c_decision_model (train labels only)",
+  "score C v1 LightGBM",
+  "score C v1 LightGBM (sample)"
+ ],
+ "guards": [
+  {
+   "time": "2026-11-25T16:01:10Z",
+   "stage": 6,
+   "guard": "frozen files unchanged since the manifest",
+   "fired": false,
+   "detail": "all match"
+  }
+ ],
+ "notes": [],
+ "outputs": {
+  "results/rehearsal_42/options/c_model/c_v1_lgbm/decisions.csv": "d0a8bafb5a9843fa6cca6d42c8c695b9c5bcfa56f9afd91e8855e9f0155aad00",
+  "results/rehearsal_42/options/c_model/c_v1_lgbm/cv_report.txt": "75361137e030c68b2c34b67853fd91d4222473745bf07341250b0c864062cb29",
+  "results/rehearsal_42/options/c_model/c_v1_lgbm/features.json": "a92d3183ac0d6bd8d94e6fb647e8d00eae78f5c27ce6ef9d41e3277c15dfe9ca",
+  "results/rehearsal_42/options/c_model/c_v1_lgbm/model.txt": "c846186c39685866caf696a37bbe5b653815b17effc5f0b3ad883baf3f47916b",
+  "results/rehearsal_42/options/c_model/c_v1_lgbm/calibrator.json": "b243ce81023230251ce467a1dd363ec060d16c4d5888b72156e8eb9fa0fc04cc",
+  "results/rehearsal_42/options/c_model/c_v1_lgbm/score_report.txt": "97d88448ff28f164550132375cc199045069df2947d1ba9e66da3d58d8fc29fa",
+  "results/rehearsal_42/options/c_model/c_v1_lgbm/score_report_sample5000.txt": "7eea21a57b7cdd03a70670a54711298f3c7760212686dc61b315eaa0933b1cd5"
+ },
+ "manifest_sha256": "256b01c2939c54e6d9b02be2084469b627af8e05a2d712f989e5b151daa842cf"
+}

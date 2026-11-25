@@ -1,0 +1,71 @@
+{
+ "stage": 0,
+ "name": "preflight",
+ "mode": "rehearsal",
+ "seed": 42,
+ "ended_utc": "2026-11-25T15:58:14Z",
+ "seconds": 0.3,
+ "ledger_cost_usd": 0.0,
+ "exit": 0,
+ "reads_truth": [],
+ "guards": [
+  {
+   "time": "2026-11-25T15:58:14Z",
+   "stage": 0,
+   "guard": "frozen files unchanged since the manifest",
+   "fired": false,
+   "detail": "all match"
+  },
+  {
+   "time": "2026-11-25T15:58:14Z",
+   "stage": 0,
+   "guard": "rehearsal never uses the evaluation seed",
+   "fired": false,
+   "detail": "seed 42"
+  },
+  {
+   "time": "2026-11-25T15:58:14Z",
+   "stage": 0,
+   "guard": "rehearsal seed is a development seed",
+   "fired": false,
+   "detail": "seed 42; allowed (42, 2026)"
+  },
+  {
+   "time": "2026-11-25T15:58:14Z",
+   "stage": 0,
+   "guard": "HEAD is the commit the rehearsal manifest recorded",
+   "fired": false,
+   "detail": "manifest 365f225d9405ab4fbf96ac525342aac3179b7a44, HEAD 365f225d9405ab4fbf96ac525342aac3179b7a44"
+  },
+  {
+   "time": "2026-11-25T15:58:14Z",
+   "stage": 0,
+   "guard": "clean tree (no modified tracked files, no untracked files outside .gitignore)",
+   "fired": false,
+   "detail": "clean"
+  },
+  {
+   "time": "2026-11-25T15:58:14Z",
+   "stage": 0,
+   "guard": "AC power",
+   "fired": false,
+   "detail": "power: ac"
+  },
+  {
+   "time": "2026-11-25T15:58:14Z",
+   "stage": 0,
+   "guard": "OPENAI_API_KEY is set (value never read out)",
+   "fired": false,
+   "detail": "set"
+  }
+ ],
+ "notes": [
+  "ledger total $13.1553 before the run",
+  "effort log (not frozen) sha256 97de2d7ce59bcad1..."
+ ],
+ "outputs": {
+  "results/rehearsal_42/_freeze/preflight.json": "7cc7611f822ec21f699d3e74c5c1c7b33d891a70d8629c6c9b93bc500a635418",
+  "results/rehearsal_42/_freeze/freeze_manifest.json": "256b01c2939c54e6d9b02be2084469b627af8e05a2d712f989e5b151daa842cf"
+ },
+ "manifest_sha256": "256b01c2939c54e6d9b02be2084469b627af8e05a2d712f989e5b151daa842cf"
+}

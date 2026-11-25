@@ -1,0 +1,13 @@
+Protocol bars, run rehearsal_42 (verdicts computed by the protocol rules, cost/cost_model.py bars_row)
+  F1: band F1 within 2 points of B on the paired sample (pass: interval lower end > -0.02; fail: upper end < -0.02; else inconclusive).
+  Precision >= 0.98; recall at least 5 points above A; ECE <= 0.05 (C, D); C latency p95 <= 20 ms; D LLM share <= 20%.
+  option     band F1 [95% CI]          F1 vs B [95% CI]              F1 bar           prec bar    recall bar        ECE bar     p95 ms bar    LLM share bar    every bar?
+  A          0.1133 [0.0691, 0.1593]   -0.8837 [-0.9285, -0.8410]    fail           1.0000 pass   0.5201 reference        n/a            n/a              n/a    no
+  B          0.9970 [0.9923, 1.0000]   baseline                      reference      1.0000 pass   0.5769 pass    0.0151 n/a            n/a              n/a    yes
+  C          0.9727 [0.9597, 0.9848]   -0.0153 [-0.0274, -0.0059]    inconclusive   0.9981 pass   0.5751 pass    0.0002 pass     0.292 pass             n/a    not shown (inconclusive)
+  D          0.9866 [0.9783, 0.9943]   +0.0000 [-0.0061, +0.0061]    pass           0.9978 pass   0.5769 pass    0.0002 pass     0.293 n/a      0.00089 pass   yes
+  D (orig)   0.9727 [0.9597, 0.9848]   -0.0153 [-0.0274, -0.0059]    inconclusive   0.9981 pass   0.5751 pass    0.0002 pass     0.293 n/a      0.00000 pass   not shown (inconclusive)
+  D (forced) 0.9866 [0.9783, 0.9943]   +0.0000 [-0.0061, +0.0061]    pass           0.9978 pass   0.5769 pass    0.0002 pass     0.293 n/a      0.00089 pass   yes
+  E          not run
+  D uses routing rule v2 (the setting that counts) and, outside [lo, hi), C's own decision (the literal text of the rule). D (orig) is the original rule (lo 0.5, hi 0.9), a secondary row. D (forced) is v2 with the forced reading (p >= hi same, p < lo different), a diagnostic row.
+  Bases: A full band; F1 difference on the sample; B sample estimate (weighted); B is the baseline of the F1 bar; C full band; F1 difference on the sample; D exact full band; F1 difference on the sample; D (orig) exact full band; F1 difference on the sample; original routing rule; D (forced) exact full band; F1 difference on the sample; forced reading (diagnostic)

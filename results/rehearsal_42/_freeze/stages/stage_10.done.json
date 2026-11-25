@@ -1,0 +1,49 @@
+{
+ "stage": 10,
+ "name": "scoring",
+ "mode": "rehearsal",
+ "seed": 42,
+ "ended_utc": "2026-11-25T16:09:29Z",
+ "seconds": 26.3,
+ "ledger_cost_usd": 0.0,
+ "exit": 0,
+ "reads_truth": [
+  "score B. frontier LLM (frozen prompt) (sample)",
+  "compare B (frontier LLM) vs A (threshold only)",
+  "compare B (frontier LLM) vs C v1 LightGBM",
+  "compare C v1 LightGBM vs B (frontier LLM)",
+  "compare D (hybrid) vs B (frontier LLM)",
+  "compare D (hybrid) vs C v1 LightGBM",
+  "compare D (original rule) vs B (frontier LLM)",
+  "compare D (hybrid) vs D (original rule)",
+  "compare D (forced reading) vs B (frontier LLM)",
+  "b_sample_report",
+  "d_report",
+  "d_full_report"
+ ],
+ "guards": [
+  {
+   "time": "2026-11-25T16:09:03Z",
+   "stage": 10,
+   "guard": "frozen files unchanged since the manifest",
+   "fired": false,
+   "detail": "all match"
+  }
+ ],
+ "notes": [],
+ "outputs": {
+  "results/rehearsal_42/options/b_llm/openai/sample5000/score_report_sample5000.txt": "67eab97d1f4ee5b60f71b7fc298b69c9242de2dc687e80d9647cb209280a2259",
+  "results/rehearsal_42/options/compare/b_vs_a.txt": "9b4409ad99fa7e85c7295bd41bfd9f52dd10cb92fba1855fe55faa0593184216",
+  "results/rehearsal_42/options/compare/b_vs_c_v1_lgbm.txt": "ac2e75ca41bac4b7b5e87006112abb98b64c8409f791d1915e8dc55dbcfc0e66",
+  "results/rehearsal_42/options/compare/c_v1_lgbm_vs_b.txt": "e4d00010024e67927e94582ae09f20e1d3380744d0b4a0e07c7b59b90e17de57",
+  "results/rehearsal_42/options/d_hybrid/compare_d_vs_b.txt": "89360e886a15d92f813feb8d97b7a190edd432a840d88896be2d8452d37997b9",
+  "results/rehearsal_42/options/d_hybrid/compare_d_vs_c.txt": "96f0f1569baa8507bf9ef845e51f91beeec2480d5bb388c706da6a53c3c7dbc7",
+  "results/rehearsal_42/options/d_hybrid/compare_d_original_vs_b.txt": "b44dd951164a0c90cc3e754737647e3a855b100c1156c08469ab7b60f3afb9ee",
+  "results/rehearsal_42/options/d_hybrid/compare_d_vs_d_original.txt": "3cd16d048a01baa6d7ad16da41250b18a7ab928e88bc94410894f44f35776c92",
+  "results/rehearsal_42/options/d_hybrid/compare_d_forced_vs_b.txt": "a17fb553ce0f27b380f11cbb864a73a2b62ac17be9906eb62549a028c36fe128",
+  "results/rehearsal_42/options/b_llm/openai/sample5000/sample_report.txt": "7a67e4973f910f33ce9ad881104441e7f4e2cde4d2062424fb26e2b3569c11b0",
+  "results/rehearsal_42/options/d_hybrid/d_report.txt": "94b6e9951ffb0143df1b39fd84d5ff302905f35f53262defa5dc611bcbcfd0a1",
+  "results/rehearsal_42/options/d_hybrid/d_fullband_report.txt": "4eaf0720e6e09abe0950db649c000e2df00c7be31cabc2f34fe4bc26fec4963c"
+ },
+ "manifest_sha256": "256b01c2939c54e6d9b02be2084469b627af8e05a2d712f989e5b151daa842cf"
+}

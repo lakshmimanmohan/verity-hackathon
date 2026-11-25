@@ -1,0 +1,71 @@
+Option D (hybrid) on the 5,000-pair test band sample, run rehearsal_42: lo 0.005, hi 0.9 (chosen by selection_rule_v2.txt, frozen_settings_v2.json)
+
+Routes (C's calibrated p: p >= hi decided same, lo <= p < hi the LLM, p < lo decided different)
+  route         sampled  weighted (test band)    share
+  c_different        62              44,654.0   0.9926
+  llm                10                  10.0   0.0002
+  c_same            321                 321.0   0.0071
+  LLM calls: 10 sampled; weighted LLM share of the band 0.0002 = about 10 calls on the 44,985 band pairs
+  projected cost: $0.0003 per 1,000 band pairs ($0.001527 per call, B's measured cost), about $0.015 for the band; B alone costs $1.527 per 1,000 band pairs
+
+Errors among the sampled pairs: 2 false non-matches, 0 false matches (333 same, 60 different sampled)
+  zero-error bounds (exact one-sided 95% Clopper-Pearson; the bootstrap interval is degenerate when an error count is 0):
+    false matches: 0 of 60 false pairs; false-match rate <= 0.04870 (up to 2175 false matches on 44,652 false pairs)
+    implied worst case on a band of 333 true and 44,652 false pairs: precision >= 0.1321, recall = 0.9940, F1 >= 0.2332
+
+False negatives (same organization, decided different): 2, all shown
+  R21400a4280 | Ra96e227283   decision different, p 0.000, route c_different, weight 1.0000, tags acronym+po_box+typo_address
+      address_line     7101 Jefferson Drive                         | Pots Office Box 47552
+      city             Tampa                                        | Tampa
+      company_name     M.R.F.L. Corp.                               | Morgan and Reed Freight Lines Corp
+      phone            (492) 906-0118                               | (missing)
+      postal_code      33684-7908                                   | 33684
+      state            FL                                           | FL
+      website          morganreed.com                               | (missing)
+  R3e2d47b3d5 | Rb73e644279   decision different, p 0.002, route c_different, weight 1.0000, tags missing_phone+po_box+truncation
+      address_line     8209 Market Avenue                           | Post Office Box 13283
+      city             Tampa                                        | TAMPA
+      company_name     Ironwood Evergreen                           | Ironwood Evergreen Realty Co
+      phone            (missing)                                    | (missing)
+      postal_code      33618                                        | 33618-7920
+      state            FL                                           | FL
+      website          (missing)                                    | ironwoodevergreen.com
+
+False positives (different organizations, decided same): 0, all shown
+
+Errors by tag (sample counts; recall and false-match rate weighted to the test band)
+  tag         pairs  same  diff   FN   FP   recall (w)   false-match rate (w)   FP-rate bound
+  acronym       144   136     8    1    0       0.9926                0.00000   <= 0.3123
+  truncation     80    70    10    1    0       0.9857                0.00000   <= 0.2589
+  po_box        217   211     6    2    0       0.9905                0.00000   <= 0.3930
+  decoy           0     0     0    0    0            -                      -   
+  easy            9     6     3    0    0       1.0000                0.00000   <= 0.6316
+  no tag         34     0    34    0    0            -                0.00000   <= 0.0843
+
+C v1 LightGBM's errors on the full test band: 6 false matches and 12 missed true pairs; where the chosen rule (lo 0.005, hi 0.9) sends each pair
+
+  C false matches: 6; routed to the LLM 0, c_same 6, c_different 0
+    pair                         C p  route       in sample B answer (recorded)       D decision   tags
+    R2fd4b0c2e8 R3034da5a8e    1.000  c_same      no        not in sample (no B answer)(not sampled)standard
+    R3034da5a8e R436f4d7510    1.000  c_same      no        not in sample (no B answer)(not sampled)acronym+standard+typo_address
+    R328fe4a992 Re0cd72f297    1.000  c_same      no        not in sample (no B answer)(not sampled)clean+missing_phone+truncation
+    R436f4d7510 R544898bcd8    1.000  c_same      no        not in sample (no B answer)(not sampled)acronym+typo_address
+    Ra42aae9298 Rad9d1046db    1.000  c_same      no        not in sample (no B answer)(not sampled)clean+missing_phone+typo
+    Rad125d0ae6 Rf8c5ecdda6    1.000  c_same      no        not in sample (no B answer)(not sampled)case+po_box
+
+  C missed true pairs: 12; routed to the LLM 10, c_same 0, c_different 2
+    pair                         C p  route       in sample B answer (recorded)       D decision   tags
+    R056ae34b28 R33c04b4826    0.301  llm         yes       same 0.89                  same         po_box+truncation
+    R0e1241e40a R77b89d7310    0.301  llm         yes       same 0.97                  same         acronym+missing_phone+po_box
+    R1e07b5777a Rf8c5ecdda6    0.433  llm         yes       same 0.83                  same         acronym+po_box
+    R21400a4280 Ra96e227283    0.000  c_different yes       same 0.89                  different    acronym+po_box+typo_address
+    R3e2d47b3d5 Rb73e644279    0.002  c_different yes       same 0.87                  different    missing_phone+po_box+truncation
+    R4d3b8a5632 R67743925b9    0.433  llm         yes       same 0.96                  same         po_box+truncation
+    R4d3b8a5632 Rbdc5ccfe29    0.433  llm         yes       same 0.91                  same         acronym+po_box
+    R4d8fbffd48 R77ceb93d54    0.433  llm         yes       same 0.88                  same         po_box+truncation+typo_address
+    R6460b5edcc R796572e66e    0.301  llm         yes       same 0.95                  same         po_box+truncation
+    R867c38b590 Rdcd8394894    0.433  llm         yes       same 0.92                  same         acronym+missing_phone+truncation+typo_address
+    R97e02da0b0 Rb1df66d41e    0.301  llm         yes       same 0.87                  same         acronym+missing_phone+po_box
+    Rc059a3b909 Rd0fd93329c    0.301  llm         yes       same 0.93                  same         po_box+truncation
+
+  10 of C's 18 full-band errors are routed to the LLM; the other 8 keep C's decision.

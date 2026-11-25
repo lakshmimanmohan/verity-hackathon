@@ -1,0 +1,49 @@
+{
+ "stage": 9,
+ "name": "decoy check",
+ "mode": "rehearsal",
+ "seed": 42,
+ "ended_utc": "2026-11-25T16:09:03Z",
+ "seconds": 51.3,
+ "ledger_cost_usd": 0.0831,
+ "exit": 0,
+ "reads_truth": [
+  "make_decoy_check (selection only)",
+  "decoy_check_report"
+ ],
+ "guards": [
+  {
+   "time": "2026-11-25T16:08:12Z",
+   "stage": 9,
+   "guard": "frozen files unchanged since the manifest",
+   "fired": false,
+   "detail": "all match"
+  },
+  {
+   "time": "2026-11-25T16:08:13Z",
+   "stage": 9,
+   "guard": "decoy pairs at most 300",
+   "fired": false,
+   "detail": "55 pairs"
+  },
+  {
+   "time": "2026-11-25T16:08:13Z",
+   "stage": 9,
+   "guard": "AC power",
+   "fired": false,
+   "detail": "power: ac"
+  }
+ ],
+ "notes": [
+  "B decoycheck: per-run cap $0.2831 = ledger spend already held for run id rehearsal_42/b_llm/openai/decoycheck ($0.0831) + allowance $0.20",
+  "pairs: 55 (sample file decoy_check_pairs.csv); distinct prompts 55 (0 pairs repeat another pair's exact record content and share its answer); already answered in the local cache: 0; calls to make: 55",
+  "projection: about $0.08 at the pilot's $0.001545 per call; about 1 minutes at 95.3 calls per minute (8 keys x 12 per minute, 2 workers; the pilot measured 95.3); run cap --max-usd $0.28",
+  "cost gate: 55 pairs to call x $0.001545 (pilot cost per call) x 1.3 = $0.11; ledger total $13.8377, remaining under the $45 cap $31.16; platform limit $30 - ledger total = $16.16 -> PASS"
+ ],
+ "outputs": {
+  "results/rehearsal_42/options/b_llm/decoy_check_pairs.csv": "60cb3cb163befaa55d2a326f1e91b8a98508afb659aaa5e89c4a9b0a283775db",
+  "results/rehearsal_42/options/b_llm/openai/decoycheck/decisions.csv": "a7722f0870b706e2489ce12b25a5e0f196625a7f225f307233688419897279e4",
+  "results/rehearsal_42/options/b_llm/openai/decoycheck/decoy_report.txt": "51e7a7967104376b16bd352317ceb2ba479cffd3a52257596e4b3f532a5b1e18"
+ },
+ "manifest_sha256": "256b01c2939c54e6d9b02be2084469b627af8e05a2d712f989e5b151daa842cf"
+}

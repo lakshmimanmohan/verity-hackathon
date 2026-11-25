@@ -1,0 +1,11 @@
+Results, run rehearsal_42
+  option     band F1 [95% CI]            band P  band R  overall P  overall R     ECE   F1 vs B  F1 bar          p95 ms  LLM share  LLM $/1,000 pairs  $/month at 1M/day  every bar?
+  A          0.1133 [0.0691, 0.1593]    1.0000  0.0601     1.0000     0.5201           -0.8837  fail                                          0.0000              1,656  no
+  B          0.9970 [0.9923, 1.0000]    1.0000  0.9940     1.0000     0.5769  0.0151  baseline  reference                                     1.6302            995,798  yes
+  C          0.9727 [0.9597, 0.9848]    0.9817  0.9640     0.9981     0.5751  0.0002   -0.0153  inconclusive     0.292                        0.0000              4,730  not shown (inconclusive)
+  D          0.9866 [0.9783, 0.9943]    0.9793  0.9940     0.9978     0.5769  0.0002   +0.0000  pass             0.293    0.00089             0.0014              6,031  yes
+  D (orig)   0.9727 [0.9597, 0.9848]    0.9817  0.9640     0.9981     0.5751  0.0002   -0.0153  inconclusive     0.293    0.00000             0.0000              5,147  not shown (inconclusive)
+  D (forced) 0.9866 [0.9783, 0.9943]    0.9793  0.9940     0.9978     0.5769  0.0002   +0.0000  pass             0.293    0.00089             0.0014              6,031  yes
+  E          not run
+  LLM $/1,000 pairs = LLM share x B's cost per call x 1,000; B's cost per call: measured in this run.
+  D uses routing rule v2 and C's own decision outside [lo, hi). D (orig) is the original rule (secondary row); D (forced) is v2 with the forced reading (diagnostic).

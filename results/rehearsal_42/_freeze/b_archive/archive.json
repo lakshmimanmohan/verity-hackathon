@@ -1,0 +1,9 @@
+{
+ "decisions_sha256": "3066042d8ccd81760b021b6f391aec0a51040a43f01dc8d06f07e9c3566213f8",
+ "rule": "commit the gzipped archive file if it is under 1 MB",
+ "mode": "calls.jsonl",
+ "what": "gzipped calls.jsonl of the stage",
+ "archive_file": "calls.jsonl.gz",
+ "archive_gz_bytes": 24728,
+ "commit_archive": true
+}

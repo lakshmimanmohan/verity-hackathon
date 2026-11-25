@@ -1,0 +1,49 @@
+Option B (frozen prompt, gpt-5.4) on every test band pair whose records share a decoy group but have different entities, run rehearsal_42: 55 pairs (supplementary check, no bar)
+every pair is a different-organization pair: false matches 1 of 55
+  false-match rate 0.018; exact one-sided 95% upper bound 0.0834
+
+p_same distribution (all pairs are truly different)
+  [0.0, 0.2)    53   decided same 0
+  [0.2, 0.4)     1   decided same 0
+  [0.4, 0.6)     0   decided same 0
+  [0.6, 0.8)     0   decided same 0
+  [0.8, 1.0]     1   decided same 1
+  highest p_same 0.87, mean 0.091
+
+False matches (decided same): 1, all shown
+  R8c047bfb08 | R9d085c52de   decision same, p_same 0.87
+      address_line     P.O. Box 90811                               | 7510 Sunset Parkway
+      city             Kansas City                                  | Charlotte
+      company_name     Wetsfield Summit Realty, Co.                 | Westfield Summit Realty Co
+      phone            (missing)                                    | (697) 750-9412
+      postal_code      64175                                        | 28242
+      state            MO                                           | NC
+      website          westfieldsummit.com                          | westfieldsummit.com
+
+The 3 highest-p_same pairs that were decided different (closest calls), both records side by side
+  R461c971c89 | Rb2695178f1   decision different, p_same 0.20
+      address_line     4589 Commerce Rd                             | 3367 Corporate Street
+      city             Houston                                      | Austin
+      company_name     Atlantic Prairie Packaging L.L.C.            | Atlantic Prairie Packaging LLC
+      phone            (missing)                                    | (878) 991-2357
+      postal_code      77002                                        | 78707
+      state            TX                                           | TX
+      website          atlanticprairie.com                          | atlanticprairie.com
+  R23d5c95f20 | R9d085c52de   decision different, p_same 0.18
+      address_line     3457 Corporate Ave.                          | 7510 Sunset Parkway
+      city             KANSAS CITY                                  | Charlotte
+      company_name     WSR Co.                                      | Westfield Summit Realty Co
+      phone            712.295.9972                                 | (697) 750-9412
+      postal_code      64175-6878                                   | 28242
+      state            MO                                           | NC
+      website          westfieldsummit.com                          | westfieldsummit.com
+  R7d67a47480 | Rb2695178f1   decision different, p_same 0.18
+      address_line     4589 Commerce Road                           | 3367 Corporate Street
+      city             Houston                                      | Austin
+      company_name     Atlantic Prairie Packaging, LLC              | Atlantic Prairie Packaging LLC
+      phone            2589248105                                   | (878) 991-2357
+      postal_code      77002                                        | 78707
+      state            TX                                           | TX
+      website          atlanticprairie.com                          | atlanticprairie.com
+
+Run: calls 55, cache hits 0 (pairs already answered in the sample run), spent $0.0831; hit ratio excluding each key's first call 0.852; refusals 0, parse failures 0, API errors 0; run time 0.71 minutes

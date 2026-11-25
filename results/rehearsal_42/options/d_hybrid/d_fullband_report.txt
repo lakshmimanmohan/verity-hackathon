@@ -1,0 +1,168 @@
+Option D, exact decisions for all 44,985 test band pairs (lo 0.005, hi 0.9), run rehearsal_42
+routes: {'c_different': 44618, 'c_same': 327, 'llm': 40}; LLM share 0.00089 (40 pairs: 40 with a B answer)
+
+Exact errors: 7 false matches, 2 false non-matches
+
+False matches (different organizations decided same): 7, all shown
+  R2fd4b0c2e8 | R3034da5a8e   decision same, p 1.000, route c_same, tags standard
+      address_line     2092 Center Boulevard                        | 5021 Mill Lane
+      city             Albany                                       | Albany
+      company_name     Moreau and Hughes Manufacturing L.L.C.       | Bennett Medical Supply Ltd
+      phone            684-351-4443                                 | 673.519.4443
+      postal_code      12202                                        | 12290
+      state            NY                                           | NY
+      website          (missing)                                    | (missing)
+  R3034da5a8e | R436f4d7510   decision same, p 1.000, route c_same, tags acronym+standard+typo_address
+      address_line     5021 Mill Lane                               | 2092 Cente rBlvd Ste 210
+      city             Albany                                       | Albany
+      company_name     Bennett Medical Supply Ltd                   | MHM L.L.C.
+      phone            673.519.4443                                 | 684-351-4443
+      postal_code      12290                                        | 12202-9685
+      state            NY                                           | NY
+      website          (missing)                                    | (missing)
+  R328fe4a992 | Re0cd72f297   decision same, p 1.000, route c_same, tags clean+missing_phone+truncation
+      address_line     6823 Enterprise Parkway                      | 5602 Main Lane
+      city             Pittsburgh                                   | Pittsburgh
+      company_name     Silverline Packaging                         | Silverline Equipment Ren
+      phone            (683) 975-8806                               | (missing)
+      postal_code      15270                                        | 15270
+      state            PA                                           | PA
+      website          silverlinepackaging.com                      | silverlineequipment.com
+  R436f4d7510 | R544898bcd8   decision same, p 1.000, route c_same, tags acronym+typo_address
+      address_line     2092 Cente rBlvd Ste 210                     | 5021 Mill Lane
+      city             Albany                                       | Albany
+      company_name     MHM L.L.C.                                   | B.M.S. Ltd.
+      phone            684-351-4443                                 | 673-519-4443
+      postal_code      12202-9685                                   | 12290-3573
+      state            NY                                           | NY
+      website          (missing)                                    | (missing)
+  R9ece1b598a | Ra42aae9298   decision same, p 0.900, route llm, tags missing_phone+truncation+typo
+      address_line     9950 Center Way                              | 5653 Highland Rd
+      city             NASHVILLE                                    | Nashville
+      company_name     Silverline Willow                            | Silverline Willow Environmenntal Services, L
+      phone            482.923.8378                                 | (missing)
+      postal_code      37228-2533                                   | 37226
+      state            TN                                           | TN
+      website          silverlinewillow.com                         | silverlinewillow.com
+  Ra42aae9298 | Rad9d1046db   decision same, p 1.000, route c_same, tags clean+missing_phone+typo
+      address_line     5653 Highland Rd                             | 9950 Center Way
+      city             Nashville                                    | Nashville
+      company_name     Silverline Willow Environmenntal Services, L | Silverline Willow Pharmacy LLC
+      phone            (missing)                                    | 482.923.8378
+      postal_code      37226                                        | 37228
+      state            TN                                           | TN
+      website          silverlinewillow.com                         | silverlinewillow.com
+  Rad125d0ae6 | Rf8c5ecdda6   decision same, p 1.000, route c_same, tags case+po_box
+      address_line     3471 Main Dr.                                | P.O. Box 66104
+      city             Omaha                                        | Omaha
+      company_name     PRAIRIE CLEARVIEW ENERGY SOLUTIONS, LTD.     | Okafor & Carter Staffing Solutions
+      phone            (695) 860-7209                               | (missing)
+      postal_code      68150                                        | 68150
+      state            NE                                           | NE
+      website          (missing)                                    | (missing)
+
+False non-matches (same organization decided different): 2, all shown
+  R21400a4280 | Ra96e227283   decision different, p 0.000, route c_different, tags acronym+po_box+typo_address
+      address_line     7101 Jefferson Drive                         | Pots Office Box 47552
+      city             Tampa                                        | Tampa
+      company_name     M.R.F.L. Corp.                               | Morgan and Reed Freight Lines Corp
+      phone            (492) 906-0118                               | (missing)
+      postal_code      33684-7908                                   | 33684
+      state            FL                                           | FL
+      website          morganreed.com                               | (missing)
+  R3e2d47b3d5 | Rb73e644279   decision different, p 0.002, route c_different, tags missing_phone+po_box+truncation
+      address_line     8209 Market Avenue                           | Post Office Box 13283
+      city             Tampa                                        | TAMPA
+      company_name     Ironwood Evergreen                           | Ironwood Evergreen Realty Co
+      phone            (missing)                                    | (missing)
+      postal_code      33618                                        | 33618-7920
+      state            FL                                           | FL
+      website          (missing)                                    | ironwoodevergreen.com
+
+Sample-based estimate (5,000-pair sample, compare_d_vs_b.txt) against the exact full-band numbers
+                   sample estimate  sample 95% interval      exact   inside?
+  band F1                   0.9970  [0.9923, 1.0000]        0.9866   NO
+  band precision            1.0000  [1.0000, 1.0000]        0.9793   NO: the interval is degenerate [1.0000, 1.0000] (0 false matches sampled); the zero-error bound (worst-case precision >= 0.9208) contains the exact value
+  band recall               0.9940  [0.9847, 1.0000]        0.9940   yes
+  overall precision: sample 1.0000, exact 0.9978; overall recall: sample 0.5791, exact 0.5769; ECE: sample 0.0002, exact 0.0002
+  why the sample missed the false matches: the 7 exact false matches are 6 sure-same pairs from C (p = 1.0) and 1 the LLM answered same; each non-match has a 1-in-9.56 chance of being sampled, so a handful of false matches can all be missed (the sample's 95% bound allowed up to 29)
+
+Where D and C differ: 11 of 44,985 band pairs (D differs from C only on the LLM-routed pairs)
+  R056ae34b28 R33c04b4826   C different (p 0.301) -> D same   truth same
+  R0e1241e40a R77b89d7310   C different (p 0.301) -> D same   truth same
+  R1e07b5777a Rf8c5ecdda6   C different (p 0.433) -> D same   truth same
+  R4d3b8a5632 R67743925b9   C different (p 0.433) -> D same   truth same
+  R4d3b8a5632 Rbdc5ccfe29   C different (p 0.433) -> D same   truth same
+  R4d8fbffd48 R77ceb93d54   C different (p 0.433) -> D same   truth same
+  R6460b5edcc R796572e66e   C different (p 0.301) -> D same   truth same
+  R867c38b590 Rdcd8394894   C different (p 0.433) -> D same   truth same
+  R97e02da0b0 Rb1df66d41e   C different (p 0.301) -> D same   truth same
+  R9ece1b598a Ra42aae9298   C different (p 0.301) -> D same   truth different
+  Rc059a3b909 Rd0fd93329c   C different (p 0.301) -> D same   truth same
+  of those 11: {'D right': 10, 'D wrong': 1}
+
+Where D and B differ: B has an answer for 478 band pairs (the 5,000 sampled, 64 decoy-check and routed pairs); they differ on 5 of them; {'D wrong, B right': 2, 'D right, B wrong': 3}. On the 44,507 band pairs B never saw, the comparison is not possible
+  R21400a4280 Ra96e227283   D different (route c_different, p 0.000)  B same (p_same 0.89)   truth same   acronym+po_box+typo_address
+  R3e2d47b3d5 Rb73e644279   D different (route c_different, p 0.002)  B same (p_same 0.87)   truth same   missing_phone+po_box+truncation
+  R6aac5649b9 Ra268f399ac   D same (route c_same, p 1.000)  B different (p_same 0.17)   truth same   missing_phone+standard+typo_address
+  R71e540a0d0 Rcb07f8a5ed   D same (route c_same, p 1.000)  B different (p_same 0.27)   truth same   missing_phone+po_box+truncation+typo
+  R8c047bfb08 R9d085c52de   D different (route c_different, p 0.000)  B same (p_same 0.87)   truth different   clean+po_box+typo
+
+D's decision on each of the 55 decoy pairs (different organizations that share a decoy group)
+  pair                      route        D decision      C p  B p_same
+  R03510d3323 Rac1c3b020b   c_different  different     0.000         -
+  R05d7b764a3 R0ae4e45efe   c_different  different     0.000         -
+  R05d7b764a3 R0cd2a9ced6   c_different  different     0.000         -
+  R05d7b764a3 R3a9d196aa8   c_different  different     0.000         -
+  R05d7b764a3 R3da0f0c304   c_different  different     0.000         -
+  R05d7b764a3 R76961ea73b   c_different  different     0.000         -
+  R0af2e38d30 Raae293eeea   c_different  different     0.000         -
+  R0d3be753e2 Rccf4052d3d   c_different  different     0.000         -
+  R0fa1cfdd04 Rc467bc910b   c_different  different     0.000         -
+  R12bf32e46b R927d2089a5   c_different  different     0.000         -
+  R12bf32e46b Rbecc4c5d5c   c_different  different     0.000         -
+  R139bcdafca R2511c604de   c_different  different     0.000         -
+  R1af349e856 Rc15c99d9f7   c_different  different     0.000         -
+  R23d5c95f20 R9d085c52de   c_different  different     0.000         -
+  R24a5a76a5c Rb525d5a711   c_different  different     0.000         -
+  R2511c604de R27411bf458   c_different  different     0.000         -
+  R2511c604de R30979ab104   c_different  different     0.000         -
+  R287b0f7e71 Rd140265d1f   c_different  different     0.000         -
+  R29292bfc91 R9d085c52de   c_different  different     0.000         -
+  R305f139423 Raa49f731d1   c_different  different     0.000         -
+  R3b5a8fe06f Rcdd7ff2846   c_different  different     0.000         -
+  R3d490ae949 Rcdd7ff2846   c_different  different     0.000         -
+  R461c971c89 Rb2695178f1   c_different  different     0.000         -
+  R46dc17828a R8602644a86   c_different  different     0.000         -
+  R494c3455fd Rcdd7ff2846   c_different  different     0.000         -
+  R4cacd7c5ae R55aa598bc4   c_different  different     0.000         -
+  R534143a256 R756bc435c7   c_different  different     0.000         -
+  R55aa598bc4 Rba2ac56543   c_different  different     0.000         -
+  R5702f9f4e8 Rdcccba099f   c_different  different     0.000         -
+  R5702f9f4e8 Rf262d9ac43   c_different  different     0.000         -
+  R60458da583 Rb63c57d2c2   c_different  different     0.000         -
+  R61fa96cedd Rcdd7ff2846   c_different  different     0.000         -
+  R6c1c50bf4e Reb4fdf48c6   c_different  different     0.000         -
+  R756bc435c7 Rdfff0452c3   c_different  different     0.000         -
+  R756bc435c7 Recd0c62d58   c_different  different     0.000         -
+  R7d67a47480 Rb2695178f1   c_different  different     0.000         -
+  R832138231b R8cde95a736   c_different  different     0.000         -
+  R832138231b Rabac73ca2b   c_different  different     0.000         -
+  R8471958eac R86bac899ef   c_different  different     0.000         -
+  R860e323e12 Rdddb8fb3c7   c_different  different     0.000         -
+  R86bac899ef Rbb0e7a12f6   c_different  different     0.000         -
+  R8a9ba7dadf Rc0f085429f   c_different  different     0.000         -
+  R8b381746ec Rac1c3b020b   c_different  different     0.000         -
+  R8c047bfb08 R9d085c52de   c_different  different     0.000         -
+  R941ff14d75 Rd4f88b613c   c_different  different     0.000         -
+  R94715273b0 Re4c053d7e8   c_different  different     0.000         -
+  R9523205ddf Rcdd7ff2846   c_different  different     0.000         -
+  R9edb11ee22 Rbadeaf7224   c_different  different     0.000         -
+  R9edb11ee22 Rc7745fa366   c_different  different     0.000         -
+  R9ffd93ede1 Rb525d5a711   c_different  different     0.000         -
+  Raf7214b43d Rbae660efe1   c_different  different     0.000         -
+  Rbf133a5cf5 Rc00ef9150b   c_different  different     0.000         -
+  Rc00ef9150b Rdfb8c3f5d8   c_different  different     0.000         -
+  Rcdd7ff2846 Rd2f1e1b463   c_different  different     0.000         -
+  Re4edd820ee Refa2be78b0   c_different  different     0.000         -
+  summary: {('c_different', 'different'): 55}; wrongly matched 0 of 55 (B alone: 1 of 68)
