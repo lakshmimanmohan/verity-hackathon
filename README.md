@@ -99,7 +99,7 @@ Each run writes its config, metrics and timings to `results/<run>/`, so any numb
 
 ## Freeze run (once)
 
-The evaluation set uses seed 7919 (see Amendments in `protocol.md`). Generate it once, on Dec 4, after every threshold, feature and prompt is fixed. Then run steps 2 to 4 above unchanged.
+The evaluation set uses seed 7919 (see Amendments in `protocol.md`). Generate it once, at the freeze run, after every threshold, feature and prompt is fixed. Then run steps 2 to 4 above unchanged.
 
 ```
 export PYTHONHASHSEED=0
