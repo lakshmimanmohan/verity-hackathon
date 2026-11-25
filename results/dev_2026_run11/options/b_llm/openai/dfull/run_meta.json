@@ -1,0 +1,95 @@
+{
+ "provider": "openai",
+ "requested_model": "gpt-5.4-2026-03-05",
+ "models_reported": {
+  "gpt-5.4-2026-03-05": 38
+ },
+ "settings": "max_output_tokens=64;reasoning_effort=none",
+ "system_prompt_sha256": "857de291325e9b49d7878eb34d180c180e716c99da5a96b60a5aaf747fd5ac94",
+ "answer_settings": {
+  "max_output_tokens": 64,
+  "reasoning_effort": "none"
+ },
+ "mode": "live",
+ "pairs": 38,
+ "distinct_prompts": 38,
+ "cache_hits": 25,
+ "calls": 13,
+ "spent_usd": 0.031567,
+ "pending": 0,
+ "stopped": null,
+ "refusals": 0,
+ "api_errors": 0,
+ "unusable_answers": 0,
+ "prefix_check": {
+  "predicted_tokens": 1910,
+  "predicted_status": "ok",
+  "first_call": {
+   "input_tokens": 2101,
+   "cached_tokens": 1792,
+   "pair_tokens_estimate": 132,
+   "observed_prefix_tokens": 1969,
+   "status": "outside"
+  }
+ },
+ "prompt_cache_keys": 8,
+ "key_rpm": 12.0,
+ "concurrency": 2,
+ "prompt_cache": {
+  "calls": 13,
+  "input_tokens": 27273,
+  "cached_tokens": 17920,
+  "hit_ratio": 0.657060096065706,
+  "calls_excl_first_per_key": 6,
+  "input_tokens_excl_first": 12573,
+  "cached_tokens_excl_first": 10752,
+  "hit_ratio_excl_first": 0.8551658315437843,
+  "keys_used": 7,
+  "per_key": {
+   "0": {
+    "calls": 1,
+    "input_tokens": 2091,
+    "cached_tokens": 1792
+   },
+   "1": {
+    "calls": 2,
+    "input_tokens": 4195,
+    "cached_tokens": 3584
+   },
+   "2": {
+    "calls": 2,
+    "input_tokens": 4192,
+    "cached_tokens": 3584
+   },
+   "3": {
+    "calls": 2,
+    "input_tokens": 4194,
+    "cached_tokens": 1792
+   },
+   "4": {
+    "calls": 2,
+    "input_tokens": 4203,
+    "cached_tokens": 3584
+   },
+   "6": {
+    "calls": 1,
+    "input_tokens": 2112,
+    "cached_tokens": 0
+   },
+   "7": {
+    "calls": 3,
+    "input_tokens": 6286,
+    "cached_tokens": 3584
+   }
+  }
+ },
+ "hit_log": [],
+ "final_sample": "results\\dev_2026_run11\\options\\d_hybrid\\routed_fullband_pairs.csv",
+ "frozen_prompt": "results\\dev_2026_run11\\options\\b_llm\\frozen_prompt.json",
+ "gate": "cost gate: 13 pairs to call x $0.001545 (pilot cost per call) x 1.3 = $0.03; ledger total $10.9534, remaining under the $45 cap $34.05; platform limit $30 - ledger total = $19.05 -> PASS",
+ "power": "ac",
+ "started_utc": "2026-11-25T00:55:14Z",
+ "ended_utc": "2026-11-25T00:55:29Z",
+ "run_time_minutes": 0.25,
+ "test_pairs": 38
+}

@@ -1,0 +1,13 @@
+Option B openai / gpt-5.4-2026-03-05 (max_output_tokens=64;reasoning_effort=none): 38 TEST band sample pairs (routed_fullband_pairs.csv)
+calls 13, cache hits 25, spent $0.0316, pending 0, refusals 0, models reported {'gpt-5.4-2026-03-05': 38}
+prefix-length check: system prompt 6,684 characters (appendix 885 characters, sha256 857de291325e); predicted shared prefix 1910 tokens, inside the target 1900 to 1950
+first live call: input_tokens 2101, cached 1792, pair about 132 tokens: observed shared prefix 1969 (outside)
+final hit ratio after 13 calls: overall 0.657 (17,920 / 27,273 input tokens); excluding each key's first call 0.855 (6 calls)
+api errors 0, unusable answers 0; prompt-cache keys 8, 12 requests per minute per key, 2 workers
+latency per call: p50 1.04s, p95 1.18s, max 2.38s
+gate: cost gate: 13 pairs to call x $0.001545 (pilot cost per call) x 1.3 = $0.03; ledger total $10.9534, remaining under the $45 cap $34.05; platform limit $30 - ledger total = $19.05 -> PASS
+power: ac
+started utc: 2026-11-25T00:55:14Z
+ended utc: 2026-11-25T00:55:29Z
+run time minutes: 0.25
+decisions: results\dev_2026_run11\options\b_llm\openai\dfull\decisions.csv
