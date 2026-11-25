@@ -12,10 +12,13 @@ call, hit ratio 0.5, prices $2.0 / $0.2 / $10.0 per million tokens (input / cach
                            serverless 10 x 30.4 x 0.0001 = $0.0304 (used)
   Verity hosting           1,000 records x 0.1 s = 100 core-seconds a day; always-on $36.48, serverless $0.304 (used)
   operations hours         A 1, B 2 + 4 = 6, C 2 + 4 x 1 = 6, D 2 + 4 + 4 = 10
-  one-time (development)   (80 + 100) h x $100 = $18,000 for every option (the Verity build and productization)
-  one-time (labeling)      C and D: 2,000 labels x 5 h per 1,000 x $100 = $1,000; so A and B 18,000, C and D 19,000
-                           (the PoC's effort-log hours and API spend are not charged: the separate evidence block)
-  per month (amortized)    development 18,000 / 12 = 1,500; labeling 1,000 / 12 = 83.3333
+  one-time (development)   hours x $100: shared verity "yes" 6.5 h + pre-existing 80 + productization 100 = 186.5 h = $18,650 for every
+                           option, plus the option's own "yes" hours (A 1, B 0.5, C 2, D 0 of its own, inheriting B's 0.5 and C's 2)
+                           and B's development API spend ($10, B and D):
+                           A 18,750   B 18,650 + 50 + 10 = 18,710   C 18,650 + 200 = 18,850   D 18,650 + 50 + 200 + 10 = 18,910
+  one-time (labeling)      C and D: 2,000 labels x 5 h per 1,000 x $100 = $1,000 (B and A have none), so C 19,850 and D 19,910
+                           (hours marked "no", eval hours and the evaluation API spend are the evidence block, not charged)
+  per month (amortized)    development: A 1,562.5, B 1,559.1667, C 1,570.8333, D 1,575.8333; labeling 1,000 / 12 = 83.3333
 
 Who pays, per month, at 1,000 records/day (components: llm, hosting, operations, development, labeling)
   A   0, 0.304, 100, 1,500, 0                  B   364.80, 0.304, 600, 1,500, 0
@@ -88,28 +91,66 @@ class CostTests(unittest.TestCase):
         self.assertEqual([M.ops_hours_month(self.p, o) for o in "ABCD"], [1, 6, 6, 10])
         self.assertEqual(M.ops_hours_month(self.p, "C", retrains_per_month=4.33), 2 + 4 * 4.33)
 
-    def test_one_time_costs_are_development_and_labeling_only(self):
-        for o, expect in (("A", 18000), ("B", 18000), ("C", 19000), ("D", 19000)):
+    DEV = {"A": 18750 / 12, "B": 18710 / 12, "C": 18850 / 12, "D": 18910 / 12}           # development amortized per month
+
+    def test_one_time_costs_follow_the_build_rule(self):
+        for o, expect in (("A", 18750), ("B", 18710), ("C", 19850), ("D", 19910)):
             self.assertAlmostEqual(M.one_time_total(self.p, o, 100, 2000), expect, msg=o)
         self.assertEqual(M.label_hours(self.p, 63665), 63665 / 1000 * 5)
-        self.assertAlmostEqual(M.one_time_total(self.p, "C", 100, 63665), 18000 + 63665 / 1000 * 5 * 100)
-        self.assertAlmostEqual(M.one_time_total(self.p, "B", 100, 63665), 18000)                    # B: zero labels
-        self.assertEqual(M.one_time_split(self.p, "C", 100, 2000), {"development": 18000.0, "labeling": 1000.0})
-        # the PoC's effort-log hours and API spend never enter an option's one-time cost
-        richer = replace(self.p, effort_hours={"verity": 99, "A": 99, "B": 99, "C": 99, "D": 99}, b_dev_api_usd=1e6)
-        self.assertAlmostEqual(M.one_time_total(richer, "D", 100, 2000), 19000)
+        self.assertAlmostEqual(M.one_time_total(self.p, "C", 100, 63665), 18850 + 63665 / 1000 * 5 * 100)
+        self.assertAlmostEqual(M.one_time_total(self.p, "B", 100, 63665), 18710)                    # B: zero labels
+        self.assertEqual(M.one_time_split(self.p, "C", 100, 2000), {"development": 18850.0, "labeling": 1000.0})
+        self.assertEqual(M.one_time_split(self.p, "D", 100, 2000), {"development": 18910.0, "labeling": 1000.0})
+
+    def test_d_inherits_b_and_c_hours_and_b_api_spend(self):
+        lines = {n: v for n, v, _ in M.one_time_lines(self.p, "D", 100, 2000)}
+        self.assertAlmostEqual(lines["option B effort-log hours (production needed) (inherited by D)"], 0.5 * 100)
+        self.assertAlmostEqual(lines["option C effort-log hours (production needed) (inherited by D)"], 2 * 100)
+        self.assertAlmostEqual(lines["option B development API spend (ledger) (inherited by D)"], 10)
+        self.assertAlmostEqual(lines["option D effort-log hours (production needed)"], 0.0)
+        a_lines = [n for n, _, _ in M.one_time_lines(self.p, "A", 100, 2000)]
+        self.assertFalse(any("API" in n for n in a_lines))                                         # A and C carry no development API spend
+        self.assertFalse(any("API" in n for n, _, _ in M.one_time_lines(self.p, "C", 100, 2000)))
+
+    def test_the_rate_scales_hours_but_not_the_api_spend(self):
+        self.assertAlmostEqual(M.one_time_total(self.p, "B", 50, 0), 187 * 50 + 10)
+        self.assertAlmostEqual(M.one_time_total(self.p, "B", 200, 0), 187 * 200 + 10)
+
+    def test_eval_and_no_hours_are_never_charged(self):
+        rows = [{"bucket": "B", "hours": 1.0, "production_needed": True}, {"bucket": "B", "hours": 2.0, "production_needed": False},
+                {"bucket": "eval", "hours": 3.0, "production_needed": True}, {"bucket": "eval", "hours": 4.0, "production_needed": False},
+                {"bucket": "verity", "hours": 0.5, "production_needed": True}, {"bucket": "verity", "hours": 0.25, "production_needed": False}]
+        sp = M.effort_split(rows)
+        self.assertEqual(sp["B"], {"total": 3.0, "charged": 1.0, "evidence": 2.0})
+        self.assertEqual(sp["eval"], {"total": 7.0, "charged": 0.0, "evidence": 7.0})          # an eval 'yes' row is still evidence
+        self.assertEqual(sp["verity"], {"total": 0.75, "charged": 0.5, "evidence": 0.25})
+        self.assertAlmostEqual(sum(v["total"] for v in sp.values()), sum(v["charged"] + v["evidence"] for v in sp.values()))
+        richer = replace(self.p, effort_hours={**{k: v["charged"] for k, v in sp.items()}, "eval": 0.0})
+        self.assertAlmostEqual(M.one_time_total(richer, "B", 100, 0), (0.5 + 80 + 100 + 1.0) * 100 + 10)          # no eval, no 'no' hours
+
+    def test_an_empty_effort_log_is_refused(self):
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            f = tmp / "effort_log.csv"
+            f.write_bytes(b"\r\n")                                                                  # what a truncated file looks like
+            self.assertEqual(M.read_effort_log(f), [])
+            with self.assertRaises(SystemExit) as cm:
+                M.load_inputs(M.REPO, M.REPO / "results" / "dev_2026_run11", [], 100.0, f)
+            self.assertIn("no rows with hours", str(cm.exception))
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
 
     def test_monthly_totals(self):
         c = M.monthly(self.p, "C", 1000, 100, 2000)
         self.assertAlmostEqual(c["running"], 0.0304 + 0.304 + 600, places=6)
-        self.assertAlmostEqual(c["one_time_amortized"], 19000 / 12, places=6)
-        self.assertAlmostEqual(c["development"], 1500, places=6)
+        self.assertAlmostEqual(c["one_time_amortized"], 19850 / 12, places=6)
+        self.assertAlmostEqual(c["development"], 18850 / 12, places=6)
         self.assertAlmostEqual(c["labeling"], 1000 / 12, places=6)
-        self.assertAlmostEqual(c["total_month"], 0.3344 + 600 + 19000 / 12, places=6)
-        self.assertAlmostEqual(c["total_horizon"], 19000 + 12 * 600.3344, places=4)
+        self.assertAlmostEqual(c["total_month"], 0.3344 + 600 + 19850 / 12, places=6)
+        self.assertAlmostEqual(c["total_horizon"], 19850 + 12 * 600.3344, places=4)
         b = M.monthly(self.p, "B", 1000, 100, 2000)
         self.assertAlmostEqual(b["running"], 364.80 + 0.304 + 600, places=6)
-        self.assertAlmostEqual(b["total_horizon"], 18000 + 12 * 965.104, places=4)
+        self.assertAlmostEqual(b["total_horizon"], 18710 + 12 * 965.104, places=4)
 
     def rows(self, option, payer="customer", **kw):
         return {(r["scenario"], r["label"]): r for r in M.scenario_rows(self.p, option, 1000, 100, 2000, labeling_payer=payer, **kw)}
@@ -117,8 +158,9 @@ class CostTests(unittest.TestCase):
     LAB = 1000 / 12                       # labeling amortized, C and D
 
     def test_s1_precisely_pays_everything_but_labeling_which_is_the_customers(self):
-        for o, pre, cus in (("A", 100 + 0.304 + 1500, 0.0), ("B", 364.80 + 0.304 + 600 + 1500, 0.0), ("C", 0.3344 + 600 + 1500, self.LAB),
-                            ("D", 36.48 + 0.3344 + 1000 + 1500, self.LAB)):
+        D_ = self.DEV
+        for o, pre, cus in (("A", 100 + 0.304 + D_["A"], 0.0), ("B", 364.80 + 0.304 + 600 + D_["B"], 0.0), ("C", 0.3344 + 600 + D_["C"], self.LAB),
+                            ("D", 36.48 + 0.3344 + 1000 + D_["D"], self.LAB)):
             r = self.rows(o)[("S1", o)]
             self.assertAlmostEqual(r["precisely"], pre, places=6, msg=o)
             self.assertAlmostEqual(r["customer"], cus, places=6, msg=o)
@@ -128,11 +170,11 @@ class CostTests(unittest.TestCase):
     def test_s2_the_llm_line_and_labeling_are_the_customers(self):
         b = self.rows("B")[("S2", "B")]
         self.assertAlmostEqual(b["customer"], 364.80, places=6)
-        self.assertAlmostEqual(b["precisely"], 0.304 + 600 + 1500, places=6)
+        self.assertAlmostEqual(b["precisely"], 0.304 + 600 + self.DEV["B"], places=6)
         self.assertAlmostEqual(b["total"], self.rows("B")[("S1", "B")]["total"], places=9)         # the split changes, not the total
         d = self.rows("D")[("S2", "D")]
         self.assertAlmostEqual(d["customer"], 36.48 + self.LAB, places=6)
-        self.assertAlmostEqual(d["precisely"], 0.3344 + 1000 + 1500, places=6)
+        self.assertAlmostEqual(d["precisely"], 0.3344 + 1000 + self.DEV["D"], places=6)
         c = self.rows("C")[("S2", "C")]
         self.assertAlmostEqual(c["customer"], self.LAB, places=6)                                   # C has no LLM line: only labeling
 
@@ -164,9 +206,9 @@ class CostTests(unittest.TestCase):
 
     def test_labeling_paid_by_precisely_is_the_sensitivity(self):
         c = self.rows("C", payer="Precisely")
-        self.assertAlmostEqual(c[("S1", "C")]["precisely"], 0.3344 + 600 + 1500 + self.LAB, places=6)
+        self.assertAlmostEqual(c[("S1", "C")]["precisely"], 0.3344 + 600 + self.DEV["C"] + self.LAB, places=6)
         self.assertEqual(c[("S1", "C")]["customer"], 0.0)
-        self.assertAlmostEqual(c[("S2", "C")]["precisely"], 0.3344 + 600 + 1500 + self.LAB, places=6)
+        self.assertAlmostEqual(c[("S2", "C")]["precisely"], 0.3344 + 600 + self.DEV["C"] + self.LAB, places=6)
         s3 = c[("S3", "C")]
         self.assertAlmostEqual(s3["precisely"], self.LAB, places=6)                                 # labeling only
         self.assertTrue(s3["precisely_partial"])                                                    # development and support still n/m
@@ -222,8 +264,8 @@ class VariantAndBarTests(unittest.TestCase):
 
     def test_b_without_the_shared_verity_build(self):
         v = M.monthly_b_variant(self.p, "no-verity-build", 1000, 100, 0)
-        self.assertAlmostEqual(v["one_time"], 0.0, places=9)                      # B has no labeling and no shared build
-        self.assertAlmostEqual(M.one_time_total(self.p, "B", 100, 0), 18000)      # with the Verity lines
+        self.assertAlmostEqual(v["one_time"], 0.5 * 100 + 10, places=9)           # B's own hours and API spend stay; the shared Verity lines go
+        self.assertAlmostEqual(M.one_time_total(self.p, "B", 100, 0), 18710)      # with the Verity lines (6.5 + 80 + 100 h)
         self.assertAlmostEqual(v["running"], M.monthly(self.p, "B", 1000, 100, 0)["running"], places=9)
         with self.assertRaises(ValueError):
             M.monthly_b_variant(self.p, "nope", 1000, 100, 0)

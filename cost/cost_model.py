@@ -22,10 +22,13 @@ Model (all formulas are in the functions below and are tested in cost/test_cost_
                       (every option, B included); cost = the cheaper of always-on (whole cores, 50% utilisation) and
                       serverless (core-seconds billed). Hosting prices are ASSUMED.
   operations          hours per month x hourly rate (ASSUMED hours; retraining cadence for C and D)
-  one-time            charged to options: the Verity pre-existing build (80 h) and productization (100 h), shared by every
-                      option, and labeling for C and D (hours per 1,000 pairs measured from the "Hand check of 100
-                      pairs" row). The PoC's own spend (effort-log hours, API spend from the ledger) is NOT charged to
-                      any option or scenario: it is the separate block "cost to build the evidence"
+  one-time            charged to options: effort-log hours marked production_needed "yes" in the option's own bucket,
+                      plus the "yes" hours of the shared verity bucket (A, B, C and D all carry them), plus the Verity
+                      pre-existing build (80 h) and productization (100 h); D also inherits the "yes" hours of B and C and
+                      B's development API spend (tuning rounds, caching diagnostics, smoke test, concurrency test: a
+                      one-time cost of B and of D); labeling for C and D (hours per 1,000 pairs measured from the "Hand
+                      check of 100 pairs" row). Hours marked "no", all eval hours and the evaluation API spend are NOT
+                      charged to any option or scenario: they are the separate block "cost to build the evidence"
   total over horizon  one-time + horizon months x monthly running cost
   who pays            three deployment scenarios (assumed; who pays is a commercial decision this PoC can inform but not
                       settle): S1 Precisely-hosted (Precisely pays hosting, operations and LLM tokens; the customer pays
@@ -165,12 +168,21 @@ def label_hours(p: Params, labels: int) -> float:
 
 
 def one_time_lines(p: Params, option: str, rate: float, labels: int, include_verity: bool = True) -> list[tuple[str, float, str]]:
-    """(line, USD, kind) for the one-time cost charged to an option. kind is "development" (the Verity pre-existing build
-    and productization, shared by every option; include_verity False drops them: the "B without the shared Verity build"
-    variant) or "labeling" (C and D). The PoC's effort-log hours and ledger API spend are not here: they are the separate
-    block "cost to build the evidence"."""
-    lines = ([("verity pre-existing build (80 h, your estimate)", p.verity_preexisting_hours * rate, "development"),
+    """(line, USD, kind) for the one-time cost charged to an option; kind is "development" or "labeling".
+    development = the effort-log hours marked production_needed "yes" in the option's own bucket + the "yes" hours of the shared
+    verity bucket + the Verity pre-existing build + productization; D also inherits B's and C's "yes" hours, and B and D carry B's
+    development API spend (ledger). include_verity False drops the three shared Verity lines (the "B without the shared Verity
+    build" variant). Hours marked "no", eval hours and the evaluation API spend are the evidence block and never appear here."""
+    h = p.effort_hours
+    lines = ([("verity effort-log hours (production needed, shared by A, B, C and D)", h.get("verity", 0.0) * rate, "development"),
+              ("verity pre-existing build (80 h, your estimate)", p.verity_preexisting_hours * rate, "development"),
               ("verity productization (100 h, your figure)", p.verity_productization_hours * rate, "development")] if include_verity else [])
+    own = {"A": ["A"], "B": ["B"], "C": ["C"], "D": ["D", "B", "C"]}.get(option, [])
+    for bucket in own:
+        tag = " (inherited by D)" if (option == "D" and bucket != "D") else ""
+        lines.append((f"option {bucket} effort-log hours (production needed){tag}", h.get(bucket, 0.0) * rate, "development"))
+    if option in ("B", "D"):
+        lines.append(("option B development API spend (ledger)" + (" (inherited by D)" if option == "D" else ""), p.b_dev_api_usd, "development"))
     if option in ("C", "D"):
         lines.append((f"labeling, {labels:,} labels x {p.label_hours_per_1000:g} h per 1,000", label_hours(p, labels) * rate, "labeling"))
     return lines
@@ -437,6 +449,20 @@ def read_effort_log(path: Path) -> list[dict]:
     return rows
 
 
+def effort_split(rows: list[dict]) -> dict:
+    """bucket -> total, charged and evidence hours. Charged to options: production_needed "yes" hours outside the eval bucket.
+    Evidence (charged to no option or scenario): hours marked "no" and every eval hour."""
+    out: dict = {}
+    for r in rows:
+        b = out.setdefault(r["bucket"], {"total": 0.0, "charged": 0.0, "evidence": 0.0})
+        b["total"] += r["hours"]
+        if r["production_needed"] and r["bucket"] != "eval":
+            b["charged"] += r["hours"]
+        else:
+            b["evidence"] += r["hours"]
+    return out
+
+
 def hours_by_bucket(rows: list[dict]) -> dict:
     out: dict = {}
     for r in rows:
@@ -486,7 +512,7 @@ def label_hours_per_1000_from_log(rows: list[dict]) -> float:
     return r["hours"] / n * 1000
 
 
-def load_inputs(repo: Path, run: Path, out_rows: list, productization_hours: float) -> tuple[Params, dict]:
+def load_inputs(repo: Path, run: Path, out_rows: list, productization_hours: float, effort_log_path: Path | None = None) -> tuple[Params, dict]:
     """Build Params from the repo's result files and record every input in out_rows (name, value, unit, status,
     source, note)."""
     def add(name, value, unit, status, source, note=""):
@@ -624,15 +650,22 @@ def load_inputs(repo: Path, run: Path, out_rows: list, productization_hours: flo
         "annoy==1.17.3 failed to build on this machine (error class: Microsoft Visual C++ 14.0 or greater is required; no Windows wheel); one attempt, no retry. "
         "The shared pipeline's cost uses exact search only")
 
-    log = read_effort_log(repo / "cost" / "effort_log.csv")
+    effort_path = effort_log_path or (repo / "cost" / "effort_log.csv")
+    log = read_effort_log(effort_path)
+    if not log:
+        raise SystemExit(f"{effort_path} has no rows with hours (an empty or truncated file?); nothing to cost. "
+                         f"Restore it (for example: git show HEAD:cost/effort_log.csv) or pass --effort-log.")
     p.label_hours_per_1000 = label_hours_per_1000_from_log(log)
     add("labeling hours per 1,000 pairs", p.label_hours_per_1000, "hours", "measured", "cost/effort_log.csv row 'Hand check of 100 pairs' (0.5 h)",
         "sensitivity 2 and 10; the hand check was blind agreement checking, not a labeling workflow")
     buckets = hours_by_bucket(log)
-    p.effort_hours = {k: v["production"] for k, v in buckets.items()}
+    split = effort_split(log)
+    p.effort_hours = {k: v["charged"] for k, v in split.items()}
     for k, v in sorted(buckets.items()):
-        add(f"effort-log hours, bucket {k}", f"{v['total']:g} total, {v['production']:g} production needed", "hours", "measured",
-            "cost/effort_log.csv", "the PoC's own effort: goes into the block 'cost to build the evidence', charged to no option or scenario")
+        add(f"effort-log hours, bucket {k}", f"{v['total']:g} total, {v['production']:g} production needed (yes), {v['other']:g} no", "hours", "measured",
+            "cost/effort_log.csv", ("eval hours: the block 'cost to build the evidence', charged to no option" if k == "eval" else
+                                    ("production-needed hours are charged to A, B, C and D (shared); 'no' hours are evidence" if k == "verity" else
+                                     "production-needed hours are charged to this option (and to D if B or C); 'no' hours are evidence")))
     pre = [r for r in csv.reader((repo / "cost" / "verity_preexisting_cost.csv").open(encoding="utf-8-sig"))][-1]
     p.verity_preexisting_hours = float(pre[1])
     add("Verity pre-existing build", p.verity_preexisting_hours, "hours", "assumed", "cost/verity_preexisting_cost.csv (your estimate)")
@@ -641,13 +674,13 @@ def load_inputs(repo: Path, run: Path, out_rows: list, productization_hours: flo
     led = ledger_spend(repo / "results" / "llm_ledger.jsonl")
     p.b_dev_api_usd = led["by_class"].get("B development", 0.0)
     add("ledger classification rule", "tuning rounds (tune*), caching diagnostics (cache_diagnostic*), the smoke test (smoke*) and "
-        "the concurrency test = B development; sample5000, decoycheck, dfull (D routed pairs) and the "
-        "coming Dec 4 runs (final*, dec4*) = evaluation, counted once. Both classes are the PoC's API spend: they are shown in the block "
-        "'cost to build the evidence' and charged to no option or scenario", "", "assumed", "your instruction; cost/cost_model.py classify_ledger_label",
+        "the concurrency test = B development, a one-time cost of B and, by inheritance, of D; sample5000, decoycheck, dfull (D routed pairs) and the "
+        "coming Dec 4 runs (final*, dec4*) = evaluation, counted once: the evidence block, charged to no option or scenario", "", "assumed",
+        "your instruction; cost/cost_model.py classify_ledger_label",
         "the concurrency test is my classification (a capacity measurement for B)")
     for lab, usd in sorted(led["by_label"].items()):
         add(f"ledger spend, run {lab}", round(usd, 4), "USD", "measured", "results/llm_ledger.jsonl", classify_ledger_label(lab))
-    add("ledger: B development API spend", round(p.b_dev_api_usd, 4), "USD", "measured", "results/llm_ledger.jsonl", "cost to build the evidence; charged to no option or scenario")
+    add("ledger: B development API spend", round(p.b_dev_api_usd, 4), "USD", "measured", "results/llm_ledger.jsonl", "one-time cost of B, and of D through inheritance")
     add("ledger: evaluation API spend (counted once)", round(led["by_class"].get("evaluation", 0.0), 4), "USD", "measured", "results/llm_ledger.jsonl", "cost to build the evidence; charged to no option or scenario")
     if led["by_class"].get("unclassified"):
         add("ledger: UNCLASSIFIED spend", round(led["by_class"]["unclassified"], 4), "USD", "measured", "results/llm_ledger.jsonl", "add a rule in classify_ledger_label")
@@ -691,7 +724,7 @@ def load_inputs(repo: Path, run: Path, out_rows: list, productization_hours: flo
     add("option E", "not run", "", "measured", "options/e_slm.py has no results", "no numbers are invented")
     lc = list(csv.DictReader((run / "options" / "c_model" / "lc_v2" / "learning_curve.csv").open(encoding="utf-8")))
     f1 = {int(r["n"]): float(r["f1_mean"]) for r in lc}
-    return p, {"log": log, "buckets": buckets, "ledger": led, "lc_f1": f1, "full_f1": 0.9653, "n_band": n_band, "conc": conc,
+    return p, {"effort_split": split, "effort_path": effort_path, "log": log, "buckets": buckets, "ledger": led, "lc_f1": f1, "full_f1": 0.9653, "n_band": n_band, "conc": conc,
                "latency": latency, "mixture": mixture, "d_off": d_off}
 
 
@@ -717,12 +750,13 @@ def main() -> int:
     ap.add_argument("--effort-log-complete", action="store_true",
                     help="the effort log covers B and D; without it every output starts with the DRAFT line")
     ap.add_argument("--productization-hours", type=float, default=100.0)
+    ap.add_argument("--effort-log", type=Path, default=None, help="the effort log to read (default cost/effort_log.csv)")
     args = ap.parse_args()
     draft = not args.effort_log_complete
     out = args.out
     out.mkdir(parents=True, exist_ok=True)
     rows_a: list = []
-    p, ctx = load_inputs(REPO, args.run, rows_a, args.productization_hours)
+    p, ctx = load_inputs(REPO, args.run, rows_a, args.productization_hours, args.effort_log)
     L: list[str] = []
     say = L.append
     if draft:
@@ -730,46 +764,97 @@ def main() -> int:
         say("")
     log = ctx["log"]
     say(f"Effort log: {len(log)} rows with hours, {min(r['date'] for r in log):%Y-%m-%d} to {max(r['date'] for r in log):%Y-%m-%d}")
-    say("Hours by bucket (total / production needed / other):")
+    split = ctx["effort_split"]
+    say("Hours by bucket: total / production_needed yes / no, and where they go (charged to options, or the evidence block):")
     for k, v in sorted(ctx["buckets"].items()):
-        say(f"  {k:<8}{v['total']:>6g} / {v['production']:>5g} / {v['other']:>5g}")
-    say(f"  These hours are the PoC's own effort. They go into the block 'cost to build the evidence' below and are not charged to any option or scenario. "
-        f"B and D are only partly in the log (logged production hours: B {ctx['buckets'].get('B', {}).get('production', 0):g}, "
-        f"D {ctx['buckets'].get('D', {}).get('production', 0):g}), so that block is undercounted until the log is completed (use --effort-log-complete once it is).")
+        say(f"  {k:<8}{v['total']:>6g} / {v['production']:>5g} / {v['other']:>5g}      charged to options {split[k]['charged']:>5g}, evidence {split[k]['evidence']:>5g}")
+    tot_all = sum(v["total"] for v in ctx["buckets"].values())
+    tot_yes = sum(v["production"] for v in ctx["buckets"].values())
+    ch_h = sum(v["charged"] for v in split.values())
+    ev_h = sum(v["evidence"] for v in split.values())
+    say(f"  {'total':<8}{tot_all:>6g} / {tot_yes:>5g} / {tot_all - tot_yes:>5g}      charged to options {ch_h:>5g}, evidence {ev_h:>5g}")
+    say("  One-time build cost of an option = its own bucket's 'yes' hours + the shared verity 'yes' hours (carried by A, B, C and D) + the Verity pre-existing build (80 h) "
+        "+ productization (100 h); D also inherits the 'yes' hours of B and C and B's development API spend. Hours marked 'no', all eval hours and the evaluation API spend "
+        "are the block 'cost to build the evidence', charged to no option or scenario. "
+        f"B and D are only partly in the log (logged 'yes' hours: B {split.get('B', {}).get('charged', 0):g}, D {split.get('D', {}).get('charged', 0):g}), so their build cost is "
+        f"undercounted until the log is completed (use --effort-log-complete once it is).")
     led = ctx["ledger"]
     ev_rows = []
-    say("\nCost to build the evidence (the PoC's own spend; NOT charged to any option or scenario)")
+    eval_api = led["by_class"].get("evaluation", 0.0)
+    say("\nCost to build the evidence (hours marked 'no', all eval hours, and the evaluation API spend; NOT charged to any option or scenario)")
     say(f"  {'effort-log hours':<30}{'hours':>8}" + "".join(f"{'$' + format(r, 'g') + '/h':>12}" for r in RATES))
-    tot_h = 0.0
-    for k, v in sorted(ctx["buckets"].items()):
-        tot_h += v["total"]
-        say(f"  {'bucket ' + k:<30}{v['total']:>8g}" + "".join(f"{v['total'] * r:>12,.0f}" for r in RATES))
-        ev_rows.append(["effort-log hours", f"bucket {k}", f"{v['total']:g}"] + [f"{v['total'] * r:.2f}" for r in RATES])
-    say(f"  {'hours total':<30}{tot_h:>8g}" + "".join(f"{tot_h * r:>12,.0f}" for r in RATES))
-    ev_rows.append(["effort-log hours", "total", f"{tot_h:g}"] + [f"{tot_h * r:.2f}" for r in RATES])
-    api_total = sum(led["by_class"].values())
-    say(f"  API spend from the ledger: " + ", ".join(f"{k} ${v:.4f}" for k, v in sorted(led["by_class"].items())) + f"; total ${api_total:.4f}")
+    for k, v in sorted(split.items()):
+        if v["evidence"] > 0:
+            say(f"  {'bucket ' + k:<30}{v['evidence']:>8g}" + "".join(f"{v['evidence'] * r:>12,.0f}" for r in RATES))
+            ev_rows.append(["effort-log hours (evidence)", f"bucket {k}", f"{v['evidence']:g}"] + [f"{v['evidence'] * r:.2f}" for r in RATES])
+    say(f"  {'evidence hours total':<30}{ev_h:>8g}" + "".join(f"{ev_h * r:>12,.0f}" for r in RATES))
+    ev_rows.append(["effort-log hours (evidence)", "total", f"{ev_h:g}"] + [f"{ev_h * r:.2f}" for r in RATES])
+    say(f"  API spend, evaluation runs (counted once): ${eval_api:.4f}")
     for lab, usd in sorted(led["by_label"].items()):
-        say(f"    {lab:<28} ${usd:>8.4f}  {classify_ledger_label(lab)}")
-        ev_rows.append(["API spend (ledger)", f"{lab} ({classify_ledger_label(lab)})", ""] + [f"{usd:.4f}"] * 3)
-    ev_rows.append(["API spend (ledger)", "total", ""] + [f"{api_total:.4f}"] * 3)
-    say(f"  {'evidence total (hours x rate + API spend)':<44}" + "".join(f"{tot_h * r + api_total:>12,.0f}" for r in RATES))
-    ev_rows.append(["total", "hours x rate + API spend", ""] + [f"{tot_h * r + api_total:.2f}" for r in RATES])
+        if classify_ledger_label(lab) == "evaluation":
+            say(f"    {lab:<28} ${usd:>8.4f}")
+            ev_rows.append(["API spend (ledger, evaluation)", lab, ""] + [f"{usd:.4f}"] * 3)
+    ev_rows.append(["API spend (ledger, evaluation)", "total", ""] + [f"{eval_api:.4f}"] * 3)
+    say(f"  {'evidence total (hours x rate + API spend)':<44}" + "".join(f"{ev_h * r + eval_api:>12,.0f}" for r in RATES))
+    ev_rows.append(["total", "evidence hours x rate + evaluation API spend", ""] + [f"{ev_h * r + eval_api:.2f}" for r in RATES])
+    say(f"  For reference, charged to options instead: {ch_h:g} production-needed hours, and B's development API spend ${p.b_dev_api_usd:.4f} (a one-time cost of B and D).")
+    ev_rows.append(["charged to options (reference)", "production-needed hours", f"{ch_h:g}"] + [f"{ch_h * r:.2f}" for r in RATES])
+    ev_rows.append(["charged to options (reference)", "B development API spend (ledger)", ""] + [f"{p.b_dev_api_usd:.4f}"] * 3)
     write_csv(out / "evidence_cost.csv", ["kind", "item", "hours", "usd_at_50_per_hour", "usd_at_100_per_hour", "usd_at_200_per_hour"], ev_rows, draft)
-    # reconciliation: the file's own hours (a separate parse), the loader's, and the figure written to evidence_cost.csv
-    raw_rows = list(csv.DictReader((REPO / "cost" / "effort_log.csv").open(newline="", encoding="utf-8-sig")))
+    # reconciliation: the file's own hours (a separate parse) = charged + evidence = the loader's = the figure written to evidence_cost.csv
+    raw_rows = list(csv.DictReader(ctx["effort_path"].open(newline="", encoding="utf-8-sig")))
     raw_hours = [(r["bucket"].strip(), float(r["hours"]), r["production_needed"].strip().lower() == "yes") for r in raw_rows if (r["hours"] or "").strip()]
     raw_total = sum(h for _, h, _ in raw_hours)
-    raw_prod = sum(h for _, h, y in raw_hours if y)
-    csv_total = next(float(r[2]) for r in ev_rows if r[0] == "effort-log hours" and r[1] == "total")
+    raw_charged = sum(h for bk, h, y in raw_hours if y and bk != "eval")
+    raw_evidence = raw_total - raw_charged
     csv_back = [r for r in csv.reader(line for line in (out / "evidence_cost.csv").read_text(encoding="utf-8").splitlines() if not line.startswith("#"))]
-    csv_file_total = next(float(r[2]) for r in csv_back if r[0] == "effort-log hours" and r[1] == "total")
-    loader_prod = sum(v["production"] for v in ctx["buckets"].values())
-    say(f"  Reconciliation of the effort hours: effort_log.csv has {len(raw_rows)} rows ({len(raw_hours)} with hours) and sums to {raw_total:g} h "
-        f"({raw_prod:g} h production needed, {raw_total - raw_prod:g} h not); the loader's total is {tot_h:g} h ({loader_prod:g} h production needed); "
-        f"evidence_cost.csv has {csv_file_total:g} h. " + ("They agree." if abs(raw_total - tot_h) < 1e-9 and abs(raw_total - csv_file_total) < 1e-9 and abs(raw_prod - loader_prod) < 1e-9 else "THEY DO NOT AGREE"))
-    if not (abs(raw_total - tot_h) < 1e-9 and abs(raw_total - csv_file_total) < 1e-9 and abs(raw_prod - loader_prod) < 1e-9 and abs(csv_total - tot_h) < 1e-9):
+    csv_ev_total = next(float(r[2]) for r in csv_back if r[0] == "effort-log hours (evidence)" and r[1] == "total")
+    ok_rec = (abs(raw_total - tot_all) < 1e-9 and abs(raw_charged - ch_h) < 1e-9 and abs(raw_evidence - ev_h) < 1e-9 and abs(csv_ev_total - ev_h) < 1e-9
+              and abs(tot_all - (ch_h + ev_h)) < 1e-9)
+    say(f"  Reconciliation of the effort hours: {ctx['effort_path'].name} has {len(raw_rows)} rows ({len(raw_hours)} with hours) and sums to {raw_total:g} h = {raw_charged:g} h charged to "
+        f"options + {raw_evidence:g} h evidence; the loader's total is {tot_all:g} h ({ch_h:g} + {ev_h:g}); evidence_cost.csv has {csv_ev_total:g} evidence hours. "
+        + ("They agree." if ok_rec else "THEY DO NOT AGREE"))
+    if not ok_rec:
         raise SystemExit("effort hours do not reconcile: fix the loader")
+
+    # one-time build cost, before and after the rule change
+    say("\nOne-time cost to build, before and after the rule change (USD; labeling shown separately), next to the monthly running cost at "
+        f"{BASE_VOLUME:,} records/day (LLM + hosting + operations, $50 / $100 / $200 per hour)")
+    say("  before = the previous rule: the Verity pre-existing build (80 h) and productization (100 h) only, the same for every option. "
+        "after = those plus the option's own 'yes' hours, the shared verity 'yes' hours, (D) B's and C's 'yes' hours, and B's development API spend (B, D).")
+    say(f"  {'option':<8}{'before $50/$100/$200':>26}{'after hours':>13}{'API':>8}{'after $50/$100/$200':>30}{'labeling at $100/h: 2,000 / 63,665':>38}{'running per month':>30}")
+    ot_rows = []
+    for opt in OPTIONS:
+        if opt == "E":
+            say(f"  {'E':<8}not run (no numbers)")
+            ot_rows.append(["E", "not run"] + [""] * 8)
+            continue
+        before = [(p.verity_preexisting_hours + p.verity_productization_hours) * r for r in RATES]
+        api = p.b_dev_api_usd if opt in ("B", "D") else 0.0
+        hours_after = one_time_split(p, opt, 1.0, 0)["development"] - api            # hours (the rate is 1, the API spend is not scaled)
+        after = [one_time_split(p, opt, r, 0)["development"] for r in RATES]
+        lab = [label_hours(p, n) * BASE_RATE if opt in ("C", "D") else 0.0 for n in (BASE_LABELS, LABEL_SCENARIOS[-1])]
+        run_ = [monthly(p, opt, BASE_VOLUME, r, BASE_LABELS)["running"] for r in RATES]
+        say(f"  {opt:<8}{'/'.join(f'{x:,.0f}' for x in before):>26}{hours_after:>13g}{api:>8.2f}{'/'.join(f'{x:,.0f}' for x in after):>30}"
+            f"{('/'.join(f'{x:,.0f}' for x in lab) if opt in 'CD' else 'none (no labels needed)'):>38}{'/'.join(f'{x:,.0f}' for x in run_):>30}")
+        for r, bf, af, rn in zip(RATES, before, after, run_):
+            ot_rows.append([opt, r, f"{bf:.2f}", f"{hours_after:g}", f"{api:.4f}", f"{af:.2f}", f"{lab[0]:.2f}" if opt in "CD" else "0", f"{lab[1]:.2f}" if opt in "CD" else "0", f"{rn:.2f}"])
+    write_csv(out / "one_time_cost.csv", ["option", "hourly_rate_usd", "build_before_usd", "build_hours_after", "b_development_api_usd_included",
+                                          "build_after_usd", "labeling_2000_labels_at_100_per_hour_usd", "labeling_63665_labels_at_100_per_hour_usd",
+                                          "running_usd_month_at_1M_per_day"], [r for r in ot_rows if r[1] != "not run"], draft)
+    tot_lab = {n: {o: [one_time_total(p, o, r, n) for r in RATES] for o in "ABCD"} for n in (BASE_LABELS, LABEL_SCENARIOS[-1])}
+    b_cheapest = all(tot_lab[n]["B"][i] <= min(tot_lab[n]["C"][i], tot_lab[n]["D"][i]) for n in tot_lab for i in range(len(RATES)))
+    a_vs_b = [tot_lab[BASE_LABELS]["B"][i] - tot_lab[BASE_LABELS]["A"][i] for i in range(len(RATES))]
+    if b_cheapest:
+        say("  B is cheapest to build of B, C and D once labeling is counted (no labels needed); C and D need labeled pairs. "
+            f"Without labeling, C's build is ${tot_lab[BASE_LABELS]['B'][1] - tot_lab[BASE_LABELS]['C'][1] + label_hours(p, BASE_LABELS) * BASE_RATE:,.0f} cheaper than B's at $100/h (fewer logged hours, no API development spend), "
+            f"which labeling at 2,000 labels (${label_hours(p, BASE_LABELS) * BASE_RATE:,.0f}) already outweighs"
+            + (f". A, which fails the F1 bar and needs no labels either, is ${a_vs_b[1]:,.0f} cheaper to build than B at $100/h (B carries ${p.b_dev_api_usd:.2f} of API development spend and more logged hours)."
+               if min(a_vs_b) > 0 else "."))
+    else:
+        say("  B is NOT the cheapest to build of B, C and D at every rate and label count (see the table); C and D need labeled pairs.")
+    say("  The build cost is dominated by the shared 180 hours (Verity build and productization): without labeling the four options are within "
+        f"${max(one_time_total(p, o, BASE_RATE, 0) for o in 'ABCD') - min(one_time_total(p, o, BASE_RATE, 0) for o in 'ABCD'):,.0f} of each other at $100/h.")
 
     # labeling table
     say("\nLabeling for C and D, next to B's zero labels (hours at "
