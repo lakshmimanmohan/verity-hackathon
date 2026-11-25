@@ -512,7 +512,8 @@ def label_hours_per_1000_from_log(rows: list[dict]) -> float:
     return r["hours"] / n * 1000
 
 
-def load_inputs(repo: Path, run: Path, out_rows: list, productization_hours: float, effort_log_path: Path | None = None) -> tuple[Params, dict]:
+def load_inputs(repo: Path, run: Path, out_rows: list, productization_hours: float, effort_log_path: Path | None = None,
+                dev_run: Path | None = None) -> tuple[Params, dict]:
     """Build Params from the repo's result files and record every input in out_rows (name, value, unit, status,
     source, note)."""
     def add(name, value, unit, status, source, note=""):
@@ -553,18 +554,27 @@ def load_inputs(repo: Path, run: Path, out_rows: list, productization_hours: flo
     p.routed_share = routed / n_band
     add("D routed share (exact, full test band)", round(p.routed_share, 6), "ratio", "measured",
         "results/.../options/d_hybrid/routed_fullband_pairs.csv and c_v1_lgbm/decisions.csv", f"{routed} of {n_band:,} band pairs; sensitivity 0.001, 0.01, 0.05, 0.20")
-    readme = (run / "README.txt").read_text(encoding="utf-8")
-    band_pairs = int(re.search(r"review ([\d,]+)", readme).group(1).replace(",", ""))
-    records = int(re.search(r"([\d,]+) records", readme).group(1).replace(",", ""))
+    dev = dev_run or run
+    bs = run / "band_summary.json"
+    if bs.exists():
+        bsd = json.loads(bs.read_text(encoding="utf-8"))
+        band_pairs, records, src_bp = int(bsd["band_pairs"]), int(bsd["records"]), f"{run.name}/band_summary.json"
+    else:
+        readme = (run / "README.txt").read_text(encoding="utf-8")
+        band_pairs = int(re.search(r"review ([\d,]+)", readme).group(1).replace(",", ""))
+        records = int(re.search(r"([\d,]+) records", readme).group(1).replace(",", ""))
+        src_bp = f"{run.name}/README.txt"
     p.band_pairs_per_record = band_pairs / records
-    add("band pairs per record", round(p.band_pairs_per_record, 4), "pairs", "measured", f"{run.name}/README.txt", f"{band_pairs:,} / {records:,}; sensitivity 5, 10, 20")
+    add("band pairs per record", round(p.band_pairs_per_record, 4), "pairs", "measured", src_bp, f"{band_pairs:,} / {records:,}; sensitivity 5, 10, 20")
 
-    ct = json.loads((run / "options" / "c_model" / "c_v1_lgbm" / "timings.json").read_text(encoding="utf-8"))
-    pp = [t for t in ct["timings"] if t["stage"] == "optionC.per_pair"][0]
-    p.c_cpu_s_per_pair = pp["seconds"] / pp["items"]
-    p.d_cpu_s_per_pair = p.c_cpu_s_per_pair
-    add("C per-pair CPU time, mean (first measurement, one repeat)", round(p.c_cpu_s_per_pair * 1000, 4), "ms", "measured", "options/c_model/c_v1_lgbm/timings.json", "one core, one pair at a time; features + predict + calibrate; replaced by the 3-repeat measurement when present")
-    add("C per-pair CPU time, p95 (first measurement)", pp["per_item_ms"]["p95"], "ms", "measured", "options/c_model/c_v1_lgbm/timings.json")
+    ct_path = run / "options" / "c_model" / "c_v1_lgbm" / "timings.json"
+    if ct_path.exists():
+        ct = json.loads(ct_path.read_text(encoding="utf-8"))
+        pp = [t for t in ct["timings"] if t["stage"] == "optionC.per_pair"][0]
+        p.c_cpu_s_per_pair = pp["seconds"] / pp["items"]
+        p.d_cpu_s_per_pair = p.c_cpu_s_per_pair
+        add("C per-pair CPU time, mean (first measurement, one repeat)", round(p.c_cpu_s_per_pair * 1000, 4), "ms", "measured", "options/c_model/c_v1_lgbm/timings.json", "one core, one pair at a time; features + predict + calibrate; replaced by the 3-repeat measurement when present")
+        add("C per-pair CPU time, p95 (first measurement)", pp["per_item_ms"]["p95"], "ms", "measured", "options/c_model/c_v1_lgbm/timings.json")
     add("D per-pair CPU time (before the D measurement)", round(p.d_cpu_s_per_pair * 1000, 4), "ms", "assumed", "derived from C",
         "D runs C on every band pair; the routing test is negligible; replaced by the measurement when present")
     add("A per-pair CPU time", 0.0, "ms", "assumed", "not measured", "a threshold test; treated as zero")
@@ -607,6 +617,8 @@ def load_inputs(repo: Path, run: Path, out_rows: list, productization_hours: flo
         p.d_cpu_s_per_pair = latency["D"]["median_of_repeats"]["mean_ms"] / 1000
         p.latency_loaded = True
     mix_path = run / "options" / "latency" / "d_latency_mixture.json"
+    if not mix_path.exists():
+        mix_path = dev / "options" / "latency" / "d_latency_mixture.json"          # dev measurement, flagged by its path
     mixture = None
     if mix_path.exists():
         mixture = json.loads(mix_path.read_text(encoding="utf-8"))
@@ -686,6 +698,8 @@ def load_inputs(repo: Path, run: Path, out_rows: list, productization_hours: flo
         add("ledger: UNCLASSIFIED spend", round(led["by_class"]["unclassified"], 4), "USD", "measured", "results/llm_ledger.jsonl", "add a rule in classify_ledger_label")
 
     cc = run / "options" / "b_llm" / "openai" / "concurrency" / "concurrency.json"
+    if not cc.exists():
+        cc = dev / "options" / "b_llm" / "openai" / "concurrency" / "concurrency.json"   # dev measurement, flagged by its path
     conc = None
     if cc.exists():
         c = conc = json.loads(cc.read_text(encoding="utf-8"))
@@ -722,9 +736,19 @@ def load_inputs(repo: Path, run: Path, out_rows: list, productization_hours: flo
     add("cost to build the evidence", "separate block: effort-log hours x hourly rate and the ledger API spend", "", "measured", "cost/effort_log.csv and results/llm_ledger.jsonl",
         "not charged to any option or scenario; undercounted for B and D until the effort log is complete")
     add("option E", "not run", "", "measured", "options/e_slm.py has no results", "no numbers are invented")
-    lc = list(csv.DictReader((run / "options" / "c_model" / "lc_v2" / "learning_curve.csv").open(encoding="utf-8")))
+    lc_path = run / "options" / "c_model" / "lc_v2" / "learning_curve.csv"
+    if not lc_path.exists():
+        lc_path = dev / "options" / "c_model" / "lc_v2" / "learning_curve.csv"      # the learning curve exists for the dev run only
+    lc = list(csv.DictReader(lc_path.open(encoding="utf-8")))
     f1 = {int(r["n"]): float(r["f1_mean"]) for r in lc}
-    return p, {"effort_split": split, "effort_path": effort_path, "log": log, "buckets": buckets, "ledger": led, "lc_f1": f1, "full_f1": 0.9653, "n_band": n_band, "conc": conc,
+    add("learning curve (mean band F1 at 500, 1,000, 2,000 labels)", f"{f1.get(500)}, {f1.get(1000)}, {f1.get(2000)}", "", "measured", lc_path.relative_to(repo).as_posix() if lc_path.is_relative_to(repo) else str(lc_path),
+        "dev run" if lc_path.parent.parent.parent.parent != run else "")
+    cv = (run / "options" / "c_model" / "c_v1_lgbm" / "cv_report.txt").read_text(encoding="utf-8")
+    as_eval = int(re.search(r"Training set: (\d+) pairs", cv).group(1))
+    full_f1 = parse_band_f1((run / "options" / "c_model" / "c_v1_lgbm" / "score_report.txt").read_text(encoding="utf-8"))
+    add("labels as evaluated (C and D)", as_eval, "labels", "measured", "options/c_model/c_v1_lgbm/cv_report.txt", f"every train band pair of this run; C's full-band band F1 {full_f1:.4f}")
+    return p, {"effort_split": split, "effort_path": effort_path, "log": log, "buckets": buckets, "ledger": led, "lc_f1": f1, "full_f1": full_f1,
+               "as_eval_labels": as_eval, "n_band": n_band, "conc": conc,
                "latency": latency, "mixture": mixture, "d_off": d_off}
 
 
@@ -746,6 +770,8 @@ def fmt_usd(x) -> str:
 def main() -> int:
     ap = argparse.ArgumentParser(description="Cost model for the options.")
     ap.add_argument("--run", type=Path, default=REPO / "results" / "dev_2026_run11")
+    ap.add_argument("--dev-run", type=Path, default=REPO / "results" / "dev_2026_run11",
+                    help="where the dev-only inputs come from when the run has none (learning curve, concurrency test, D latency mixture)")
     ap.add_argument("--out", type=Path, default=REPO / "cost")
     ap.add_argument("--effort-log-complete", action="store_true",
                     help="the effort log covers B and D; without it every output starts with the DRAFT line")
@@ -756,7 +782,9 @@ def main() -> int:
     out = args.out
     out.mkdir(parents=True, exist_ok=True)
     rows_a: list = []
-    p, ctx = load_inputs(REPO, args.run, rows_a, args.productization_hours, args.effort_log)
+    p, ctx = load_inputs(REPO, args.run, rows_a, args.productization_hours, args.effort_log, args.dev_run)
+    global LABEL_SCENARIOS
+    LABEL_SCENARIOS = (500, 1000, 2000, ctx["as_eval_labels"])
     L: list[str] = []
     say = L.append
     if draft:
@@ -822,7 +850,7 @@ def main() -> int:
         f"{BASE_VOLUME:,} records/day (LLM + hosting + operations, $50 / $100 / $200 per hour)")
     say("  before = the previous rule: the Verity pre-existing build (80 h) and productization (100 h) only, the same for every option. "
         "after = those plus the option's own 'yes' hours, the shared verity 'yes' hours, (D) B's and C's 'yes' hours, and B's development API spend (B, D).")
-    say(f"  {'option':<8}{'before $50/$100/$200':>26}{'after hours':>13}{'API':>8}{'after $50/$100/$200':>30}{'labeling at $100/h: 2,000 / 63,665':>38}{'running per month':>30}")
+    say(f"  {'option':<8}{'before $50/$100/$200':>26}{'after hours':>13}{'API':>8}{'after $50/$100/$200':>30}{'labeling at $100/h: 2,000 / ' + format(LABEL_SCENARIOS[-1], ','):>38}{'running per month':>30}")
     ot_rows = []
     for opt in OPTIONS:
         if opt == "E":
@@ -840,7 +868,7 @@ def main() -> int:
         for r, bf, af, rn in zip(RATES, before, after, run_):
             ot_rows.append([opt, r, f"{bf:.2f}", f"{hours_after:g}", f"{api:.4f}", f"{af:.2f}", f"{lab[0]:.2f}" if opt in "CD" else "0", f"{lab[1]:.2f}" if opt in "CD" else "0", f"{rn:.2f}"])
     write_csv(out / "one_time_cost.csv", ["option", "hourly_rate_usd", "build_before_usd", "build_hours_after", "b_development_api_usd_included",
-                                          "build_after_usd", "labeling_2000_labels_at_100_per_hour_usd", "labeling_63665_labels_at_100_per_hour_usd",
+                                          "build_after_usd", "labeling_2000_labels_at_100_per_hour_usd", "labeling_as_evaluated_labels_at_100_per_hour_usd",
                                           "running_usd_month_at_1M_per_day"], [r for r in ot_rows if r[1] != "not run"], draft)
     tot_lab = {n: {o: [one_time_total(p, o, r, n) for r in RATES] for o in "ABCD"} for n in (BASE_LABELS, LABEL_SCENARIOS[-1])}
     b_cheapest = all(tot_lab[n]["B"][i] <= min(tot_lab[n]["C"][i], tot_lab[n]["D"][i]) for n in tot_lab for i in range(len(RATES)))
@@ -861,10 +889,10 @@ def main() -> int:
         f"{p.label_hours_per_1000:g} h per 1,000 pairs, measured from the hand check; sensitivity 2 and 10)")
     say(f"  {'labels':>8}{'mean band F1':>14}{'hours':>8}" + "".join(f"{'$' + format(r, 'g') + '/h':>12}" for r in RATES))
     for n in LABEL_SCENARIOS:
-        f1 = ctx["full_f1"] if n == 63665 else ctx["lc_f1"][n]
+        f1 = ctx["full_f1"] if n == LABEL_SCENARIOS[-1] else ctx["lc_f1"][n]
         say(f"  {n:>8,}{f1:>14.4f}{label_hours(p, n):>8.1f}" + "".join(f"{label_hours(p, n) * r:>12,.0f}" for r in RATES))
     say(f"  {'B: 0':>8}{'':>14}{0:>8}" + "".join(f"{0:>12}" for _ in RATES) + "   (B needs no labeled training pairs to run)")
-    say("  The 63,665 row is what the dev result for C used (every train band pair, F1 0.9653); it is not a recommended budget. "
+    say(f"  The {LABEL_SCENARIOS[-1]:,} row is what the result for C used (every train band pair, F1 {ctx['full_f1']:.4f}); it is not a recommended budget. "
         "On the dev data the labels came free from the generator. The 500 to 2,000 rows are the mean band F1 over 5 sampling seeds of "
         "the learning curve (lc_v2); the spread between seeds is large (see learning_curve.csv). B's development also used labeled train pairs "
         "(8 few-shot examples and 2,000 tuning pairs, free from the generator); that is not charged as labeling here.")
@@ -1013,8 +1041,8 @@ def main() -> int:
     say(f"\nLabel rows for C and D: the label cost is only ever shown next to the F1 measured with that label count")
     say(f"  {'option':<6}{'row':<14}{'labels':>8}{'label hours':>12}{'label cost at $50/$100/$200':>30}{'band F1':>26}{'12-month total at 1M/day':>26}")
     for opt, d_ in (("C", bar_in["C"]), ("D", bar_in["D"])):
-        m = monthly(p, opt, BASE_VOLUME, BASE_RATE, 63665)
-        say(f"  {opt:<6}{'as evaluated':<14}{63665:>8,}{label_hours(p, 63665):>12.1f}{'/'.join(f'{label_hours(p, 63665) * r:,.0f}' for r in RATES):>30}"
+        m = monthly(p, opt, BASE_VOLUME, BASE_RATE, LABEL_SCENARIOS[-1])
+        say(f"  {opt:<6}{'as evaluated':<14}{LABEL_SCENARIOS[-1]:>8,}{label_hours(p, LABEL_SCENARIOS[-1]):>12.1f}{'/'.join(f'{label_hours(p, LABEL_SCENARIOS[-1]) * r:,.0f}' for r in RATES):>30}"
             f"{d_['band_f1']:>20.4f} (full band){m['total_horizon']:>14,.0f}")
     say(f"  {'C':<6}{'at 2,000':<14}{2000:>8,}{label_hours(p, 2000):>12.1f}{'/'.join(f'{label_hours(p, 2000) * r:,.0f}' for r in RATES):>30}"
         f"{ctx['lc_f1'][2000]:>14.4f} (mean of 5 seeds){c2['total_horizon']:>9,.0f}")
@@ -1114,7 +1142,7 @@ def main() -> int:
     for lab in (BASE_LABELS, LABEL_SCENARIOS[-1]):
         for opt in ("A", "C", "D"):
             say(f"  {lab:<22,}{opt:<8}" + "".join(f"{below_text(be_map[('S1 and S2', lab, r, opt)]):<48}" for r in RATES))
-    say("  (labels 2,000: base case; labels 63,665: as evaluated for C and D.)")
+    say(f"  (labels 2,000: base case; labels {LABEL_SCENARIOS[-1]:,}: as evaluated for C and D.)")
 
     # shared pipeline cost x 1, 10, 100 (exact neighbor search scales with record count)
     pipe_rows, ranks = [], {}

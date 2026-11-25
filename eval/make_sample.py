@@ -14,6 +14,8 @@ recall and F1 estimate the full test band.
 The truth file (<run>/orgs_raw_truth.csv) is read for test records only and only to choose the
 pairs. Labels are not written to the output, which has columns record_a, record_b, weight.
 
+--n-nonmatches K draws every same-entity pair plus K non-matches (size = same-entity pairs + K), used by the rehearsal.
+
 Default output: <run>/options/b_llm/test_sample<size>.csv, for seed 0 only (another seed needs
 --out, so the committed sample is never overwritten by accident). Other code imports
 draw_sample() and test_band_pairs() from here; there is no second copy of the sampler.
@@ -90,6 +92,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Draw the fixed weighted sample of test band pairs.")
     ap.add_argument("run", type=Path)
     ap.add_argument("--size", type=int, default=5000)
+    ap.add_argument("--n-nonmatches", type=int, default=None,
+                    help="instead of --size: every same-entity pair plus this many non-matches (the rehearsal sample)")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", type=Path, default=None)
     args = ap.parse_args()
@@ -98,7 +102,10 @@ def main() -> int:
             raise SystemExit("--out is required for a seed other than 0")
         args.out = args.run / "options" / "b_llm" / f"test_sample{args.size}.csv"
     band = test_band_pairs(args.run)
-    pairs, weights, n_true, n_false_all, n_false, w_false = draw_sample(band, test_entities(args.run), args.size, args.seed)
+    entity = test_entities(args.run)
+    if args.n_nonmatches is not None:
+        args.size = sum(entity[a] == entity[b] for a, b in band) + args.n_nonmatches
+    pairs, weights, n_true, n_false_all, n_false, w_false = draw_sample(band, entity, args.size, args.seed)
     write_sample(args.out, pairs, weights)
     print(f"test band pairs {len(band):,}: {n_true} same-entity, {n_false_all:,} non-matches")
     print(f"sample (seed {args.seed}): {len(pairs):,} pairs = {n_true} same-entity (weight 1) + {n_false:,} non-matches "

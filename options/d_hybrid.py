@@ -209,8 +209,9 @@ def cmd_list_routed(args) -> int:
             w.writerow([a, b, "1.0"])
     answered = merge_b(b_paths(args.run))
     have = sum(key(a, b) in answered for a, b, _ in pairs)
+    p_range = f"C's p from {min(p for *_, p in pairs):.3f} to {max(p for *_, p in pairs):.3f}" if pairs else "none routed"
     print(f"frozen setting lo {lo:g}, hi {fmt_hi(hi)}: {len(pairs)} of {len(c_rows):,} test band pairs are routed to the LLM "
-          f"(C's p from {min(p for *_, p in pairs):.3f} to {max(p for *_, p in pairs):.3f}); {have} already have a recorded B answer in "
+          f"({p_range}); {have} already have a recorded B answer in "
           f"the sample / decoy-check / earlier D runs; {len(pairs) - have} do not (the local cache is checked by the B run itself)")
     print(f"written: {out}")
     return 0

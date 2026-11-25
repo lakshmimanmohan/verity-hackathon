@@ -1,0 +1,283 @@
+"""
+Tests for eval/freeze_run.py: the seed 7919 refusals, the manifest check, stage order and resume, and truth sealing.
+Every test runs in a temporary folder with fake stages or a fake step runner: nothing is generated, no seed 7919 data
+is created or read, and no LLM is called.
+
+  python eval/test_freeze_run.py
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import freeze_run as F  # noqa: E402
+
+
+def no_call(args, env, log_file):
+    raise AssertionError(f"no step may run in this test: {args}")
+
+
+class Base(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.repo = Path(self.tmp.name)
+        (self.repo / "frozen.txt").write_text("v1\n", encoding="utf-8")
+        self.logs: list[str] = []
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def runner(self, mode="rehearsal", seed=42, stages=None, call=None, approve=False, run_dir=None, freeze_dir=None) -> F.Runner:
+        run_dir = run_dir or self.repo / "results" / "run"
+        freeze_dir = freeze_dir or run_dir / "_freeze"
+        R = F.Runner(mode, seed, run_dir, freeze_dir, approve=approve, allow_battery=True, repo=self.repo, frozen=["frozen.txt"],
+                     stages=stages, call=call or no_call, log=self.logs.append, ledger_path=self.repo / "ledger.jsonl")
+        R.pip_freeze = False
+        return R
+
+    def guards_fired(self, R: F.Runner) -> list[dict]:
+        p = R.freeze_dir / "guards.jsonl"
+        return [g for g in map(json.loads, p.read_text(encoding="utf-8").splitlines()) if g["fired"]] if p.exists() else []
+
+
+class SeedRefusals(Base):
+    def real(self, approve):
+        return self.runner(mode="real", seed=F.EVAL_SEED, approve=approve, run_dir=self.repo / "results" / "eval_7919",
+                           freeze_dir=self.repo / "results" / "freeze")
+
+    def test_real_run_refused_without_approval(self):
+        R = self.real(approve=False)
+        with self.assertRaises(F.Guard) as cm:
+            F.s1_generate(R)
+        self.assertIn("--approve-seed-7919", str(cm.exception))
+        self.assertFalse(R.run_dir.exists())
+        self.assertEqual([g["guard"] for g in self.guards_fired(R)], ["--approve-seed-7919 given"])
+
+    def test_real_run_refused_when_the_run_folder_exists(self):
+        R = self.real(approve=True)
+        R.run_dir.mkdir(parents=True)
+        with self.assertRaises(F.Guard) as cm:
+            F.s1_generate(R)
+        self.assertIn("the run folder does not exist", str(cm.exception))
+        self.assertEqual(list(R.run_dir.iterdir()), [])
+
+    def test_real_run_refused_when_a_generation_record_exists(self):
+        R = self.real(approve=True)
+        R.freeze_dir.mkdir(parents=True)
+        (R.freeze_dir / "generation_record.json").write_text("{}", encoding="utf-8")
+        with self.assertRaises(F.Guard) as cm:
+            F.s1_generate(R)
+        self.assertIn("no earlier generation record", str(cm.exception))
+
+    def test_rehearsal_refuses_seed_7919(self):
+        ns = argparse.Namespace(rehearsal=True, dev_seed=F.EVAL_SEED, approve_seed_7919=False, allow_battery=False)
+        with self.assertRaises(F.Guard) as cm:
+            F.runner_from_args(ns)
+        self.assertIn("7919", str(cm.exception))
+        R = self.runner(seed=F.EVAL_SEED)                       # and inside the stage, if a Runner were built by hand
+        with self.assertRaises(F.Guard):
+            F.s1_generate(R)
+        self.assertFalse((R.run_dir / "orgs_raw.csv").exists())
+
+    def test_rehearsal_refuses_the_approval_flag_and_other_seeds(self):
+        with self.assertRaises(F.Guard):
+            F.runner_from_args(argparse.Namespace(rehearsal=True, dev_seed=42, approve_seed_7919=True, allow_battery=False))
+        with self.assertRaises(F.Guard):
+            F.runner_from_args(argparse.Namespace(rehearsal=True, dev_seed=1234, approve_seed_7919=False, allow_battery=False))
+
+    def test_rehearsal_refuses_a_run_folder_with_data(self):
+        R = self.runner()
+        R.run_dir.mkdir(parents=True)
+        (R.run_dir / "orgs_raw.csv").write_text("record_id\n", encoding="utf-8")
+        with self.assertRaises(F.Guard) as cm:
+            F.s1_generate(R)
+        self.assertIn("holds no data", str(cm.exception))
+
+    def test_real_mode_refuses_a_development_seed(self):
+        R = self.runner(mode="real", seed=42, approve=True, run_dir=self.repo / "r", freeze_dir=self.repo / "f")
+        with self.assertRaises(F.Guard):
+            F.s1_generate(R)
+
+
+class ManifestCheck(Base):
+    def test_hash_mismatch_stops_the_run_before_the_stage(self):
+        called = []
+        R = self.runner(stages=[(0, "zero", lambda R: called.append(0) or {}), (1, "one", lambda R: called.append(1) or {})])
+        R.write_manifest()
+        R.run(only=0)
+        self.assertEqual(called, [0])
+        (self.repo / "frozen.txt").write_text("v2\n", encoding="utf-8")
+        with self.assertRaises(F.Guard) as cm:
+            R.run(only=1)
+        self.assertIn("frozen.txt", str(cm.exception))
+        self.assertEqual(called, [0])                           # stage 1 never started
+        self.assertFalse(R.done_file(1).exists())
+        self.assertEqual(self.guards_fired(R)[-1]["guard"], "frozen files unchanged since the manifest")
+        self.assertIn("guard fired", (R.freeze_dir / "deviations.md").read_text(encoding="utf-8"))
+
+    def test_missing_frozen_file_stops_the_run(self):
+        R = self.runner(stages=[(0, "zero", lambda R: {})])
+        R.write_manifest()
+        (self.repo / "frozen.txt").unlink()
+        with self.assertRaises(F.Guard):
+            R.run()
+
+    def test_rehearsal_writes_its_manifest_and_records_the_hashes(self):
+        R = self.runner(stages=[(0, "zero", lambda R: {})])
+        R.run()
+        m = json.loads(R.manifest_path.read_text(encoding="utf-8"))
+        self.assertEqual(m["files"]["frozen.txt"], F.sha256_file(self.repo / "frozen.txt"))
+        self.assertEqual(json.loads(R.done_file(0).read_text(encoding="utf-8"))["manifest_sha256"], F.sha256_file(R.manifest_path))
+
+    def test_real_run_needs_a_manifest(self):
+        R = self.runner(mode="real", seed=F.EVAL_SEED, run_dir=self.repo / "r", freeze_dir=self.repo / "f", stages=[(0, "zero", lambda R: {})])
+        with self.assertRaises(F.Guard) as cm:
+            R.run()
+        self.assertIn("no manifest", str(cm.exception))
+
+
+class StageOrderAndResume(Base):
+    def make(self, fail_at=None):
+        self.called: list[int] = []
+        self.fail_at = fail_at
+
+        def stage(n):
+            def fn(R):
+                self.called.append(n)
+                if self.fail_at == n:
+                    raise F.StageFailed(f"stage {n} broke")
+                out = R.run_dir / f"out_{n}.txt"
+                out.parent.mkdir(parents=True, exist_ok=True)
+                out.write_text(f"stage {n}\n", encoding="utf-8")
+                return {"outputs": [out]}
+            return fn
+        return self.runner(stages=[(n, f"s{n}", stage(n)) for n in range(4)])
+
+    def test_stages_run_in_order_and_write_done_files(self):
+        R = self.make()
+        R.run()
+        self.assertEqual(self.called, [0, 1, 2, 3])
+        for n in range(4):
+            d = json.loads(R.done_file(n).read_text(encoding="utf-8"))
+            self.assertEqual(d["exit"], 0)
+            self.assertEqual(list(d["outputs"].values()), [F.sha256_file(R.run_dir / f"out_{n}.txt")])
+
+    def test_a_stage_needs_every_earlier_stage_done(self):
+        R = self.make()
+        with self.assertRaises(F.Guard) as cm:
+            R.run(only=2)
+        self.assertIn("needs stages [0, 1]", str(cm.exception))
+        self.assertEqual(self.called, [])
+
+    def test_a_second_run_needs_resume(self):
+        R = self.make()
+        R.run()
+        with self.assertRaises(F.Guard) as cm:
+            R.run()
+        self.assertIn("--resume", str(cm.exception))
+
+    def test_resume_after_a_failure_skips_the_done_stages(self):
+        R = self.make(fail_at=2)
+        with self.assertRaises(F.StageFailed):
+            R.run()
+        self.assertEqual(self.called, [0, 1, 2])
+        self.assertFalse(R.done_file(2).exists())
+        self.called.clear()
+        self.fail_at = None
+        R.run(resume=True)
+        self.assertEqual(self.called, [2, 3])
+        dev = (R.freeze_dir / "deviations.md").read_text(encoding="utf-8")
+        self.assertIn("failed: stage 2 broke", dev)
+        self.assertIn("resume", dev)
+
+    def test_resume_stops_if_a_done_stage_output_changed(self):
+        R = self.make(fail_at=3)
+        with self.assertRaises(F.StageFailed):
+            R.run()
+        (R.run_dir / "out_1.txt").write_text("edited\n", encoding="utf-8")
+        self.called.clear()
+        self.fail_at = None
+        with self.assertRaises(F.Guard) as cm:
+            R.run(resume=True)
+        self.assertIn("out_1.txt", str(cm.exception))
+        self.assertEqual(self.called, [])
+
+    def test_one_stage_rerun_with_stage_flag(self):
+        R = self.make()
+        R.run()
+        self.called.clear()
+        R.run(only=3)
+        self.assertEqual(self.called, [3])
+
+
+class TruthSealing(Base):
+    def setUp(self):
+        super().setUp()
+        self.run_dir = self.repo / "results" / "run"
+        self.run_dir.mkdir(parents=True)
+        (self.run_dir / "orgs_raw_truth.csv").write_text("record_id,true_entity_id\nR1,E1\n", encoding="utf-8")
+
+    def test_truth_is_sealed_outside_truth_steps_and_restored_at_the_end(self):
+        seen = []
+
+        def call(args, env, log_file):
+            seen.append((args[-1], (self.run_dir / "orgs_raw_truth.csv").exists(), (self.run_dir / "orgs_raw_truth.csv.sealed").exists()))
+            return 0, ""
+
+        def fn(R):
+            R.step(0, [F.PY, "a.py", "no-truth"])
+            R.step(0, [F.PY, "b.py", "truth"], truth=True)
+            R.step(0, [F.PY, "c.py", "no-truth-again"])
+            return {"outputs": [R.truth]}
+        R = self.runner(stages=[(0, "zero", fn)], call=call)
+        R.run()
+        self.assertEqual(seen, [("no-truth", False, True), ("truth", True, False), ("no-truth-again", False, True)])
+        self.assertTrue(R.truth.exists())
+        self.assertFalse(R.sealed.exists())
+        d = json.loads(R.done_file(0).read_text(encoding="utf-8"))
+        self.assertEqual(d["reads_truth"], ["b.py"])
+        self.assertIn("results/run/orgs_raw_truth.csv", d["outputs"])
+
+    def test_restore_after_a_simulated_crash(self):
+        R = self.runner(stages=[(0, "zero", lambda R: {}), (1, "one", lambda R: {})])
+        R.run(only=0)
+        R.seal()                                                # a crash while sealed: the process dies, no finally runs
+        self.assertFalse(R.truth.exists())
+        R2 = self.runner(stages=R.stages)
+        R2.run(only=1)
+        self.assertTrue(R2.truth.exists())
+        self.assertFalse(R2.sealed.exists())
+        self.assertIn("truth restored", (R2.freeze_dir / "deviations.md").read_text(encoding="utf-8"))
+
+    def test_an_exception_inside_a_stage_still_leaves_the_truth_unsealed(self):
+        def fn(R):
+            R.seal()
+            raise F.StageFailed("boom")
+        R = self.runner(stages=[(0, "zero", fn)])
+        with self.assertRaises(F.StageFailed):
+            R.run()
+        self.assertTrue(R.truth.exists())
+
+    def test_resume_verifies_the_truth_hash_whichever_name_it_has(self):
+        def fn(R):
+            R.seal()
+            return {"outputs": [R.truth]}
+        R = self.runner(stages=[(0, "zero", fn), (1, "one", lambda R: (_ for _ in ()).throw(F.StageFailed("stop")))])
+        with self.assertRaises(F.StageFailed):
+            R.run()
+        R.stages = [(0, "zero", fn), (1, "one", lambda R: {})]
+        R.run(resume=True)                                      # no guard: the truth file matches under its unsealed name
+        (R.truth).write_text("record_id,true_entity_id\nR1,E2\n", encoding="utf-8")
+        R.done_file(1).unlink()
+        with self.assertRaises(F.Guard):
+            R.run(resume=True)
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)
