@@ -95,6 +95,8 @@ class Params:
     verity_productization_hours: float = 100.0
     b_dev_api_usd: float = 0.0
     horizon_months: int = 12
+    verity_quotable: bool = False
+    latency_loaded: bool = False
 
 
 def llm_cost_per_call(p: Params, mode: str = "standard", hit_ratio: float | None = None) -> float:
@@ -156,11 +158,12 @@ def label_hours(p: Params, labels: int) -> float:
     return labels / 1000 * p.label_hours_per_1000
 
 
-def one_time_lines(p: Params, option: str, rate: float, labels: int) -> list[tuple[str, float]]:
-    """(line, USD) for the one-time cost of an option. eval is never charged; verity is shared by every option."""
-    lines = [("verity effort-log hours (production needed)", p.effort_hours.get("verity", 0.0) * rate),
-             ("verity pre-existing build (80 h, your estimate)", p.verity_preexisting_hours * rate),
-             ("verity productization (100 h, your figure)", p.verity_productization_hours * rate)]
+def one_time_lines(p: Params, option: str, rate: float, labels: int, include_verity: bool = True) -> list[tuple[str, float]]:
+    """(line, USD) for the one-time cost of an option. eval is never charged; verity is shared by every option
+    (include_verity False drops the shared Verity lines: the "B without the shared Verity build" variant)."""
+    lines = ([("verity effort-log hours (production needed)", p.effort_hours.get("verity", 0.0) * rate),
+              ("verity pre-existing build (80 h, your estimate)", p.verity_preexisting_hours * rate),
+              ("verity productization (100 h, your figure)", p.verity_productization_hours * rate)] if include_verity else [])
     if option == "A":
         lines.append(("option A effort-log hours", p.effort_hours.get("A", 0.0) * rate))
     if option in ("B", "D"):
@@ -174,18 +177,18 @@ def one_time_lines(p: Params, option: str, rate: float, labels: int) -> list[tup
     return lines
 
 
-def one_time_total(p: Params, option: str, rate: float, labels: int) -> float:
-    return sum(v for _, v in one_time_lines(p, option, rate, labels))
+def one_time_total(p: Params, option: str, rate: float, labels: int, include_verity: bool = True) -> float:
+    return sum(v for _, v in one_time_lines(p, option, rate, labels, include_verity))
 
 
 def monthly(p: Params, option: str, records_per_day: float, rate: float, labels: int, llm_mode: str = "standard",
-            retrains_per_month: float | None = None) -> dict:
+            retrains_per_month: float | None = None, include_verity_one_time: bool = True) -> dict:
     if option == "E":
         return {"option": "E", "status": "not run"}
     llm = llm_cost_month(p, option, records_per_day, llm_mode)
     host = hosting_month(p, option, records_per_day)
     ops = ops_hours_month(p, option, retrains_per_month) * rate
-    ot = one_time_total(p, option, rate, labels)
+    ot = one_time_total(p, option, rate, labels, include_verity_one_time)
     amort = ot / p.horizon_months
     running = llm + host["used"] + ops
     return {"option": option, "status": "modelled", "llm": llm, "hosting_model": host["model"]["used"],
@@ -201,6 +204,113 @@ def monthly(p: Params, option: str, records_per_day: float, rate: float, labels:
 
 def total_horizon(p: Params, option: str, volume: float, rate: float, labels: int, **kw) -> float:
     return monthly(p, option, volume, rate, labels, **kw)["total_horizon"]
+
+
+B_VARIANTS = {"price-70": "B, LLM price -70% (mini-class, price only, no quality claim)",
+              "no-verity-build": "B without the shared Verity build in its one-time costs"}
+B_VARIANT_SHORT = {"price-70": "B, price -70%", "no-verity-build": "B, no Verity build"}
+
+
+def monthly_b_variant(p: Params, variant: str, records_per_day: float, rate: float, labels: int) -> dict:
+    """Variants of B for cost only: the LLM price multiplied by 0.3 (a smaller model's price; nothing is claimed about its
+    quality), or B's one-time costs without the shared Verity build and productization lines."""
+    if variant == "price-70":
+        return monthly(replace(p, llm_price_factor=p.llm_price_factor * 0.3), "B", records_per_day, rate, labels)
+    if variant == "no-verity-build":
+        return monthly(p, "B", records_per_day, rate, labels, include_verity_one_time=False)
+    raise ValueError(variant)
+
+
+# ------------------------------------------------------------------ protocol bars
+BAR_F1_MARGIN = -0.02
+BAR_PRECISION = 0.98
+BAR_RECALL_OVER_A = 0.05
+BAR_ECE = 0.05
+BAR_LATENCY_C_P95_MS = 20.0
+BAR_LLM_SHARE = 0.20
+
+
+def f1_bar_verdict(lo: float, hi: float) -> str:
+    """Option minus B in band F1: pass when the interval's lower end is above -0.02, fail when its upper end is below,
+    otherwise inconclusive (protocol.md, borderline bar, judged on the paired 5,000-pair sample)."""
+    return "pass" if lo > BAR_F1_MARGIN else ("fail" if hi < BAR_F1_MARGIN else "inconclusive")
+
+
+def parse_overall(text: str) -> tuple[float, float]:
+    m = re.search(r"Overall \([^\n]*\n\s+precision ([\d.]+)\s+recall ([\d.]+)", text)
+    return float(m.group(1)), float(m.group(2))
+
+
+def parse_band_f1(text: str) -> float:
+    return float(re.search(r"Band \([^\n]*\n[^\n]*\n\s+F1 ([\d.]+)", text).group(1))
+
+
+def parse_ece(text: str):
+    m = re.search(r"ECE\s+([\d.]+)\s+\(bar", text)
+    return float(m.group(1)) if m else None
+
+
+def parse_f1_diff(text: str) -> tuple[float, float, float]:
+    """(difference, lower, upper) of band F1 from a compare_options.py output (first minus second)."""
+    blk = text.split("Difference (first minus second)", 1)[1]
+    m = re.search(r"band F1\s+([+-][\d.]+)\s+95% CI \[([+-][\d.]+), ([+-][\d.]+)\]", blk)
+    return float(m.group(1)), float(m.group(2)), float(m.group(3))
+
+
+def load_bar_inputs(run: Path, p: Params, latency: dict | None) -> dict:
+    """Per option: the numbers each protocol bar needs, read from the committed score and comparison reports."""
+    o = run / "options"
+    rd = lambda path: path.read_text(encoding="utf-8")
+    a_full, c_full, b_samp = rd(o / "a_threshold" / "score_report.txt"), rd(o / "c_model" / "c_v1_lgbm" / "score_report.txt"), \
+        rd(o / "b_llm" / "openai" / "sample5000" / "score_report_sample5000.txt")
+    d_full = rd(o / "d_hybrid" / "score_report_fullband.txt")
+    a_vs_b = parse_f1_diff(rd(o / "compare" / "b_vs_a.txt"))                       # B first: negate for A minus B
+    a_vs_b = (-a_vs_b[0], -a_vs_b[2], -a_vs_b[1])
+    c_vs_b = parse_f1_diff(rd(o / "compare" / "c_v1_lgbm_vs_b.txt"))
+    d_vs_b = parse_f1_diff(rd(o / "d_hybrid" / "compare_d_vs_b.txt"))
+    c_lat = None
+    if latency:
+        c_lat = latency["C"]["median_of_repeats"]["p95_ms"]
+    else:
+        ct = json.loads((o / "c_model" / "c_v1_lgbm" / "timings.json").read_text(encoding="utf-8"))
+        c_lat = [t for t in ct["timings"] if t["stage"] == "optionC.per_pair"][0]["per_item_ms"]["p95"]
+    out = {
+        "A": {"band_f1": parse_band_f1(a_full), "f1_diff": a_vs_b, "overall": parse_overall(a_full), "ece": None, "basis": "full band; F1 difference on the sample"},
+        "B": {"band_f1": parse_band_f1(b_samp), "f1_diff": None, "overall": parse_overall(b_samp), "ece": parse_ece(b_samp),
+              "basis": "sample estimate (weighted); B is the baseline of the F1 bar"},
+        "C": {"band_f1": parse_band_f1(c_full), "f1_diff": c_vs_b, "overall": parse_overall(c_full), "ece": parse_ece(c_full), "latency_p95_ms": c_lat,
+              "basis": "full band; F1 difference on the sample"},
+        "D": {"band_f1": parse_band_f1(d_full), "f1_diff": d_vs_b, "overall": parse_overall(d_full), "ece": parse_ece(d_full), "llm_share": p.routed_share,
+              "basis": "exact full band; F1 difference on the sample"},
+    }
+    if latency and "D" in latency:
+        out["D"]["latency_p95_ms"] = latency["D"]["median_of_repeats"]["p95_ms"]
+    return out
+
+
+def bars_row(option: str, d: dict, a_recall: float) -> dict:
+    """The verdict per bar and whether every bar is met."""
+    v = {}
+    if d["f1_diff"] is None:
+        v["f1"] = "reference (B is the baseline)"
+    else:
+        v["f1"] = f1_bar_verdict(d["f1_diff"][1], d["f1_diff"][2])
+    v["precision"] = "pass" if d["overall"][0] >= BAR_PRECISION else "fail"
+    if option == "A":
+        v["recall"] = "reference (A is the baseline)"
+    else:
+        v["recall"] = "pass" if d["overall"][1] >= a_recall + BAR_RECALL_OVER_A - 1e-12 else "fail"
+    v["ece"] = ("pass" if d["ece"] <= BAR_ECE else "fail") if option in ("C", "D") else "n/a (bar is for C and D)"
+    v["latency"] = ("pass" if d["latency_p95_ms"] <= BAR_LATENCY_C_P95_MS else "fail") if option == "C" else "n/a (bar is for C)"
+    v["llm_share"] = ("pass" if d["llm_share"] <= BAR_LLM_SHARE else "fail") if option == "D" else "n/a (bar is for D)"
+    checked = [x for x in v.values() if x in ("pass", "fail", "inconclusive")]
+    if "fail" in checked or (option == "A"):
+        v["every"] = "no"
+    elif "inconclusive" in checked:
+        v["every"] = "not shown (inconclusive)"
+    else:
+        v["every"] = "yes"
+    return v
 
 
 def break_even(f_option, f_b, lo: float = 1e3, hi: float = 1e8, steps: int = 400) -> dict:
@@ -347,18 +457,48 @@ def load_inputs(repo: Path, run: Path, out_rows: list, productization_hours: flo
     pp = [t for t in ct["timings"] if t["stage"] == "optionC.per_pair"][0]
     p.c_cpu_s_per_pair = pp["seconds"] / pp["items"]
     p.d_cpu_s_per_pair = p.c_cpu_s_per_pair
-    add("C per-pair CPU time, mean", round(p.c_cpu_s_per_pair * 1000, 4), "ms", "measured", "options/c_model/c_v1_lgbm/timings.json", "one core, one pair at a time; features + predict + calibrate")
-    add("C per-pair CPU time, p95", pp["per_item_ms"]["p95"], "ms", "measured", "options/c_model/c_v1_lgbm/timings.json")
-    add("D per-pair CPU time", round(p.d_cpu_s_per_pair * 1000, 4), "ms", "assumed", "derived from C",
-        "D runs C on every band pair; the routing test is negligible; D has no timing file of its own")
+    add("C per-pair CPU time, mean (first measurement, one repeat)", round(p.c_cpu_s_per_pair * 1000, 4), "ms", "measured", "options/c_model/c_v1_lgbm/timings.json", "one core, one pair at a time; features + predict + calibrate; replaced by the 3-repeat measurement when present")
+    add("C per-pair CPU time, p95 (first measurement)", pp["per_item_ms"]["p95"], "ms", "measured", "options/c_model/c_v1_lgbm/timings.json")
+    add("D per-pair CPU time (before the D measurement)", round(p.d_cpu_s_per_pair * 1000, 4), "ms", "assumed", "derived from C",
+        "D runs C on every band pair; the routing test is negligible; replaced by the measurement when present")
     add("A per-pair CPU time", 0.0, "ms", "assumed", "not measured", "a threshold test; treated as zero")
 
-    ri = json.loads((repo / "results" / "dev_2026_run10_1core" / "verity_data" / "run_info.json").read_text(encoding="utf-8"))["runs"][-1]
-    total = [t for t in ri["timings"] if t["stage"] == "verity.total"][0]["seconds"]
-    p.verity_cpu_s_per_record = total / 10000
-    add("Verity pipeline time per record, one thread", round(p.verity_cpu_s_per_record * 1000, 2), "ms", "measured",
-        "results/dev_2026_run10_1core/verity_data/run_info.json (verity.total / 10,000 records)",
-        "NOT FOR QUOTING until a controlled run exists: uncontrolled laptop state; includes 14 s of startup; shared by every option, B included")
+    vt_path = repo / "results" / "dev_2026_timing_summary" / "verity_timing.json"
+    latency = None
+    if vt_path.exists():
+        vt = json.loads(vt_path.read_text(encoding="utf-8"))
+        for setting in ("1thread", "allthreads"):
+            st = vt["settings"][setting]
+            tot = st["stage"]["verity.total"]
+            add(f"Verity pipeline total, {setting}, per record (median of {len(st['repeats'])} repeats)", round(tot["median"] / vt["records"] * 1000, 2), "ms", "measured",
+                vt_path.relative_to(repo).as_posix(),
+                f"min {tot['min']:.1f} s, max {tot['max']:.1f} s, cold {tot['cold']:.1f} s, warm {tot['warm']:.1f} s; spread (max-min)/median {st['total_spread_pct']:.1f}%; "
+                + ("the repeats agree within 10%: label removed" if st["total_within_10pct"] else "NOT FOR QUOTING: the repeats differ by more than 10% on total time")
+                + "; includes startup; shared by every option, B included")
+        one = vt["settings"]["1thread"]
+        p.verity_cpu_s_per_record = one["stage"]["verity.total"]["median"] / vt["records"]
+        p.verity_quotable = bool(one["total_within_10pct"])
+    else:
+        ri = json.loads((repo / "results" / "dev_2026_run10_1core" / "verity_data" / "run_info.json").read_text(encoding="utf-8"))["runs"][-1]
+        total = [t for t in ri["timings"] if t["stage"] == "verity.total"][0]["seconds"]
+        p.verity_cpu_s_per_record = total / 10000
+        add("Verity pipeline time per record, one thread", round(p.verity_cpu_s_per_record * 1000, 2), "ms", "measured",
+            "results/dev_2026_run10_1core/verity_data/run_info.json (verity.total / 10,000 records)",
+            "NOT FOR QUOTING until a controlled run exists: uncontrolled laptop state; includes 14 s of startup; shared by every option, B included")
+    lat_path = run / "options" / "latency" / "latency_summary.json"
+    if lat_path.exists():
+        latency = json.loads(lat_path.read_text(encoding="utf-8"))
+        for opt in ("C", "D"):
+            m = latency[opt]["median_of_repeats"]
+            add(f"{opt} per-pair latency, one core, median of {len(latency[opt]['repeats'])} repeats", f"p50 {m['p50_ms']} ms, p95 {m['p95_ms']} ms, max {m['max_ms']} ms, mean {m['mean_ms']} ms",
+                "ms", "measured", lat_path.relative_to(repo).as_posix(), f"{latency['pairs']:,} test band pairs, features included, one pair at a time"
+                + ("; plus the routing step" if opt == "D" else ""))
+        pl = latency["parallel"]
+        add("C and D under load: 10 processes, one thread each", f"{pl['pairs_per_second_total']} pairs per second in total, per-pair p95 {pl['p95_ms_under_load']} ms (C); D {pl.get('D', {}).get('pairs_per_second_total', 'n/a')} pairs per second, p95 {pl.get('D', {}).get('p95_ms_under_load', 'n/a')} ms",
+            "", "measured", lat_path.relative_to(repo).as_posix(), "disjoint slices of the band; this machine has 12 cores, 14 threads")
+        p.c_cpu_s_per_pair = latency["C"]["median_of_repeats"]["mean_ms"] / 1000
+        p.d_cpu_s_per_pair = latency["D"]["median_of_repeats"]["mean_ms"] / 1000
+        p.latency_loaded = True
 
     log = read_effort_log(repo / "cost" / "effort_log.csv")
     p.label_hours_per_1000 = label_hours_per_1000_from_log(log)
@@ -411,7 +551,8 @@ def load_inputs(repo: Path, run: Path, out_rows: list, productization_hours: flo
     add("option E", "not run", "", "measured", "options/e_slm.py has no results", "no numbers are invented")
     lc = list(csv.DictReader((run / "options" / "c_model" / "lc_v2" / "learning_curve.csv").open(encoding="utf-8")))
     f1 = {int(r["n"]): float(r["f1_mean"]) for r in lc}
-    return p, {"log": log, "buckets": buckets, "ledger": led, "lc_f1": f1, "full_f1": 0.9653, "n_band": n_band, "conc": conc}
+    return p, {"log": log, "buckets": buckets, "ledger": led, "lc_f1": f1, "full_f1": 0.9653, "n_band": n_band, "conc": conc,
+               "latency": latency}
 
 
 # ---------------------------------------------------------------------------------------------- outputs
@@ -505,11 +646,77 @@ def main() -> int:
             say(f"  {vol:>12,}{opt:>7}{m['llm']:>12,.0f}{m['hosting']:>10,.0f}{m['operations']:>12,.0f}{m['one_time_amortized']:>13,.0f}{m['total_month']:>12,.0f}"
                 f"   {m['cost_precisely_byok']:,.0f} / {m['cost_customer_byok']:,.0f}")
     say(f"  (hosting is the cheaper of always-on and serverless; shared Verity pipeline per record is in every row: "
-        f"{p.verity_cpu_s_per_record * 1000:.1f} ms of one core per record, NOT FOR QUOTING)")
+        f"{p.verity_cpu_s_per_record * 1000:.1f} ms of one core per record{'' if p.verity_quotable else ', NOT FOR QUOTING'})")
     cpm = calls_per_day(p, "B", 100_000) / 1440
     say(f"\nThroughput: B at 100K records/day needs {calls_per_day(p, 'B', 100_000):,.0f} calls a day = {cpm:,.0f} calls per minute "
         f"({cpm / 60:.1f} per second; about {cpm / 60 * 0.95:.0f} requests in flight at the measured p50 latency of 0.95 s). "
         f"1M and 10M records/day need 10x and 100x that. D needs {calls_per_day(p, 'D', 10_000_000) / 1440:,.0f} calls per minute at 10M records/day.")
+
+    # options against the protocol bars, with cost at 1M records per day
+    bar_in = load_bar_inputs(args.run, p, ctx["latency"])
+    a_recall = bar_in["A"]["overall"][1]
+    bar_rows = []
+    say(f"\nOptions against the protocol bars (protocol.md), with cost at {BASE_VOLUME:,} records per day (hourly rate ${BASE_RATE:g}; C and D as evaluated: "
+        f"{LABEL_SCENARIOS[-1]:,} labels)")
+    say("  F1 bar: band F1 within 2 points of B, judged on the paired 5,000-pair sample (pass: interval lower end above -0.02; fail: upper end below; else inconclusive).")
+    say("  Precision bar: overall precision >= 0.98. Recall bar: overall recall at least 5 points above A. ECE <= 0.05 (C, D). C latency p95 <= 20 ms. D LLM share <= 20%.")
+    say(f"  {'option':<8}{'F1 vs B [95% CI]':<30}{'F1 bar':<14}{'prec':>7}{'bar':>6}{'recall':>8}{'bar':>6}{'ECE bar':>9}{'latency':>9}{'LLM share':>10}  every bar?          cost/month   12-month total")
+    for opt in "ABCD":
+        d = bar_in[opt]
+        v = bars_row(opt, d, a_recall)
+        m = monthly(p, opt, BASE_VOLUME, BASE_RATE, LABEL_SCENARIOS[-1])
+        diff = "baseline" if d["f1_diff"] is None else f"{d['f1_diff'][0]:+.4f} [{d['f1_diff'][1]:+.4f}, {d['f1_diff'][2]:+.4f}]"
+        say(f"  {opt:<8}{diff:<30}{v['f1'][:12]:<14}{d['overall'][0]:>7.4f}{v['precision']:>6}{d['overall'][1]:>8.4f}{v['recall'][:5]:>6}{v['ece'][:4]:>9}{v['latency'][:4]:>9}{v['llm_share'][:4]:>10}"
+            f"  {v['every']:<18}{m['total_month']:>12,.0f}{m['total_horizon']:>16,.0f}")
+        bar_rows.append([opt, d["basis"], d["band_f1"], "" if d["f1_diff"] is None else f"{d['f1_diff'][0]:.4f}", "" if d["f1_diff"] is None else f"{d['f1_diff'][1]:.4f}",
+                         "" if d["f1_diff"] is None else f"{d['f1_diff'][2]:.4f}", v["f1"], d["overall"][0], v["precision"], d["overall"][1], v["recall"],
+                         "" if d["ece"] is None else d["ece"], v["ece"], d.get("latency_p95_ms", ""), v["latency"], d.get("llm_share", ""), v["llm_share"], v["every"],
+                         f"{m['total_month']:.2f}", f"{m['total_horizon']:.2f}", LABEL_SCENARIOS[-1] if opt in "CD" else 0])
+    say(f"  {'E':<8}not run (no results; no numbers)")
+    bar_rows.append(["E", "not run"] + [""] * 19)
+    say("  B's overall figures are sample estimates; A, C and D are exact on the full test band. A is the reference for the recall bar and fails the F1 bar; "
+        "C's F1 bar is inconclusive at this sample size (its interval straddles -0.02).")
+    c2 = monthly(p, "C", BASE_VOLUME, BASE_RATE, 2000)
+    d2 = monthly(p, "D", BASE_VOLUME, BASE_RATE, 2000)
+    say(f"\nLabel rows for C and D: the label cost is only ever shown next to the F1 measured with that label count")
+    say(f"  {'option':<6}{'row':<14}{'labels':>8}{'label hours':>12}{'label cost at $50/$100/$200':>30}{'band F1':>26}{'12-month total at 1M/day':>26}")
+    for opt, d_ in (("C", bar_in["C"]), ("D", bar_in["D"])):
+        m = monthly(p, opt, BASE_VOLUME, BASE_RATE, 63665)
+        say(f"  {opt:<6}{'as evaluated':<14}{63665:>8,}{label_hours(p, 63665):>12.1f}{'/'.join(f'{label_hours(p, 63665) * r:,.0f}' for r in RATES):>30}"
+            f"{d_['band_f1']:>20.4f} (full band){m['total_horizon']:>14,.0f}")
+    say(f"  {'C':<6}{'at 2,000':<14}{2000:>8,}{label_hours(p, 2000):>12.1f}{'/'.join(f'{label_hours(p, 2000) * r:,.0f}' for r in RATES):>30}"
+        f"{ctx['lc_f1'][2000]:>14.4f} (mean of 5 seeds){c2['total_horizon']:>9,.0f}")
+    say(f"  {'D':<6}{'at 2,000':<14}{2000:>8,}{label_hours(p, 2000):>12.1f}{'/'.join(f'{label_hours(p, 2000) * r:,.0f}' for r in RATES):>30}"
+        f"{'not measured':>26}{d2['total_horizon']:>14,.0f}")
+    say("  'As evaluated' is what the dev results used (every train band pair, labels free from the generator); it is not a recommended budget. "
+        "D's F1 was never measured with fewer labels, so no F1 is shown for D at 2,000. The C figure at 2,000 is the mean over 5 sampling seeds of the "
+        "learning curve (individual seeds ranged widely), not a paired test result.")
+    write_csv(out / "options_vs_bars.csv",
+              ["option", "basis", "band_f1", "f1_diff_vs_B", "f1_diff_lo", "f1_diff_hi", "f1_bar", "overall_precision", "precision_bar", "overall_recall", "recall_bar",
+               "ece", "ece_bar", "latency_p95_ms", "latency_bar", "llm_share", "llm_share_bar", "meets_every_bar", "total_usd_month_at_1M_per_day",
+               "total_usd_12_months_at_1M_per_day", "labels"], bar_rows, draft)
+
+    # B variants (cost only)
+    say(f"\nB variants (cost only; no quality claim for either) at {BASE_VOLUME:,} records per day, ${BASE_RATE:g}/h, USD")
+    say(f"  {'variant':<72}{'LLM / month':>14}{'total / month':>15}{'12-month total':>16}")
+    for name, m in [("B as measured (gpt-5.4, frozen prompt)", monthly(p, "B", BASE_VOLUME, BASE_RATE, 0))] + \
+            [(B_VARIANTS[k], monthly_b_variant(p, k, BASE_VOLUME, BASE_RATE, 0)) for k in B_VARIANTS]:
+        say(f"  {name:<72}{m['llm']:>14,.0f}{m['total_month']:>15,.0f}{m['total_horizon']:>16,.0f}")
+    var_rows = []
+    for k in B_VARIANTS:
+        for rate in RATES:
+            for vol in VOLUMES:
+                m = monthly_b_variant(p, k, vol, rate, 0)
+                var_rows.append([k, rate, vol, f"{m['llm']:.2f}", f"{m['running']:.2f}", f"{m['one_time']:.2f}", f"{m['total_month']:.2f}", f"{m['total_horizon']:.2f}"])
+    write_csv(out / "b_variants.csv", ["variant", "hourly_rate_usd", "records_per_day", "llm_usd_month", "running_usd_month", "one_time_usd",
+                                       "total_usd_month", "total_usd_over_horizon"], var_rows, draft)
+    say("  Break-even of A, C and D against each B variant (labels 2,000; range 1,000 to 100,000,000 records per day):")
+    for k in B_VARIANTS:
+        for opt in ("A", "C", "D"):
+            for rate in RATES:
+                r = break_even(lambda v, o=opt, rt=rate: total_horizon(p, o, v, rt, 2000), lambda v, kk=k, rt=rate: monthly_b_variant(p, kk, v, rt, 2000)["total_horizon"])
+                tail = "no crossing: " + r["kind"] if r["volume"] is None else f"{r['volume']:,.0f} records per day ({r['kind']})"
+                say(f"    {B_VARIANT_SHORT[k]:<20}{opt} at ${rate:g}/h: {tail}")
 
     conc = ctx["conc"]
     if conc:
@@ -521,6 +728,8 @@ def main() -> int:
         if clean:
             top = clean[0]
             need = calls_per_day(p, "B", 100_000) / 1440
+            say(f"  Capacity line: B at 100K records/day needs about {calls_per_day(p, 'B', 100_000) / 1440:,.0f} calls/min, measured only up to about "
+                f"{top['calls_per_minute']:.0f} ({top['workers']} workers); the rest is extrapolated.")
             say(f"  Highest clean level: {top['workers']} workers = {top['calls_per_minute']:.0f} calls per minute (no 429 or other error at any level; the SDK retries "
                 f"a 429 twice before it would show). B at 100K records/day needs {need:,.0f} calls per minute, {need / top['calls_per_minute']:.1f}x that; at the "
                 f"measured near-linear scaling (about {top['calls_per_minute'] / top['workers']:.0f} calls per minute per worker) that is about {need / (top['calls_per_minute'] / top['workers']):.0f} "
@@ -626,7 +835,7 @@ def make_charts(p: Params, out: Path, draft: bool) -> None:
             ax.margins(y=0.15)
     axes[0][0].legend(fontsize=8)
     fig.text(0.5, 0.005, f"E: not run. Hourly rate ${BASE_RATE:g}, {BASE_LABELS:,} labels for C and D, standard prices with cache. "
-             "Verity pipeline per record is in every option (NOT FOR QUOTING). One-time includes the shared Verity build and productization hours in every option.", ha="center", fontsize=8)
+             "Verity pipeline per record is in every option" + ("" if p.verity_quotable else " (NOT FOR QUOTING)") + ". One-time includes the shared Verity build and productization hours in every option.", ha="center", fontsize=8)
     fig.suptitle(("DRAFT: effort log incomplete, one-time costs for B and D undercounted\n" if draft else "") + "Monthly cost per option")
     fig.tight_layout(rect=(0, 0.02, 1, 0.95))
     fig.savefig(out / "chart_monthly_cost.png", dpi=120)
@@ -648,7 +857,7 @@ def make_charts(p: Params, out: Path, draft: bool) -> None:
         ax.set_xlabel("records per day")
         ax.set_ylabel(f"total USD over {p.horizon_months} months (one-time + running)")
         ax.legend(fontsize=8)
-    fig.text(0.5, 0.005, "Dotted lines: break-even volume against B. E: not run. A is cheapest but fails the quality bars.", ha="center", fontsize=8)
+    fig.text(0.5, 0.005, "Dotted lines: break-even volume against B. E: not run. A does not meet the quality bars (see summary.txt).", ha="center", fontsize=8)
     fig.suptitle(("DRAFT: effort log incomplete, one-time costs for B and D undercounted\n" if draft else "") + f"Break-even against B ({BASE_LABELS:,} labels for C and D)")
     fig.tight_layout(rect=(0, 0.03, 1, 0.93))
     fig.savefig(out / "chart_break_even.png", dpi=120)

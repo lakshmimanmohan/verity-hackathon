@@ -109,6 +109,56 @@ class CostTests(unittest.TestCase):
         self.assertEqual(e, {"option": "E", "status": "not run"})
 
 
+class VariantAndBarTests(unittest.TestCase):
+    def setUp(self):
+        self.p = small()
+
+    def test_b_price_variant_scales_only_the_llm_line(self):
+        base = M.monthly(self.p, "B", 1000, 100, 0)
+        v = M.monthly_b_variant(self.p, "price-70", 1000, 100, 0)
+        self.assertAlmostEqual(v["llm"], 364.80 * 0.3, places=6)                 # 109.44
+        self.assertAlmostEqual(v["running"] - v["llm"], base["running"] - base["llm"], places=9)
+        self.assertAlmostEqual(v["one_time"], base["one_time"], places=9)
+
+    def test_b_without_the_shared_verity_build(self):
+        v = M.monthly_b_variant(self.p, "no-verity-build", 1000, 100, 0)
+        self.assertAlmostEqual(v["one_time"], 0.5 * 100 + 10, places=9)           # B hours + development API spend only
+        self.assertAlmostEqual(M.one_time_total(self.p, "B", 100, 0), 18710)      # with the Verity lines (18,650)
+        self.assertAlmostEqual(v["running"], M.monthly(self.p, "B", 1000, 100, 0)["running"], places=9)
+        with self.assertRaises(ValueError):
+            M.monthly_b_variant(self.p, "nope", 1000, 100, 0)
+
+    def test_f1_bar_verdicts(self):
+        self.assertEqual(M.f1_bar_verdict(-0.0154, 0.0), "pass")                  # lower end above -0.02
+        self.assertEqual(M.f1_bar_verdict(-0.0936, -0.0045), "inconclusive")      # straddles -0.02
+        self.assertEqual(M.f1_bar_verdict(-0.8739, -0.7722), "fail")              # upper end below -0.02
+        self.assertEqual(M.f1_bar_verdict(-0.02, 0.0), "inconclusive")            # lower end must be strictly above
+
+    def test_bar_rows(self):
+        base = {"band_f1": 0.9, "overall": (0.99, 0.58), "ece": 0.01, "latency_p95_ms": 0.3, "llm_share": 0.001}
+        ok = M.bars_row("D", {**base, "f1_diff": (-0.0075, -0.0154, 0.0)}, a_recall=0.5248)
+        self.assertEqual((ok["f1"], ok["precision"], ok["recall"], ok["ece"], ok["llm_share"], ok["every"]), ("pass", "pass", "pass", "pass", "pass", "yes"))
+        inc = M.bars_row("C", {**base, "f1_diff": (-0.0464, -0.0936, -0.0045)}, a_recall=0.5248)
+        self.assertEqual((inc["f1"], inc["latency"], inc["every"]), ("inconclusive", "pass", "not shown (inconclusive)"))
+        a = M.bars_row("A", {**base, "overall": (1.0, 0.5248), "ece": None, "f1_diff": (-0.825, -0.8739, -0.7722)}, a_recall=0.5248)
+        self.assertEqual((a["f1"], a["recall"], a["every"]), ("fail", "reference (A is the baseline)", "no"))
+        low = M.bars_row("D", {**base, "overall": (0.97, 0.5700), "f1_diff": (0.0, -0.01, 0.01)}, a_recall=0.5248)
+        self.assertEqual((low["precision"], low["recall"], low["every"]), ("fail", "fail", "no"))     # 0.57 is 4.5 points above A: fail
+        b = M.bars_row("B", {**base, "f1_diff": None}, a_recall=0.5248)
+        self.assertEqual((b["f1"], b["every"]), ("reference (B is the baseline)", "yes"))
+
+    def test_report_parsers(self):
+        text = ("Band (test band pairs, same-entity = positive) (weighted estimate)\n  pairs 44882.0  (true 340.0, 0.76%)\n"
+                "  F1 0.9971  95% CI [0.99, 1.0]\n\n"
+                "Overall (test group; outside the band Verity's decision_status) (weighted estimate)\n"
+                "  precision 1.0000  recall 0.5800  F1 0.7342\n  ECE 0.0142   (bar: <= 0.05)\n")
+        self.assertEqual(M.parse_band_f1(text), 0.9971)
+        self.assertEqual(M.parse_overall(text), (1.0, 0.58))
+        self.assertEqual(M.parse_ece(text), 0.0142)
+        cmp_ = "Difference (first minus second) = D minus B\n  band F1         -0.0075  95% CI [-0.0154, +0.0000]  (width 0.0154)\n"
+        self.assertEqual(M.parse_f1_diff(cmp_), (-0.0075, -0.0154, 0.0))
+
+
 class BreakEvenTests(unittest.TestCase):
     def test_linear_crossing(self):
         r = M.break_even(lambda v: 1000 + 2 * v, lambda v: 100 + 5 * v, lo=1, hi=1e4)
