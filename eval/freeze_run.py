@@ -68,7 +68,7 @@ REHEARSAL_NONMATCHES = 60
 DECOY_MAX = 300
 # Per-run caps of the B stages (--max-usd). Real run: absolute caps. Rehearsal: an ALLOWANCE on top of what the ledger already holds for the
 # stage's run id (the ledger's per-run total is cumulative over reruns of the same run id), so a rerun is not refused for earlier spend.
-B_CAPS = {"real": {"sample5000": 10.0, "dfull": 0.30, "decoycheck": 0.50},
+B_CAPS = {"real": {"sample5000": 12.0, "dfull": 1.0, "decoycheck": 1.0},
           "rehearsal": {"sample5000": 0.80, "dfull": 0.20, "decoycheck": 0.20}}       # rehearsal allowances: $1.20 of new spend in total
 
 
@@ -259,7 +259,8 @@ class Runner:
                          "the original rule (lo 0.5, hi 0.9) is reported as the secondary row 'D (original rule)'; both rule files and both settings files are hashed here",
                          "D decisions for pairs outside [lo, hi): C's own decision (literal v2 text); forced reading reported as a diagnostic",
                          f"embedding model pinned to revision {embedding_revision(self.repo)}, safetensors; no output changed",
-                         "B cache directory can be overridden by VERITY_LLM_CACHE_DIR; default, requests and keys unchanged"]}
+                         "B cache directory can be overridden by VERITY_LLM_CACHE_DIR; default, requests and keys unchanged",
+                         "real-run B stage caps: sample 12.00, routed 1.00, decoy 1.00 USD; rehearsal caps unchanged"]}
         self.freeze_dir.mkdir(parents=True, exist_ok=True)
         self.manifest_path.write_text(json.dumps(doc, indent=1) + "\n", encoding="utf-8")
         return doc
@@ -442,6 +443,24 @@ def install_assets(R: Runner, stage: int, assets: dict) -> list[Path]:
     return out
 
 
+def gate_projection(estimate_output: str) -> float | None:
+    """The stage's own gate projection from the --estimate-only output: pairs to call x pilot cost per call x margin (None if the
+    cost gate line is missing)."""
+    m = re.search(r"cost gate: ([\d,]+) pairs to call x \$([\d.]+) \(pilot cost per call\) x ([\d.]+) =", estimate_output)
+    if not m:
+        return None
+    return int(m.group(1).replace(",", "")) * float(m.group(2)) * float(m.group(3))
+
+
+def check_cap_against_gate(R: "Runner", stage: int, label: str, cap: float, estimate_output: str) -> None:
+    """Real run: a B stage refuses to start when its cap is below its own gate projection (both numbers are printed)."""
+    if R.mode != "real":
+        return
+    need = gate_projection(estimate_output)
+    R.guard(stage, f"B {label}: cap covers the stage's gate projection", need is not None and cap >= need,
+            f"cap ${cap:.2f}, gate projection " + ("missing from the estimate" if need is None else f"${need:.2f}"))
+
+
 def b_final(R: Runner, stage: int, pairs_file: Path, label: str) -> Path:
     from b_llm_baseline import power_status  # noqa: E402
     if not R.allow_battery:
@@ -451,6 +470,7 @@ def b_final(R: Runner, stage: int, pairs_file: Path, label: str) -> Path:
         R.note(f"B {label}: per-run cap ${cap:.4f} = ledger spend already held for run id {b_run_id(R, label)} (${prior:.4f}) + allowance ${B_CAPS[R.mode][label]:.2f}")
     base = [PY, "options/b_llm_baseline.py", R.run_dir, "--provider", "openai", "--final-sample", pairs_file, "--label", label, "--max-usd", cap]
     est = R.step(stage, base + ["--estimate-only"], label=f"B {label} estimate")
+    check_cap_against_gate(R, stage, label, cap, est)
     for line in est.splitlines():
         if line.startswith(("cost gate", "pairs:", "projection")):
             R.note(line.strip()[:220])

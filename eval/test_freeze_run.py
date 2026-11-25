@@ -157,10 +157,41 @@ class B_StageCaps(Base):
     def test_real_run_caps_are_absolute_and_unchanged(self):
         R = self.runner(mode="real", seed=F.EVAL_SEED, run_dir=self.repo / "results" / "eval_7919", freeze_dir=self.repo / "f")
         self.spend("eval_7919/b_llm/openai/sample5000", 3.0)                   # prior spend is ignored in the real run
-        self.assertEqual(F.stage_cap(R, "sample5000"), (10.0, 0.0))
-        self.assertEqual(F.stage_cap(R, "dfull"), (0.30, 0.0))
-        self.assertEqual(F.stage_cap(R, "decoycheck"), (0.50, 0.0))
-        self.assertEqual(F.B_CAPS["real"], {"sample5000": 10.0, "dfull": 0.30, "decoycheck": 0.50})
+        self.assertEqual(F.stage_cap(R, "sample5000"), (12.0, 0.0))
+        self.assertEqual(F.stage_cap(R, "dfull"), (1.0, 0.0))
+        self.assertEqual(F.stage_cap(R, "decoycheck"), (1.0, 0.0))
+        self.assertEqual(F.B_CAPS["real"], {"sample5000": 12.0, "dfull": 1.0, "decoycheck": 1.0})
+        self.assertEqual(F.B_CAPS["rehearsal"], {"sample5000": 0.80, "dfull": 0.20, "decoycheck": 0.20})      # rehearsal caps unchanged
+
+    def test_manifest_notes_the_real_run_caps(self):
+        notes = F.Runner("rehearsal", 42, self.repo / "run", self.repo / "run" / "_freeze", allow_battery=True, repo=F.REPO, frozen=[],
+                         stages=[], call=no_call, log=self.logs.append, ledger_path=self.repo / "ledger.jsonl").write_manifest()["notes"]
+        self.assertIn("real-run B stage caps: sample 12.00, routed 1.00, decoy 1.00 USD; rehearsal caps unchanged", notes)
+
+    GATE = "cost gate: {n:,} pairs to call x $0.001545 (pilot cost per call) x 1.3 = ${x:.2f}; ledger total $13.9208, remaining under the $45 cap $31.08"
+
+    def test_real_stage_refuses_to_start_when_its_cap_is_below_its_gate_projection(self):
+        R = self.runner(mode="real", seed=F.EVAL_SEED, run_dir=self.repo / "results" / "eval_7919", freeze_dir=self.repo / "f")
+        self.assertAlmostEqual(F.gate_projection(self.GATE.format(n=5000, x=10.0425)), 5000 * 0.001545 * 1.3)
+        with self.assertRaises(F.Guard) as cm:
+            F.check_cap_against_gate(R, 9, "decoycheck", 0.50, self.GATE.format(n=300, x=0.60))
+        self.assertIn("cap $0.50", str(cm.exception))                       # both numbers are printed
+        self.assertIn("gate projection $0.60", str(cm.exception))
+        with self.assertRaises(F.Guard):                                      # a missing gate line also stops the stage
+            F.check_cap_against_gate(R, 9, "decoycheck", 1.0, "no gate line here")
+
+    def test_real_stage_starts_when_the_cap_covers_the_gate_projection(self):
+        R = self.runner(mode="real", seed=F.EVAL_SEED, run_dir=self.repo / "results" / "eval_7919", freeze_dir=self.repo / "f")
+        for label, n in (("sample5000", 5000), ("dfull", 450), ("decoycheck", 300)):
+            F.check_cap_against_gate(R, 7, label, F.B_CAPS["real"][label], self.GATE.format(n=n, x=n * 0.001545 * 1.3))   # no exception
+
+    def test_the_new_real_caps_cover_the_worst_case_gates(self):
+        for label, n in (("sample5000", 5000), ("dfull", 450), ("decoycheck", 300)):
+            self.assertGreaterEqual(F.B_CAPS["real"][label], n * 0.001545 * 1.3)
+
+    def test_rehearsal_does_not_apply_the_gate_guard(self):
+        R = self.runner()
+        F.check_cap_against_gate(R, 9, "decoycheck", 0.01, self.GATE.format(n=300, x=0.60))                  # rehearsal: no exception
 
     def test_rehearsal_allowances_total_the_new_spend_cap(self):
         self.assertAlmostEqual(sum(F.B_CAPS["rehearsal"].values()), 1.20)
