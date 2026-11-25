@@ -28,3 +28,7 @@ date,hours,activity,bucket,production_needed
 11/25/2026,0.25,"Cost model: design, scenarios, review",eval,no
 11/25/2026,0.5,"Controlled timing, latency and concurrency tests",eval,no
 11/25/2026,0.5,Option D full-band exact check and latency simulation,eval,no
+11/25/2026,0.25,"Freeze runbook, rehearsals and preflight",eval,no
+11/25/2026,0.5,"Option D routing rule v2: selection and amendment",D,yes
+11/25/2026,0.5,"D robustness study across 5 development seeds",eval,no
+11/25/2026,0.5,"Embedding model pin and compliance check",verity,yes
