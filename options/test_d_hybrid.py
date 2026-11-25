@@ -122,7 +122,7 @@ class FullBandTests(unittest.TestCase):
 class FallbackOffTests(unittest.TestCase):
     def test_routed_pairs_take_c_own_decision_and_the_rest_follow_the_route(self):
         c = {("a", "b"): ("different", 0.0), ("c", "d"): ("different", 0.7), ("e", "f"): ("same", 0.85), ("g", "h"): ("same", 0.95), ("i", "j"): ("different", 0.49)}
-        rows = {(r["record_a"], r["record_b"]): r for r in D.build_fallback_off(c, 0.5, 0.9)}
+        rows = {(r["record_a"], r["record_b"]): r for r in D.build_fallback_off(c, 0.5, 0.9, "forced")}
         self.assertEqual([rows[k]["route"] for k in sorted(rows)], ["c_different", "llm", "llm", "c_same", "c_different"])
         self.assertEqual({k: rows[k]["decision"] for k in rows}, {("a", "b"): "different", ("c", "d"): "different", ("e", "f"): "same",
                                                                  ("g", "h"): "same", ("i", "j"): "different"})
@@ -130,7 +130,7 @@ class FallbackOffTests(unittest.TestCase):
 
     def test_it_differs_from_c_when_the_cutoff_is_outside_lo_and_hi(self):
         c = {("a", "b"): ("same", 0.45), ("c", "d"): ("different", 0.95)}          # a cutoff of 0.4 or 1.0: C's decision is not the route's
-        rows = {(r["record_a"], r["record_b"]): r for r in D.build_fallback_off(c, 0.5, 0.9)}
+        rows = {(r["record_a"], r["record_b"]): r for r in D.build_fallback_off(c, 0.5, 0.9, "forced")}      # forced reading only
         self.assertEqual(rows[("a", "b")]["decision"], "different")                  # route c_different overrides C's "same"
         self.assertEqual(rows[("c", "d")]["decision"], "same")                       # route c_same overrides C's "different"
 
@@ -165,6 +165,55 @@ class SelectionTests(unittest.TestCase):
             self.assertEqual(D.rule_hash(tmp / "a.txt"), D.rule_hash(tmp / "b.txt"))
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
+
+
+class ReadingTests(unittest.TestCase):
+    """Outside [lo, hi): C's own decision (literal, primary) against the route's side (forced, diagnostic)."""
+
+    def setUp(self):
+        # lo 0.05, hi 0.9: ("a","b") C said same at p 0.03 (below lo); ("c","d") C said different at p 0.95 (above hi);
+        # ("e","f") C agrees with its route; ("g","h") is routed to the LLM
+        self.c = {("a", "b"): ("same", 0.03), ("c", "d"): ("different", 0.95), ("e", "f"): ("same", 0.97), ("g", "h"): ("different", 0.4)}
+        self.b = {("g", "h"): ("same", 0.8)}
+        self.sample = [(k, 1.0) for k in sorted(self.c)]
+
+    def decisions(self, reading):
+        return {(r["record_a"], r["record_b"]): (r["decision"], r["route"]) for r in D.build(self.c, self.b, self.sample, 0.05, 0.9, reading)}
+
+    def test_literal_is_the_default_and_uses_cs_own_decision_outside_the_range(self):
+        got = {(r["record_a"], r["record_b"]): r["decision"] for r in D.build(self.c, self.b, self.sample, 0.05, 0.9)}
+        self.assertEqual(got, {k: v[0] for k, v in self.decisions("literal").items()})
+        lit = self.decisions("literal")
+        self.assertEqual(lit[("a", "b")], ("same", "c_different"))      # C said same: kept, although p < lo
+        self.assertEqual(lit[("c", "d")], ("different", "c_same"))      # C said different: kept, although p >= hi
+        self.assertEqual(lit[("g", "h")], ("same", "llm"))              # the LLM's answer
+
+    def test_forced_reading_follows_the_route(self):
+        forced = self.decisions("forced")
+        self.assertEqual(forced[("a", "b")], ("different", "c_different"))
+        self.assertEqual(forced[("c", "d")], ("same", "c_same"))
+        self.assertEqual(forced[("g", "h")], ("same", "llm"))
+
+    def test_readings_differ_counts_exactly_those_pairs(self):
+        self.assertEqual(D.readings_differ(self.c, 0.05, 0.9), [("a", "b"), ("c", "d")])
+        self.assertEqual(D.readings_differ(self.c, 0.05, None), [("a", "b")])      # no hi: nothing is forced to same
+        lit, forced = self.decisions("literal"), self.decisions("forced")
+        self.assertEqual(sorted(k for k in self.c if lit[k][0] != forced[k][0]), D.readings_differ(self.c, 0.05, 0.9))
+
+    def test_fallback_off_is_c_under_the_literal_reading_only(self):
+        lit = {(r["record_a"], r["record_b"]): r["decision"] for r in D.build_fallback_off(self.c, 0.05, 0.9)}
+        self.assertEqual(lit, {k: v[0] for k, v in self.c.items()})                 # identical to C
+        forced = {(r["record_a"], r["record_b"]): r["decision"] for r in D.build_fallback_off(self.c, 0.05, 0.9, "forced")}
+        self.assertNotEqual(forced, {k: v[0] for k, v in self.c.items()})
+
+    def test_forced_files_have_their_own_names(self):
+        self.assertEqual(D.setting_file("decisions_fullband.csv", "v2", "forced"), "decisions_fullband_forced.csv")
+        self.assertEqual(D.setting_file("decisions_fullband.csv", "original", "forced"), "decisions_fullband_original_forced.csv")
+        self.assertEqual(D.setting_file("decisions_fullband.csv", "v2"), "decisions_fullband.csv")
+
+    def test_sweep_keeps_the_forced_reading_the_original_rule_was_chosen_with(self):
+        import inspect
+        self.assertIn('build(c, b, sample, lo, hi, "forced")', inspect.getsource(D.cmd_sweep))
 
 
 class SettingTests(unittest.TestCase):
@@ -218,8 +267,8 @@ class SettingTests(unittest.TestCase):
             d = run / "options" / "d_hybrid"
             with contextlib.redirect_stdout(io.StringIO()):
                 for setting in ("v2", "original"):
-                    self.assertEqual(D.cmd_list_routed(argparse.Namespace(run=run, setting=setting)), 0)
-                    self.assertEqual(D.cmd_full(argparse.Namespace(run=run, setting=setting)), 0)
+                    self.assertEqual(D.cmd_list_routed(argparse.Namespace(run=run, setting=setting, reading="literal")), 0)
+                    self.assertEqual(D.cmd_full(argparse.Namespace(run=run, setting=setting, reading="literal")), 0)
             v2 = {(r["record_a"], r["record_b"]) for r in D.read_csv(d / "routed_fullband_pairs.csv")}
             orig = {(r["record_a"], r["record_b"]) for r in D.read_csv(d / "routed_fullband_pairs_original.csv")}
             self.assertEqual(v2, {("a1", "b1"), ("a2", "b2"), ("a3", "b3")})  # p 0.01, 0.3, 0.6 (0.001 is below lo 0.005)
@@ -241,7 +290,7 @@ class SettingTests(unittest.TestCase):
         try:
             run = self.make_run(tmp)
             with contextlib.redirect_stdout(io.StringIO()):
-                self.assertEqual(D.cmd_full_off(argparse.Namespace(run=run, setting="v2")), 0)
+                self.assertEqual(D.cmd_full_off(argparse.Namespace(run=run, setting="v2", reading="literal")), 0)
             d = run / "options" / "d_hybrid"
             self.assertTrue((d / "fallback_off_check.json").exists())
             self.assertFalse((d / "fallback_off_check_original.json").exists())

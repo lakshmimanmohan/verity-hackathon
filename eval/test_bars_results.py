@@ -25,8 +25,10 @@ DEV = HERE.parent / "results" / "dev_2026_run11"
 class BarsTableTests(unittest.TestCase):
     def test_rows_have_v2_and_the_original_rule_in_order(self):
         rows = BT.build(DEV)
-        self.assertEqual([r["option"] for r in rows], ["A", "B", "C", "D", "D (orig)", "E"])
+        self.assertEqual([r["option"] for r in rows], ["A", "B", "C", "D", "D (orig)", "D (forced)", "E"])
         d = {r["option"]: r for r in rows}
+        self.assertAlmostEqual(d["D (forced)"]["llm_share"], 51 / 44882, places=9)         # same routing as D, forced reading outside [lo, hi)
+        self.assertEqual(d["D (forced)"]["basis"].split(";")[-1].strip(), "forced reading (diagnostic)")
         self.assertAlmostEqual(d["D"]["llm_share"], 51 / 44882, places=9)
         self.assertAlmostEqual(d["D (orig)"]["llm_share"], 38 / 44882, places=9)
         self.assertNotEqual(d["D"]["band_f1"], d["D (orig)"]["band_f1"])
@@ -76,6 +78,39 @@ class ResultsTableTests(unittest.TestCase):
         self.assertEqual(rows["D (orig)"]["total_usd_month_at_1M_records_per_day"], "5")
         self.assertEqual(rows["D"]["llm_usd_per_1000_band_pairs"], f"{0.002 * 0.001 * 1000:.4f}")
         self.assertEqual(rows["D (orig)"]["llm_usd_per_1000_band_pairs"], f"{0.001 * 0.001 * 1000:.4f}")
+
+    def test_per_call_cost_comes_from_the_dev_run_when_the_run_made_no_live_call(self):
+        run = self.fake_run(True)
+        meta = run / "options" / "b_llm" / "openai" / "sample5000" / "run_meta.json"
+        meta.write_text(json.dumps({"spent_usd": 0.0, "calls": 0}), encoding="utf-8")
+        dev = self.fake_run(False)                                             # its sample5000 meta: $1.00 over 1,000 calls
+        rows = RT.build(run, dev)
+        d = [r for r in rows if r["option"] == "D"][0]
+        self.assertEqual(d["llm_usd_per_1000_band_pairs"], f"{0.002 * 0.001 * 1000:.4f}")
+        self.assertEqual(d["llm_cost_per_call_source"], "from dev run")
+        self.assertEqual(RT.b_per_call(run, dev), (0.001, "from dev run"))
+
+    def test_a_run_with_live_calls_marks_the_figure_measured(self):
+        run = self.fake_run(True)
+        self.assertEqual(RT.b_per_call(run, None), (0.001, "measured in this run"))
+
+    def test_missing_per_call_cost_prints_n_a_never_zero(self):
+        import contextlib
+        import io
+        run = self.fake_run(True)
+        (run / "options" / "b_llm" / "openai" / "sample5000" / "run_meta.json").write_text(json.dumps({"spent_usd": 0.0, "calls": 0}), encoding="utf-8")
+        for dev in (None, run, Path(tempfile.mkdtemp())):                      # no dev run, the run itself, a dev folder without the file
+            rows = RT.build(run, dev)
+            self.assertTrue(all(r["llm_usd_per_1000_band_pairs"] in ("n/a", "") for r in rows))
+            self.assertIn("n/a", rows[0]["llm_cost_per_call_source"])
+        sys.argv = ["results_table.py", str(run), "--dev-run", str(run)]
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            RT.main()
+        lines = [ln for ln in out.getvalue().splitlines() if ln.strip().startswith(("B ", "D ")) and "uses routing" not in ln]
+        self.assertTrue(lines)
+        for ln in lines:
+            self.assertIn("n/a", ln)                                          # the $/1,000 column
+            self.assertNotIn("0.0000", ln.split("n/a")[0][-20:])
 
     def test_a_run_without_the_secondary_row_still_builds(self):
         rows = RT.build(self.fake_run(False))

@@ -394,6 +394,14 @@ def load_bar_inputs(run: Path, p: Params, latency: dict | None) -> dict:
                              "basis": "exact full band; F1 difference on the sample; original routing rule"}
         if "latency_p95_ms" in out["D"]:
             out["D_original"]["latency_p95_ms"] = out["D"]["latency_p95_ms"]
+    forced = o / "d_hybrid" / "score_report_fullband_forced.txt"
+    if forced.exists():                                   # the diagnostic row: v2's routing with the forced reading outside [lo, hi)
+        d_forced = rd(forced)
+        out["D_forced"] = {"band_f1": parse_band_f1(d_forced), "f1_diff": parse_f1_diff(rd(o / "d_hybrid" / "compare_d_forced_vs_b.txt")),
+                           "overall": parse_overall(d_forced), "ece": parse_ece(d_forced), "llm_share": out["D"]["llm_share"],
+                           "basis": "exact full band; F1 difference on the sample; forced reading (diagnostic)"}
+        if "latency_p95_ms" in out["D"]:
+            out["D_forced"]["latency_p95_ms"] = out["D"]["latency_p95_ms"]
     return out
 
 
@@ -1082,6 +1090,16 @@ def main() -> int:
         say(f"  {'D orig':<8}{diff:<30}{v['f1'][:12]:<14}{d['overall'][0]:>7.4f}{v['precision']:>6}{d['overall'][1]:>8.4f}{v['recall'][:5]:>6}{v['ece'][:4]:>9}{v['latency'][:4]:>9}{v['llm_share'][:4]:>10}"
             f"  {v['every']:<18}{m['total_month']:>12,.0f}{m['total_horizon']:>16,.0f}   (D with the original routing rule, secondary row)")
         bar_rows.append(["D_original", d["basis"], d["band_f1"], f"{d['f1_diff'][0]:.4f}", f"{d['f1_diff'][1]:.4f}", f"{d['f1_diff'][2]:.4f}", v["f1"], d["overall"][0],
+                         v["precision"], d["overall"][1], v["recall"], "" if d["ece"] is None else d["ece"], v["ece"], d.get("latency_p95_ms", ""), v["latency"],
+                         d["llm_share"], v["llm_share"], v["every"], f"{m['total_month']:.2f}", f"{m['total_horizon']:.2f}", LABEL_SCENARIOS[-1]])
+    if "D_forced" in bar_in:
+        d = bar_in["D_forced"]
+        v = bars_row("D", d, a_recall)
+        m = monthly(p, "D", BASE_VOLUME, BASE_RATE, LABEL_SCENARIOS[-1])           # same routing as D: same cost
+        diff = f"{d['f1_diff'][0]:+.4f} [{d['f1_diff'][1]:+.4f}, {d['f1_diff'][2]:+.4f}]"
+        say(f"  {'D forced':<8}{diff:<30}{v['f1'][:12]:<14}{d['overall'][0]:>7.4f}{v['precision']:>6}{d['overall'][1]:>8.4f}{v['recall'][:5]:>6}{v['ece'][:4]:>9}{v['latency'][:4]:>9}{v['llm_share'][:4]:>10}"
+            f"  {v['every']:<18}{m['total_month']:>12,.0f}{m['total_horizon']:>16,.0f}   (diagnostic: v2 routing, forced reading outside [lo, hi))")
+        bar_rows.append(["D_forced", d["basis"], d["band_f1"], f"{d['f1_diff'][0]:.4f}", f"{d['f1_diff'][1]:.4f}", f"{d['f1_diff'][2]:.4f}", v["f1"], d["overall"][0],
                          v["precision"], d["overall"][1], v["recall"], "" if d["ece"] is None else d["ece"], v["ece"], d.get("latency_p95_ms", ""), v["latency"],
                          d["llm_share"], v["llm_share"], v["every"], f"{m['total_month']:.2f}", f"{m['total_horizon']:.2f}", LABEL_SCENARIOS[-1]])
     say(f"  {'E':<8}not run (no results; no numbers)")

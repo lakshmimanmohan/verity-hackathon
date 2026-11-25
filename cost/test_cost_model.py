@@ -515,6 +515,13 @@ class DRoutingV2Tests(unittest.TestCase):
         a_recall = inp["A"]["overall"][1]
         self.assertEqual(M.bars_row("D", inp["D_original"], a_recall)["llm_share"], "pass")
 
+    def test_bar_inputs_have_a_diagnostic_forced_reading_row_with_d_routing(self):
+        p = M.Params(routed_share=M.routed_share_of(self.RUN))
+        inp = M.load_bar_inputs(self.RUN, p, None)
+        self.assertIn("D_forced", inp)
+        self.assertEqual(inp["D_forced"]["llm_share"], inp["D"]["llm_share"])          # same routing, so the same LLM cost
+        self.assertIn("forced reading", inp["D_forced"]["basis"])
+
     def test_monthly_d_cost_grows_with_the_share_and_b_does_not_change(self):
         p = M.Params()
         costs = [M.monthly(replace(p, routed_share=v), "D", 1_000_000, 100.0, 63665)["total_month"] for v in M.D_SHARE_SENSITIVITY]

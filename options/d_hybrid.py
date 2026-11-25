@@ -2,18 +2,24 @@
 Option D: hybrid. C (calibrated gradient-boosted trees) decides the clear band pairs; the frontier LLM (option B)
 decides the ones in between. Routing, with C's calibrated probability p of "same":
 
-    p >= hi          decided same by C, no LLM           route c_same     (hi may be none)
+    p >= hi          no LLM                              route c_same     (hi may be none)
     lo <= p < hi     the LLM's recorded answer is used   route llm
-    p <  lo          decided different by C, no LLM      route c_different
+    p <  lo          no LLM                              route c_different
+
+Two readings of what a pair outside [lo, hi) takes. The primary one is the literal text of selection_rule_v2.txt ("pairs routed
+to the LLM take B's answer, all others take C's"): C's own decision (reading "literal"). The forced reading (p >= hi same, p < lo
+different, whatever C decided) is reported as a diagnostic, "D (forced reading)"; its files carry the suffix _forced. The two
+differ only for a pair C decides against its own probability's side of [lo, hi) (C says same below lo, or different at or above hi).
 
 Two frozen settings exist. "v2" (the setting that counts: selection_rule_v2.txt, frozen_settings_v2.json) is the default;
 "original" (selection_rule.txt, frozen_settings.json, lo 0.5, hi 0.9) is the secondary row. The v2 outputs keep the plain
 names below; the outputs of the original setting get the suffix _original (decisions_fullband_original.csv, ...).
 
-  python options/d_hybrid.py route results/<run> --lo 0.05 --hi 0.9 [--out decisions.csv]
+  python options/d_hybrid.py route results/<run> --lo 0.05 --hi 0.9 [--out decisions.csv] [--reading literal|forced]
   python options/d_hybrid.py sweep results/<run>
   python options/d_hybrid.py list-routed results/<run> [--setting v2|original]   # the full test band's pairs that go to the LLM (no truth)
-  python options/d_hybrid.py full results/<run> [--setting v2|original]          # exact D decisions for every test band pair (no sampling)
+  python options/d_hybrid.py full results/<run> [--setting v2|original] [--reading literal|forced]   # exact D decisions for every test band pair
+  python options/d_hybrid.py readings results/<run> [--setting v2|original]   # pairs where the literal and the forced reading differ
   python options/d_hybrid.py full results/<run> --fallback off   # every LLM-routed pair takes C's own decision; compared with C
 
 Inputs (all under results/<run>/options/):
@@ -89,9 +95,20 @@ def load_sample(path: Path) -> list[tuple[tuple[str, str], float]]:
     return [(key(r["record_a"], r["record_b"]), float(r["weight"])) for r in rows]
 
 
-def build(c: dict, b: dict, sample: list, lo: float, hi: float | None) -> list[dict]:
+READINGS = ("literal", "forced")
+
+
+def outside_decision(reading: str, route: str, c_decision: str) -> str:
+    """A pair outside [lo, hi): C's own decision (literal, the primary reading) or the route's side (forced)."""
+    if reading == "literal":
+        return c_decision
+    return "same" if route == "c_same" else "different"
+
+
+def build(c: dict, b: dict, sample: list, lo: float, hi: float | None, reading: str = "literal") -> list[dict]:
     """One row per sampled pair: decision, confidence, route. Fails when a sampled pair has no C answer or a pair
-    routed to the LLM has no B answer."""
+    routed to the LLM has no B answer. Pairs routed to the LLM take B's answer; the others take C's own decision
+    (reading "literal") or the route's side (reading "forced")."""
     out = []
     for (k, w) in sample:
         if k not in c:
@@ -102,10 +119,8 @@ def build(c: dict, b: dict, sample: list, lo: float, hi: float | None) -> list[d
             if k not in b:
                 raise SystemExit(f"sampled pair {k} is routed to the LLM but has no recorded B answer")
             d, conf = b[k]
-        elif r == "c_same":
-            d, conf = "same", p
         else:
-            d, conf = "different", p
+            d, conf = outside_decision(reading, r, cd), p
         out.append({"record_a": k[0], "record_b": k[1], "decision": d, "confidence": conf, "route": r, "weight": w})
     return out
 
@@ -148,9 +163,10 @@ SETTINGS = {"v2": {"settings": "frozen_settings_v2.json", "rule": "selection_rul
             "original": {"settings": "frozen_settings.json", "rule": "selection_rule.txt", "suffix": "_original"}}
 
 
-def setting_file(name: str, setting: str) -> str:
-    """Name of a D output for a setting: v2 keeps the plain name, the original setting gets _original before the extension."""
-    suffix = SETTINGS[setting]["suffix"]
+def setting_file(name: str, setting: str, reading: str = "literal") -> str:
+    """Name of a D output for a setting and a reading: v2 keeps the plain name, the original setting gets _original and the
+    forced reading _forced before the extension."""
+    suffix = SETTINGS[setting]["suffix"] + ("_forced" if reading == "forced" else "")
     stem, dot, ext = name.rpartition(".")
     return f"{stem}{suffix}{dot}{ext}" if suffix else name
 
@@ -236,33 +252,59 @@ def cmd_full(args) -> int:
     lo, hi = frozen_lo_hi(P, args.setting)
     c = load_c(P["c"])
     b = merge_b(b_paths(args.run))
-    rows = build(c, b, [(k, 1.0) for k in sorted(c)], lo, hi)
-    out = P["dir"] / setting_file("decisions_fullband.csv", args.setting)
+    rows = build(c, b, [(k, 1.0) for k in sorted(c)], lo, hi, args.reading)
+    out = P["dir"] / setting_file("decisions_fullband.csv", args.setting, args.reading)
     write_decisions(out, rows)
     n_llm = sum(r["route"] == "llm" for r in rows)
-    print(f"exact D decisions ({args.setting}) for all {len(rows):,} test band pairs (lo {lo:g}, hi {fmt_hi(hi)}): "
+    print(f"exact D decisions ({args.setting}, {args.reading} reading) for all {len(rows):,} test band pairs (lo {lo:g}, hi {fmt_hi(hi)}): "
           f"{ {k: sum(r['route'] == k for r in rows) for k in ('c_different', 'llm', 'c_same')} }; LLM share {n_llm / len(rows):.5f} -> {out}")
     return 0
 
 
-def build_fallback_off(c: dict, lo: float, hi: float | None) -> list[dict]:
+def build_fallback_off(c: dict, lo: float, hi: float | None, reading: str = "literal") -> list[dict]:
     """D with the LLM fallback off: routed exactly as D does, but a pair routed to the LLM takes C's own decision (C's
-    calibrated cutoff) instead of B's answer. Every other pair is decided by the route."""
+    calibrated cutoff) instead of B's answer. Every other pair is decided as D decides it (reading literal: C's own
+    decision, so the whole result is C's; reading forced: the route's side)."""
     rows = []
     for k in sorted(c):
         cd, p = c[k]
         r = route_of(p, lo, hi)
-        d = cd if r == "llm" else ("same" if r == "c_same" else "different")
+        d = cd if r == "llm" else outside_decision(reading, r, cd)
         rows.append({"record_a": k[0], "record_b": k[1], "decision": d, "confidence": p, "route": r, "weight": 1.0})
     return rows
+
+
+def readings_differ(c: dict, lo: float, hi: float | None) -> list[tuple[str, str]]:
+    """Pairs outside [lo, hi) where C's own decision and the route's side disagree: the pairs on which the literal and the forced
+    reading of the rule give different decisions."""
+    out = []
+    for k in sorted(c):
+        cd, p = c[k]
+        r = route_of(p, lo, hi)
+        if r != "llm" and outside_decision("forced", r, cd) != cd:
+            out.append(k)
+    return out
+
+
+def cmd_readings(args) -> int:
+    P = paths(args.run)
+    lo, hi = frozen_lo_hi(P, args.setting)
+    c = load_c(P["c"])
+    diff = readings_differ(c, lo, hi)
+    doc = {"setting": args.setting, "lo": lo, "hi": hi, "pairs": len(c), "pairs_where_readings_differ": len(diff),
+           "c_same_below_lo": sum(1 for k in diff if c[k][0] == "same"), "c_different_at_or_above_hi": sum(1 for k in diff if c[k][0] == "different")}
+    (P["dir"] / setting_file("readings_diff.json", args.setting)).write_text(json.dumps(doc, indent=1) + "\n", encoding="utf-8")
+    print(f"{args.setting} (lo {lo:g}, hi {fmt_hi(hi)}): the literal and the forced reading differ on {len(diff)} of {len(c):,} test band pairs "
+          f"({doc['c_same_below_lo']} C same below lo, {doc['c_different_at_or_above_hi']} C different at or above hi)")
+    return 0
 
 
 def cmd_full_off(args) -> int:
     P = paths(args.run)
     lo, hi = frozen_lo_hi(P, args.setting)
     c = load_c(P["c"])
-    rows = build_fallback_off(c, lo, hi)
-    out = P["dir"] / setting_file("decisions_fullband_fallback_off.csv", args.setting)
+    rows = build_fallback_off(c, lo, hi, args.reading)
+    out = P["dir"] / setting_file("decisions_fullband_fallback_off.csv", args.setting, args.reading)
     write_decisions(out, rows)
     differing = [(r["record_a"], r["record_b"]) for r in rows if r["decision"] != c[(r["record_a"], r["record_b"])][0]]
     routed = sum(r["route"] == "llm" for r in rows)
@@ -270,12 +312,12 @@ def cmd_full_off(args) -> int:
            "lo": lo, "hi": hi, "compared_with": "options/c_model/c_v1_lgbm/decisions.csv (C's calibrated cutoff)",
            "differing_examples": [list(x) for x in differing[:5]]}
     if differing:
-        score_out = P["dir"] / setting_file("score_report_fallback_off.txt", args.setting)
+        score_out = P["dir"] / setting_file("score_report_fallback_off.txt", args.setting, args.reading)
         r = subprocess.run([sys.executable, str(REPO / "eval" / "score_option.py"), str(args.run), "--decisions", str(out), "--name",
-                            "D, LLM fallback off (full band)", "--json-out", str(P["dir"] / setting_file("score_fallback_off.json", args.setting))], capture_output=True, text=True, encoding="utf-8")
+                            "D, LLM fallback off (full band)", "--json-out", str(P["dir"] / setting_file("score_fallback_off.json", args.setting, args.reading))], capture_output=True, text=True, encoding="utf-8")
         score_out.write_text(r.stdout, encoding="utf-8")
         doc["scored"] = score_out.name
-    (P["dir"] / setting_file("fallback_off_check.json", args.setting)).write_text(json.dumps(doc, indent=1) + "\n", encoding="utf-8")
+    (P["dir"] / setting_file("fallback_off_check.json", args.setting, args.reading)).write_text(json.dumps(doc, indent=1) + "\n", encoding="utf-8")
     print(f"D with the LLM fallback off, {len(rows):,} test band pairs: {routed} LLM-routed pairs take C's own decision; "
           f"{len(differing)} pairs differ from C v1 LightGBM's decisions ({'identical' if not differing else 'NOT identical: scored with score_option.py'}) -> {out}")
     return 0
@@ -284,8 +326,8 @@ def cmd_full_off(args) -> int:
 def cmd_route(args) -> int:
     P = paths(args.run)
     hi = None if args.hi.lower() == "none" else float(args.hi)
-    rows = build(load_c(P["c"]), load_b(P["b"]), load_sample(P["sample"]), args.lo, hi)
-    out = args.out or P["dir"] / f"decisions_lo{args.lo:g}_hi{fmt_hi(hi)}.csv"
+    rows = build(load_c(P["c"]), load_b(P["b"]), load_sample(P["sample"]), args.lo, hi, args.reading)
+    out = args.out or P["dir"] / f"decisions_lo{args.lo:g}_hi{fmt_hi(hi)}{'_forced' if args.reading == 'forced' else ''}.csv"
     write_decisions(out, rows)
     st = llm_stats(rows, sum(r["weight"] for r in rows))
     print(f"lo {args.lo:g}, hi {fmt_hi(hi)}: {len(rows)} sampled pairs; routes "
@@ -305,7 +347,7 @@ def cmd_sweep(args) -> int:
     settings = valid_settings()
     jobs = []
     for lo, hi in settings:
-        rows = build(c, b, sample, lo, hi)
+        rows = build(c, b, sample, lo, hi, "forced")      # the sweep that chose the original rule used the forced reading; kept as it was
         dec = work / f"d_lo{lo:g}_hi{fmt_hi(hi)}.csv"
         write_decisions(dec, rows)
         jobs.append((lo, hi, dec, llm_stats(rows, band_pairs)))
@@ -373,19 +415,21 @@ def main() -> int:
     r.add_argument("--lo", type=float, required=True)
     r.add_argument("--hi", default="none")
     r.add_argument("--out", type=Path, default=None)
+    r.add_argument("--reading", choices=READINGS, default="literal")
     s = sub.add_parser("sweep")
     s.add_argument("run", type=Path)
     s.add_argument("--workers", type=int, default=4)
-    for name in ("list-routed", "full"):
+    for name in ("list-routed", "full", "readings"):
         sp = sub.add_parser(name)
         sp.add_argument("run", type=Path)
         sp.add_argument("--setting", choices=tuple(SETTINGS), default="v2")
         if name == "full":
             sp.add_argument("--fallback", choices=("on", "off"), default="on")
+            sp.add_argument("--reading", choices=READINGS, default="literal")
     args = ap.parse_args()
     if args.cmd == "full" and args.fallback == "off":
         return cmd_full_off(args)
-    return {"route": cmd_route, "sweep": cmd_sweep, "list-routed": cmd_list_routed, "full": cmd_full}[args.cmd](args)
+    return {"route": cmd_route, "sweep": cmd_sweep, "list-routed": cmd_list_routed, "full": cmd_full, "readings": cmd_readings}[args.cmd](args)
 
 
 if __name__ == "__main__":

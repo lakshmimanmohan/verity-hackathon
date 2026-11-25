@@ -90,13 +90,31 @@ FROZEN_FILES = [
 ] + sorted(set(ASSETS_B.values()) | set(ASSETS_D.values()))
 REHEARSAL_CANNOT_TEST = [
     "seed 7919's own data: its learned threshold, band size, true-pair count and decoy count",
-    "whether C retrained on 7919 moves its calibrated probabilities so that D's routed share differs from the dev 0.085%",
+    "@D_SHARE@",
     "the 52-minute B stage at 5,000 pairs: standby, network, rate limits and the cache hit ratio over that length",
     "the real --approve-seed-7919, run-folder and generation-record refusals (unit tests only) and the tag on a committed manifest",
     "C's training with the 7919 train band (a different number of true train pairs)",
     "the platform's monthly limit reset in December",
     "quality: seed 42 is a development seed, so the rehearsal numbers are not evidence",
 ]
+
+
+def d_share_text(R: "Runner") -> str:
+    """The could-not-test line on D's routed share: v2's pooled development share (frozen_settings_v2.json) and this run's own routed share."""
+    fs = json.loads((R.repo / ASSETS_D["options/d_hybrid/frozen_settings_v2.json"]).read_text(encoding="utf-8"))
+    pooled = fs["chosen_metrics"]["share"]
+    try:
+        n_routed = lines_minus_header(R.run_dir / "options" / "d_hybrid" / "routed_fullband_pairs.csv")
+        n_band = lines_minus_header(R.run_dir / "options" / "c_model" / "c_v1_lgbm" / "decisions.csv")
+        own = f"this run's own routed share is {100 * n_routed / n_band:.3f}% ({n_routed} of {n_band:,} band pairs)"
+    except OSError:
+        own = "this run's own routed share is not available"
+    return (f"whether C retrained on 7919 moves its calibrated probabilities so that D's routed share differs from v2's development share "
+            f"(pooled {100 * pooled:.3f}% over seeds 11, 12, 13, 42 and 2026, frozen_settings_v2.json; {own})")
+
+
+def cannot_test(R: "Runner") -> list[str]:
+    return [d_share_text(R) if x == "@D_SHARE@" else x for x in REHEARSAL_CANNOT_TEST]
 
 
 class Guard(SystemExit):
@@ -208,7 +226,8 @@ class Runner:
                "notes": [f"reporting and driver scripts changed on {CHANGE_DATE} to handle an all-cached B stage; no model-side asset changed",
                          "cost model reads B per-call figures from the dev run when a stage made no live calls",
                          f"option D routing rule v2 (selection_rule_v2.txt, frozen_settings_v2.json) replaced the original rule as D's setting on {CHANGE_DATE}; "
-                         "the original rule (lo 0.5, hi 0.9) is reported as the secondary row 'D (original rule)'; both rule files and both settings files are hashed here"]}
+                         "the original rule (lo 0.5, hi 0.9) is reported as the secondary row 'D (original rule)'; both rule files and both settings files are hashed here",
+                         "D decisions for pairs outside [lo, hi): C's own decision (literal v2 text); forced reading reported as a diagnostic"]}
         self.freeze_dir.mkdir(parents=True, exist_ok=True)
         self.manifest_path.write_text(json.dumps(doc, indent=1) + "\n", encoding="utf-8")
         return doc
@@ -637,6 +656,18 @@ def s8_d(R: Runner) -> dict:
                    json_out=dd / "score_fullband_original.json"),
              score(R, 8, dd / "decisions_original.csv", "D (original rule) (C + LLM)", dd / "score_report_sample5000_original.txt", sample=True)]
     R.note(f"original rule: lo {fo['lo']}, hi {fo['hi']}: {n_orig} routed pairs; scored as the secondary row")
+    # diagnostic: the forced reading (p >= hi same, p < lo different, whatever C decided) against the primary literal reading (C's own decision outside [lo, hi))
+    for setting in ("v2", "original"):
+        R.step(8, [PY, "options/d_hybrid.py", "readings", run, "--setting", setting], label=f"d_hybrid readings ({setting})")
+        rd = json.loads((dd / ("readings_diff.json" if setting == "v2" else "readings_diff_original.json")).read_text(encoding="utf-8"))
+        R.note(f"literal vs forced reading ({setting}, lo {rd['lo']}, hi {rd['hi']}): {rd['pairs_where_readings_differ']} of {rd['pairs']:,} test band pairs differ")
+    R.step(8, [PY, "options/d_hybrid.py", "full", run, "--setting", "v2", "--reading", "forced"], label="d_hybrid full (v2, forced reading)")
+    R.step(8, [PY, "options/d_hybrid.py", "route", run, "--lo", lo, "--hi", "none" if hi is None else hi, "--reading", "forced", "--out", dd / "decisions_forced.csv"],
+           label="d_hybrid route (sample, forced reading)")
+    outs += [score(R, 8, dd / "decisions_fullband_forced.csv", "D (forced reading), exact full test band", dd / "score_report_fullband_forced.txt",
+                   json_out=dd / "score_fullband_forced.json"),
+             score(R, 8, dd / "decisions_forced.csv", "D (forced reading) (C + LLM)", dd / "score_report_sample5000_forced.txt", sample=True),
+             dd / "readings_diff.json", dd / "readings_diff_original.json", dd / "decisions_fullband_forced.csv", dd / "decisions_forced.csv"]
     R.step(8, [PY, "options/latency_bench.py", run], env={"OMP_NUM_THREADS": "1"}, label="latency_bench (one core)")
     return {"outputs": assets + [routed, dd / "routed_fullband_pairs_original.csv", dd / "decisions_fullband.csv", dd / "decisions_fullband_original.csv", chk_path,
                                  dd / "decisions.csv", dd / "decisions_original.csv", run / "options" / "latency" / "latency_summary.json"] + outs}
@@ -662,6 +693,7 @@ def s10_scoring(R: Runner) -> dict:
     bdec = o / "b_llm" / "openai" / "sample5000" / "decisions.csv"
     adec, cdec, ddec = o / "a_threshold" / "decisions.csv", o / "c_model" / "c_v1_lgbm" / "decisions.csv", o / "d_hybrid" / "decisions.csv"
     dodec = o / "d_hybrid" / "decisions_original.csv"
+    dfdec = o / "d_hybrid" / "decisions_forced.csv"
     outs = [score(R, 10, bdec, "B. frontier LLM (frozen prompt)", o / "b_llm" / "openai" / "sample5000" / "score_report_sample5000.txt", sample=True)]
     sample = o / "b_llm" / "test_sample5000.csv"
     for first, second, n1, n2, save in ((bdec, adec, "B (frontier LLM)", "A (threshold only)", o / "compare" / "b_vs_a.txt"),
@@ -670,7 +702,8 @@ def s10_scoring(R: Runner) -> dict:
                                         (ddec, bdec, "D (hybrid)", "B (frontier LLM)", o / "d_hybrid" / "compare_d_vs_b.txt"),
                                         (ddec, cdec, "D (hybrid)", "C v1 LightGBM", o / "d_hybrid" / "compare_d_vs_c.txt"),
                                         (dodec, bdec, "D (original rule)", "B (frontier LLM)", o / "d_hybrid" / "compare_d_original_vs_b.txt"),
-                                        (ddec, dodec, "D (hybrid)", "D (original rule)", o / "d_hybrid" / "compare_d_vs_d_original.txt")):
+                                        (ddec, dodec, "D (hybrid)", "D (original rule)", o / "d_hybrid" / "compare_d_vs_d_original.txt"),
+                                        (dfdec, bdec, "D (forced reading)", "B (frontier LLM)", o / "d_hybrid" / "compare_d_forced_vs_b.txt")):
         R.step(10, [PY, "eval/compare_options.py", run, "--sample", sample, "--first", first, "--second", second, "--first-name", n1, "--second-name", n2],
                truth=True, label=f"compare {n1} vs {n2}", save=save)
         outs.append(save)
@@ -747,7 +780,7 @@ def write_freeze_report(R: Runner) -> Path:
         L.append(f"  tag: {TAG} at the manifest commit (python eval/freeze_run.py tag); to publish it: git push origin {TAG}")
     else:
         L.append("  tag: none in the rehearsal")
-        L += ["", "  What the rehearsal could not test:"] + [f"    - {x}" for x in REHEARSAL_CANNOT_TEST]
+        L += ["", "  What the rehearsal could not test:"] + [f"    - {x}" for x in cannot_test(R)]
     out = R.freeze_dir / "freeze_report.txt"
     out.write_text("\n".join(L) + "\n", encoding="utf-8")
     R.log("\n".join(L))

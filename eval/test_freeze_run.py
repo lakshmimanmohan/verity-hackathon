@@ -72,6 +72,30 @@ class DSettingsV2(Base):
         self.assertTrue(any("routing rule v2" in n for n in doc["notes"]))
 
 
+class ManifestNoteAndReport(Base):
+    def runner_real_repo(self, run_dir):
+        R = F.Runner("rehearsal", 42, run_dir, self.repo / "_freeze", allow_battery=True, repo=F.REPO, frozen=F.FROZEN_FILES,
+                     stages=[(0, "zero", lambda R: {})], call=no_call, log=self.logs.append, ledger_path=self.repo / "ledger.jsonl")
+        R.pip_freeze = False
+        return R
+
+    def test_manifest_notes_the_literal_reading(self):
+        notes = self.runner_real_repo(self.repo / "run").write_manifest()["notes"]
+        self.assertIn("D decisions for pairs outside [lo, hi): C's own decision (literal v2 text); forced reading reported as a diagnostic", notes)
+
+    def test_could_not_test_list_reads_the_v2_share_not_a_fixed_string(self):
+        text = " | ".join(F.cannot_test(self.runner_real_repo(F.REPO / "results" / "dev_2026_run11")))
+        self.assertNotIn("0.085%", text)
+        self.assertIn("pooled 0.260%", text)                    # frozen_settings_v2.json: chosen_metrics.share 0.002595
+        self.assertIn("51 of 44,882", text)                     # this run's own routed share (the dev run)
+        self.assertIn("0.114%", text)
+
+    def test_stage_8_makes_the_forced_diagnostic_and_stage_10_compares_it(self):
+        import inspect
+        self.assertIn('"--reading", "forced"', inspect.getsource(F.s8_d))
+        self.assertIn("compare_d_forced_vs_b.txt", inspect.getsource(F.s10_scoring))
+
+
 class SeedRefusals(Base):
     def real(self, approve):
         return self.runner(mode="real", seed=F.EVAL_SEED, approve=approve, run_dir=self.repo / "results" / "eval_7919",
