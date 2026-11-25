@@ -239,7 +239,8 @@ class Runner:
                          f"option D routing rule v2 (selection_rule_v2.txt, frozen_settings_v2.json) replaced the original rule as D's setting on {CHANGE_DATE}; "
                          "the original rule (lo 0.5, hi 0.9) is reported as the secondary row 'D (original rule)'; both rule files and both settings files are hashed here",
                          "D decisions for pairs outside [lo, hi): C's own decision (literal v2 text); forced reading reported as a diagnostic",
-                         f"embedding model pinned to revision {embedding_revision(self.repo)}, safetensors; no output changed"]}
+                         f"embedding model pinned to revision {embedding_revision(self.repo)}, safetensors; no output changed",
+                         "B cache directory can be overridden by VERITY_LLM_CACHE_DIR; default, requests and keys unchanged"]}
         self.freeze_dir.mkdir(parents=True, exist_ok=True)
         self.manifest_path.write_text(json.dumps(doc, indent=1) + "\n", encoding="utf-8")
         return doc
@@ -388,7 +389,8 @@ def manifest_params(R: Runner) -> dict:
            "sample": f"{SAMPLE_SIZE} pairs" if R.mode == "real" else f"every same-entity test band pair + {REHEARSAL_NONMATCHES} non-matches",
            "b_caps_usd": B_CAPS[R.mode], "decoy_max_pairs": DECOY_MAX, "c_recipe": "options/c_decision_model.py --model lgbm --version c_v1_lgbm "
            "(features, grid, 5-fold grouped CV, isotonic calibration and cutoff rule as in the code; no flags changed)",
-           "verity": "--nn-mode exact, PYTHONHASHSEED=0, PYTHONUTF8=1, all threads"}
+           "verity": "--nn-mode exact, PYTHONHASHSEED=0, PYTHONUTF8=1, all threads",
+           "llm_cache_dir": "VERITY_LLM_CACHE_DIR (shell override, set)" if os.environ.get("VERITY_LLM_CACHE_DIR") else "results/llm_cache (default)"}
     try:
         prices = json.loads((R.repo / "options" / "prices.json").read_text(encoding="utf-8"))["models"]
         fz = json.loads((R.repo / ASSETS_B["options/b_llm/frozen_prompt.json"]).read_text(encoding="utf-8"))

@@ -70,7 +70,25 @@ from llm_ledger import DEFAULT_LEDGER, LIFETIME_CAP_USD, Ledger, LedgerRefused, 
 PRICES_PATH = HERE / "prices.json"
 PROMPT_PATH = HERE / "b_system_prompt.txt"
 APPENDIX_PATH = HERE / "b_prompt_appendix.txt"    # fixed generic padding, appended last (part of the prompt hash)
-CACHE_DIR = REPO / "results" / "llm_cache"
+CACHE_DIR_ENV = "VERITY_LLM_CACHE_DIR"
+
+
+def resolve_cache_dir(environ=None, env_file: Path | None = None) -> Path:
+    """The pair-cache folder: results/llm_cache, or the folder in VERITY_LLM_CACHE_DIR when that is set in the shell environment.
+    Stops if the variable is set in the repo-root .env (it is a shell setting, like VERITY_DATA_DIR). Nothing else changes: the
+    request body, the cache key and the settings hash do not depend on where the cache lives."""
+    environ = os.environ if environ is None else environ
+    env_file = REPO / ".env" if env_file is None else env_file
+    if env_file.exists():
+        for line in env_file.read_text(encoding="utf-8").splitlines():
+            name = line.strip().removeprefix("export ").split("=", 1)[0].strip()
+            if name == CACHE_DIR_ENV:
+                raise SystemExit(f"{CACHE_DIR_ENV} is set in {env_file.name}: set it in the shell environment only.")
+    value = (environ.get(CACHE_DIR_ENV) or "").strip()
+    return Path(value).expanduser().resolve() if value else REPO / "results" / "llm_cache"
+
+
+CACHE_DIR = resolve_cache_dir()
 SCHEMA = {
     "type": "object",
     "properties": {"decision": {"type": "string", "enum": ["same", "different"]},

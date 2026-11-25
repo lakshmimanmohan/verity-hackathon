@@ -90,6 +90,18 @@ class ManifestNoteAndReport(Base):
         self.assertIn("51 of 44,882", text)                     # this run's own routed share (the dev run)
         self.assertIn("0.114%", text)
 
+    def test_manifest_notes_the_cache_override_and_records_which_cache_is_used(self):
+        import os
+        from unittest import mock
+        with mock.patch.dict(os.environ, {"VERITY_LLM_CACHE_DIR": ""}):
+            doc = self.runner_real_repo(self.repo / "run").write_manifest()
+        self.assertIn("B cache directory can be overridden by VERITY_LLM_CACHE_DIR; default, requests and keys unchanged", doc["notes"])
+        self.assertEqual(doc["params"]["llm_cache_dir"], "results/llm_cache (default)")
+        self.assertIn("options/b_llm_baseline.py", F.FROZEN_FILES)
+        with mock.patch.dict(os.environ, {"VERITY_LLM_CACHE_DIR": str(self.repo / "c")}):
+            doc = self.runner_real_repo(self.repo / "run2").write_manifest()
+        self.assertEqual(doc["params"]["llm_cache_dir"], "VERITY_LLM_CACHE_DIR (shell override, set)")      # the path itself is not recorded
+
     def test_embedding_model_is_pinned_safetensors_and_noted_in_the_manifest(self):
         import re
         src = (F.REPO / "verity" / "src" / "embed.py").read_text(encoding="utf-8")
