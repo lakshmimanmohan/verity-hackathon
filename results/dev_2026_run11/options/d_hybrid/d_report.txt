@@ -1,0 +1,117 @@
+Option D (hybrid) on the 5,000-pair test band sample, run dev_2026_run11: lo 0.5, hi 0.9 (chosen by selection_rule.txt, frozen_settings.json)
+
+Routes (C's calibrated p: p >= hi decided same, lo <= p < hi the LLM, p < lo decided different)
+  route         sampled  weighted (test band)    share
+  c_different      4663              44,519.3   0.9919
+  llm                25                  50.7   0.0011
+  c_same            312                 312.0   0.0070
+  LLM calls: 25 sampled; weighted LLM share of the band 0.0011 = about 51 calls on the 44,882 band pairs
+  projected cost: $0.0017 per 1,000 band pairs ($0.001527 per call, B's measured cost), about $0.077 for the band; B alone costs $1.527 per 1,000 band pairs
+
+Errors among the sampled pairs: 7 false non-matches, 0 false matches (340 same, 4660 different sampled)
+  zero-error bounds (exact one-sided 95% Clopper-Pearson; the bootstrap interval is degenerate when an error count is 0):
+    false matches: 0 of 4,660 false pairs; false-match rate <= 0.00064 (up to 29 false matches on 44,542 false pairs)
+    implied worst case on a band of 340 true and 44,542 false pairs: precision >= 0.9208, recall = 0.9794, F1 >= 0.9492
+
+False negatives (same organization, decided different): 7, all shown
+  R00e1fda85b | R9ac1336475   decision different, p 0.002, route c_different, weight 1.0000, tags acronym+po_box
+      address_line     1310 Main Way Fl 2                           | P.O. Box 99016
+      city             Boston                                       | Boston
+      company_name     CST Incorporated                             | Coastal Silverline Technologies Incorporated
+      phone            488-413-4644                                 | (missing)
+      postal_code      02169-4387                                   | 02169
+      state            MA                                           | MA
+      website          coastalsilverline.com                        | (missing)
+  R06038804e4 | R46b5065817   decision different, p 0.002, route c_different, weight 1.0000, tags po_box+truncation+typo
+      address_line     8015 Washington Drive                        | POB 90065
+      city             Phoenix                                      | Phoenix
+      company_name     Tanaka Technolog                             | Tanaka Technoogies Corp
+      phone            +1 258 530 8056                              | (missing)
+      postal_code      85059                                        | 85059-6407
+      state            AZ                                           | AZ
+      website          www.tanakatechnologies.com                   | (missing)
+  R1201db1fc5 | Rb3f1ba6816   decision different, p 0.002, route c_different, weight 1.0000, tags po_box+standard+typo
+      address_line     PO Box 4668                                  | 4380 Market Ln.
+      city             Sacramento                                   | Sacramento
+      company_name     Pioneer Software Incorporated                | Pioneer Software Inc
+      phone            (missing)                                    | +1 710 416 5871
+      postal_code      95891                                        | 95891-7358
+      state            CA                                           | CA
+      website          pioneersoftware.com                          | (missing)
+  R26d9e258da | R7d9b66f0ab   decision different, p 0.220, route llm, weight 1.0000, tags acronym+standard+typo_address
+      address_line     1636 Oak Ln.                                 | 1366 Oak Lane Suite 100
+      city             Albany                                       | Albany
+      company_name     R.B.E.S. Inc                                 | Rivera & Brooks Environmental Services Inc
+      phone            (233) 427-1421                               | 2334271421
+      postal_code      12280                                        | 12280-6981
+      state            NY                                           | NY
+      website          riverabrooks.com                             | (missing)
+  R28962deef0 | R366b3ef3c7   decision different, p 0.355, route c_different, weight 1.0000, tags acronym+case+missing_phone
+      address_line     2304 Park Way                                | 2304 Park Way. Ste 210
+      city             Tampa                                        | Tampa
+      company_name     RPES                                         | REED & PRICE ENERGY SOLUTIONS CO.
+      phone            8074705562                                   | (missing)
+      postal_code      33692-9781                                   | 33692
+      state            FL                                           | FL
+      website          reedprice.com                                | (missing)
+  R45d7fc9b8c | Rfda06ecad4   decision different, p 0.002, route c_different, weight 1.0000, tags po_box+truncation
+      address_line     Post Office Box 31275                        | 583 Market St.
+      city             Richmond                                     | Richmond
+      company_name     Reed and Morgan Insurance Agency, L.L.C.     | Reed & Morgan Insura
+      phone            (missing)                                    | 9472174352
+      postal_code      23267                                        | 23267-6532
+      state            VA                                           | VA
+      website          reedmorgan.com                               | (missing)
+  R90c47540d7 | Red42a19bb4   decision different, p 0.002, route c_different, weight 1.0000, tags case+missing_phone+truncation
+      address_line     6604 River Road                              | 6604 River Rd. Ste 210
+      city             Minneapolis                                  | Minneapolis
+      company_name     HAYES & HUGHES FINANCIAL SERVICES CO         | Hayes & Hughes F
+      phone            9347013343                                   | (missing)
+      postal_code      55414                                        | 55414-3971
+      state            MN                                           | MN
+      website          (missing)                                    | hayeshughes.com
+
+False positives (different organizations, decided same): 0, all shown
+
+Errors by tag (sample counts; recall and false-match rate weighted to the test band)
+  tag         pairs  same  diff   FN   FP   recall (w)   false-match rate (w)   FP-rate bound
+  acronym       566   145   421    3    0       0.9793                0.00000   <= 0.0071
+  truncation    675    51   624    3    0       0.9412                0.00000   <= 0.0048
+  po_box        591   197   394    4    0       0.9797                0.00000   <= 0.0076
+  decoy           4     0     4    0    0            -                0.00000   <= 0.5271
+  easy          820    10   810    0    0       1.0000                0.00000   <= 0.0037
+  no tag       2489     0  2489    0    0            -                0.00000   <= 0.0012
+
+C v1 LightGBM's errors on the full test band: 18 false matches and 6 missed true pairs; where the chosen rule (lo 0.5, hi 0.9) sends each pair
+
+  C false matches: 18; routed to the LLM 15, c_same 3, c_different 0
+    pair                         C p  route       in sample B answer (recorded)       D decision   tags
+    R04cc0c5b9d R47be2b4ec3    0.801  llm         no        not in sample (no B answer)(not sampled)acronym+clean+missing_phone
+    R04cc0c5b9d R6a1b2515f9    0.801  llm         no        not in sample (no B answer)(not sampled)acronym+missing_phone
+    R04cc0c5b9d R88620d9b06    0.801  llm         no        not in sample (no B answer)(not sampled)acronym+missing_phone+standard
+    R0abbc2bc1f R3203b1ab35    0.801  llm         no        not in sample (no B answer)(not sampled)missing_phone+standard+typo
+    R0c00b9da4c Rca78c8d029    1.000  c_same      no        not in sample (no B answer)(not sampled)po_box
+    R0db0d40928 Raa31f5193e    0.801  llm         no        not in sample (no B answer)(not sampled)acronym+case+missing_phone+typo
+    R14ced1e882 R3203b1ab35    0.801  llm         yes       different 0.09             different    missing_phone+standard+typo
+    R171901aef3 R46b5065817    0.801  llm         yes       different 0.01             different    po_box+typo
+    R266c182205 R560d5c1cba    0.801  llm         no        not in sample (no B answer)(not sampled)po_box+truncation
+    R2698b13b2b R976f49627b    0.801  llm         yes       different 0.01             different    missing_phone+po_box
+    R536d5f80dc Re7f93a5b75    0.801  llm         no        not in sample (no B answer)(not sampled)clean+missing_phone
+    R6eafbc6c9b Rc98a5407a0    0.801  llm         no        not in sample (no B answer)(not sampled)case+missing_phone+po_box
+    R6f5d3c09db Rc121b9230b    1.000  c_same      no        not in sample (no B answer)(not sampled)acronym+missing_phone+standard
+    R7917e06d36 Raa5110878e    0.801  llm         no        not in sample (no B answer)(not sampled)clean+missing_phone
+    R7917e06d36 Rca7c1b9821    0.801  llm         no        not in sample (no B answer)(not sampled)missing_phone+standard
+    R8d643e5dd9 Rf50501eb5c    1.000  c_same      no        not in sample (no B answer)(not sampled)acronym+missing_phone+po_box
+    R976f49627b Red3db1ec19    0.801  llm         no        not in sample (no B answer)(not sampled)missing_phone+po_box
+    R9cc6618d74 Ra9fedabfef    0.801  llm         no        not in sample (no B answer)(not sampled)missing_phone+standard+truncation+typo
+
+  C missed true pairs: 6; routed to the LLM 0, c_same 0, c_different 6
+    pair                         C p  route       in sample B answer (recorded)       D decision   tags
+    R00e1fda85b R9ac1336475    0.002  c_different yes       same 0.92                  different    acronym+po_box
+    R06038804e4 R46b5065817    0.002  c_different yes       same 0.93                  different    po_box+truncation+typo
+    R1201db1fc5 Rb3f1ba6816    0.002  c_different yes       same 0.95                  different    po_box+standard+typo
+    R28962deef0 R366b3ef3c7    0.355  c_different yes       same 0.97                  different    acronym+case+missing_phone
+    R45d7fc9b8c Rfda06ecad4    0.002  c_different yes       same 0.92                  different    po_box+truncation
+    R90c47540d7 Red42a19bb4    0.002  c_different yes       same 0.97                  different    case+missing_phone+truncation
+
+  15 of C's 24 full-band errors are routed to the LLM; the other 9 keep C's decision.
