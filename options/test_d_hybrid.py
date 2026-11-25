@@ -118,6 +118,22 @@ class FullBandTests(unittest.TestCase):
         self.assertEqual([(r["route"], r["decision"]) for r in rows], [("llm", "different"), ("c_same", "same"), ("c_different", "different")])
 
 
+class FallbackOffTests(unittest.TestCase):
+    def test_routed_pairs_take_c_own_decision_and_the_rest_follow_the_route(self):
+        c = {("a", "b"): ("different", 0.0), ("c", "d"): ("different", 0.7), ("e", "f"): ("same", 0.85), ("g", "h"): ("same", 0.95), ("i", "j"): ("different", 0.49)}
+        rows = {(r["record_a"], r["record_b"]): r for r in D.build_fallback_off(c, 0.5, 0.9)}
+        self.assertEqual([rows[k]["route"] for k in sorted(rows)], ["c_different", "llm", "llm", "c_same", "c_different"])
+        self.assertEqual({k: rows[k]["decision"] for k in rows}, {("a", "b"): "different", ("c", "d"): "different", ("e", "f"): "same",
+                                                                 ("g", "h"): "same", ("i", "j"): "different"})
+        self.assertTrue(all(rows[k]["decision"] == c[k][0] for k in rows))     # identical to C when C's cutoff lies between lo and hi
+
+    def test_it_differs_from_c_when_the_cutoff_is_outside_lo_and_hi(self):
+        c = {("a", "b"): ("same", 0.45), ("c", "d"): ("different", 0.95)}          # a cutoff of 0.4 or 1.0: C's decision is not the route's
+        rows = {(r["record_a"], r["record_b"]): r for r in D.build_fallback_off(c, 0.5, 0.9)}
+        self.assertEqual(rows[("a", "b")]["decision"], "different")                  # route c_different overrides C's "same"
+        self.assertEqual(rows[("c", "d")]["decision"], "same")                       # route c_same overrides C's "different"
+
+
 class SelectionTests(unittest.TestCase):
     def r(self, lo, hi, share, f1):
         return {"lo": lo, "hi": hi, "weighted_llm_share": share, "band_f1": f1}

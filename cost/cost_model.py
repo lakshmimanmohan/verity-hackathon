@@ -238,18 +238,24 @@ COMPONENTS = ("llm", "hosting", "operations", "development", "labeling")
 COMPONENT_TEXT = {"llm": "LLM tokens", "hosting": "hosting (the matcher or model, and the shared Verity pipeline)", "operations": "operations (monitoring, retraining, LLM upkeep)",
                   "development": "development (Verity build and productization, amortized)", "labeling": "labeling for C and D (amortized)"}
 PARTY = {
-    "S1": {"llm": "Precisely", "hosting": "Precisely", "operations": "Precisely", "development": "Precisely", "labeling": "Precisely"},
-    "S2": {"llm": "customer", "hosting": "Precisely", "operations": "Precisely", "development": "Precisely", "labeling": "Precisely"},
+    "S1": {"llm": "Precisely", "hosting": "Precisely", "operations": "Precisely", "development": "Precisely", "labeling": "customer"},
+    "S2": {"llm": "customer", "hosting": "Precisely", "operations": "Precisely", "development": "Precisely", "labeling": "customer"},
     "S3": {"llm": "customer", "hosting": "customer", "operations": "customer", "development": "Precisely (not modeled)", "labeling": "customer"},
 }
 S3_FEASIBLE = {"A": "yes", "B": "no", "C": "yes", "D": "yes, with the LLM fallback off"}
+LABELING_PAYER_DEFAULT = "customer"      # assumed: the customer's data stewards hold the knowledge about which records are the same entity
+NM = "n/m"                               # not modeled
 
 
-def scenario_rows(p: Params, option: str, records_per_day: float, rate: float, labels: int) -> list[dict]:
+def scenario_rows(p: Params, option: str, records_per_day: float, rate: float, labels: int, labeling_payer: str = LABELING_PAYER_DEFAULT,
+                  d_off_quality: str = "not measured") -> list[dict]:
     """One row per scenario for an option (two for D in S3: the LLM fallback off, and with the customer's own key
     connected; B in S3 is costed with the customer's own key and flagged as not feasible when data cannot leave).
-    Each row splits the monthly cost by party: Precisely, customer, and their total. The development share in S3 is
-    Precisely's and is not modeled (left out of the total)."""
+    Each row splits the monthly cost by party: Precisely, customer, and their total. Labeling is paid by the customer in
+    every scenario by default; labeling_payer "Precisely" is the sensitivity (a services engagement, at the same hourly
+    rate). In S3 Precisely's development and support are not modeled: when Precisely pays nothing else its entry is None
+    (shown as n/m) and the total is the customer's cost; with Precisely paying for labeling its entry is that labeling
+    alone, flagged partial."""
     if option == "E":
         return [{"option": "E", "label": "E", "scenario": "", "status": "not run"}]
     m = monthly(p, option, records_per_day, rate, labels)
@@ -261,18 +267,24 @@ def scenario_rows(p: Params, option: str, records_per_day: float, rate: float, l
             if option == "B":
                 variants = [("B (own key connected)", base, "as evaluated")]
             elif option == "D":
-                variants = [("D (LLM fallback off)", {**base, "llm": 0.0}, "not measured"), ("D (own key connected)", base, "as evaluated")]
+                variants = [("D (LLM fallback off)", {**base, "llm": 0.0}, d_off_quality), ("D (own key connected)", base, "as evaluated")]
         for label, comps, quality in variants:
-            parties = PARTY[sc]
+            parties = {**PARTY[sc], "labeling": labeling_payer}
             precisely = sum(v for c, v in comps.items() if parties[c] == "Precisely")
             customer = sum(v for c, v in comps.items() if parties[c] == "customer")
-            rows.append({"option": option, "label": label, "scenario": sc, "status": "modelled", "components": comps, "parties": dict(parties),
-                         "precisely": precisely, "customer": customer, "total": precisely + customer,
+            nm = sc == "S3"
+            rows.append({"option": option, "label": label, "scenario": sc, "status": "modelled", "components": comps, "parties": parties,
+                         "precisely": None if (nm and precisely == 0) else precisely, "precisely_partial": bool(nm and precisely > 0),
+                         "customer": customer, "total": precisely + customer, "labeling_payer": labeling_payer,
                          "feasible_data_stays": S3_FEASIBLE[option] if sc == "S3" else "n/a (hosted)", "quality": quality,
                          "not_modeled": "Precisely development and support" if sc == "S3" else ("price passed through to the customer" if sc == "S1" else ""),
                          "calls_per_day": m["calls_per_day"] if comps["llm"] > 0 else 0.0, "cores_model": m["cores_model"], "cores_verity": m["cores_verity"],
                          "hosting_model": m["hosting_model"], "hosting_verity": m["hosting_verity"]})
     return rows
+
+
+def usd_or_nm(x, fmt: str = ".2f") -> str:
+    return NM if x is None else format(x, fmt)
 
 
 def scenario_total_horizon(p: Params, option: str, volume: float, rate: float, labels: int, scenario: str, d_variant: str = "off") -> float:
@@ -305,6 +317,12 @@ def parse_overall(text: str) -> tuple[float, float]:
 
 def parse_band_f1(text: str) -> float:
     return float(re.search(r"Band \([^\n]*\n[^\n]*\n\s+F1 ([\d.]+)", text).group(1))
+
+
+def parse_band_pr(text: str) -> tuple[float, float]:
+    """Band precision and recall from a score report (the accuracy line of the band block)."""
+    m = re.search(r"accuracy [\d.]+\s+precision ([\d.]+)\s+recall ([\d.]+)", text)
+    return float(m.group(1)), float(m.group(2))
 
 
 def parse_ece(text: str):
@@ -581,6 +599,27 @@ def load_inputs(repo: Path, run: Path, out_rows: list, productization_hours: flo
             f"band pairs per record x measured p50 call latency at 10 workers ({pr['b_p50_s_at_10_workers']} s); queueing not included")
         add("D LLM calls per record", f"{pr['d_expected_llm_calls_per_record']} on average; {pr['d_records_with_any_llm_call_pct']}% of records need any call", "calls", "measured-derived", src_m,
             "band pairs per record x the exact routed share")
+    d_off = None
+    chk_path = run / "options" / "d_hybrid" / "fallback_off_check.json"
+    if chk_path.exists():
+        chk = json.loads(chk_path.read_text(encoding="utf-8"))
+        rd_ = lambda path: path.read_text(encoding="utf-8")
+        if chk["identical_to_c"]:
+            txt = rd_(run / "options" / "c_model" / "c_v1_lgbm" / "score_report.txt")
+            src_txt = "options/c_model/c_v1_lgbm/score_report.txt (C's full-band score report)"
+            basis = f"measured: identical to C by construction, verified ({chk['differing_from_c']} of {chk['pairs']:,} pairs differ)"
+        else:
+            txt = rd_(run / "options" / "d_hybrid" / chk["scored"])
+            src_txt = f"options/d_hybrid/{chk['scored']} (D with the fallback off, scored)"
+            basis = f"measured: {chk['differing_from_c']} of {chk['pairs']:,} pairs differ from C, scored with score_option.py"
+        bp, br = parse_band_pr(txt)
+        op, orc = parse_overall(txt)
+        d_off = {"identical": chk["identical_to_c"], "routed": chk["llm_routed_pairs"], "pairs": chk["pairs"], "differing": chk["differing_from_c"],
+                 "band_f1": parse_band_f1(txt), "band_precision": bp, "band_recall": br, "overall_precision": op, "overall_recall": orc, "ece": parse_ece(txt)}
+        d_off["quality"] = (f"{basis}; band F1 {d_off['band_f1']:.4f}, band precision {bp:.4f}, band recall {br:.4f}, overall precision {op:.4f}, "
+                            f"overall recall {orc:.4f}, ECE {d_off['ece']:.4f} (full test band)")
+        add("S3 D with the LLM fallback off: quality", d_off["quality"], "", "measured", "options/d_hybrid/fallback_off_check.json and " + src_txt,
+            f"{chk['llm_routed_pairs']} LLM-routed pairs take C's own decision; every other pair is routed as D does; compared with C v1 LightGBM's decisions on all {chk['pairs']:,} test band pairs")
     add("ANN (approximate neighbor search) timing", "not measured", "", "measured", "results/dev_2026_ann/ann_not_measured.txt",
         "annoy==1.17.3 failed to build on this machine (error class: Microsoft Visual C++ 14.0 or greater is required; no Windows wheel); one attempt, no retry. "
         "The shared pipeline's cost uses exact search only")
@@ -640,8 +679,9 @@ def load_inputs(repo: Path, run: Path, out_rows: list, productization_hours: flo
         add(f"scenario {sc}", text, "", "assumed", "your instruction", note)
     for sc in SCENARIOS:
         add(f"scenario {sc}: who pays each component", "; ".join(f"{COMPONENT_TEXT[c]}: {PARTY[sc][c]}" for c in COMPONENTS), "", "assumed", "your instruction",
-            "hosting and operations assumptions are unchanged; only the party is assigned. Labeling is assumed to be done by Precisely when it hosts the matcher "
-            "and by the customer when the matcher runs in their environment (their data stays there)")
+            "hosting and operations assumptions are unchanged; only the party is assigned. Labeling is paid by the customer in all three scenarios (assumed: the "
+            "customer's data stewards hold the knowledge about which records are the same entity); sensitivity: Precisely pays for labeling (a services engagement) "
+            "at the same hourly rates. In S3 Precisely's development and support are n/m (not modeled)")
     add("scenario S3: feasible when data cannot leave the environment", "A yes; B no; C yes; D yes with the LLM fallback off", "", "assumed", "your instruction",
         "B needs an external LLM for every band pair; D's quality with the LLM fallback off was never measured (it is C's decisions for the routed pairs, "
         "which the evaluation did not score)")
@@ -652,7 +692,7 @@ def load_inputs(repo: Path, run: Path, out_rows: list, productization_hours: flo
     lc = list(csv.DictReader((run / "options" / "c_model" / "lc_v2" / "learning_curve.csv").open(encoding="utf-8")))
     f1 = {int(r["n"]): float(r["f1_mean"]) for r in lc}
     return p, {"log": log, "buckets": buckets, "ledger": led, "lc_f1": f1, "full_f1": 0.9653, "n_band": n_band, "conc": conc,
-               "latency": latency, "mixture": mixture}
+               "latency": latency, "mixture": mixture, "d_off": d_off}
 
 
 # ---------------------------------------------------------------------------------------------- outputs
@@ -716,6 +756,20 @@ def main() -> int:
     say(f"  {'evidence total (hours x rate + API spend)':<44}" + "".join(f"{tot_h * r + api_total:>12,.0f}" for r in RATES))
     ev_rows.append(["total", "hours x rate + API spend", ""] + [f"{tot_h * r + api_total:.2f}" for r in RATES])
     write_csv(out / "evidence_cost.csv", ["kind", "item", "hours", "usd_at_50_per_hour", "usd_at_100_per_hour", "usd_at_200_per_hour"], ev_rows, draft)
+    # reconciliation: the file's own hours (a separate parse), the loader's, and the figure written to evidence_cost.csv
+    raw_rows = list(csv.DictReader((REPO / "cost" / "effort_log.csv").open(newline="", encoding="utf-8-sig")))
+    raw_hours = [(r["bucket"].strip(), float(r["hours"]), r["production_needed"].strip().lower() == "yes") for r in raw_rows if (r["hours"] or "").strip()]
+    raw_total = sum(h for _, h, _ in raw_hours)
+    raw_prod = sum(h for _, h, y in raw_hours if y)
+    csv_total = next(float(r[2]) for r in ev_rows if r[0] == "effort-log hours" and r[1] == "total")
+    csv_back = [r for r in csv.reader(line for line in (out / "evidence_cost.csv").read_text(encoding="utf-8").splitlines() if not line.startswith("#"))]
+    csv_file_total = next(float(r[2]) for r in csv_back if r[0] == "effort-log hours" and r[1] == "total")
+    loader_prod = sum(v["production"] for v in ctx["buckets"].values())
+    say(f"  Reconciliation of the effort hours: effort_log.csv has {len(raw_rows)} rows ({len(raw_hours)} with hours) and sums to {raw_total:g} h "
+        f"({raw_prod:g} h production needed, {raw_total - raw_prod:g} h not); the loader's total is {tot_h:g} h ({loader_prod:g} h production needed); "
+        f"evidence_cost.csv has {csv_file_total:g} h. " + ("They agree." if abs(raw_total - tot_h) < 1e-9 and abs(raw_total - csv_file_total) < 1e-9 and abs(raw_prod - loader_prod) < 1e-9 else "THEY DO NOT AGREE"))
+    if not (abs(raw_total - tot_h) < 1e-9 and abs(raw_total - csv_file_total) < 1e-9 and abs(raw_prod - loader_prod) < 1e-9 and abs(csv_total - tot_h) < 1e-9):
+        raise SystemExit("effort hours do not reconcile: fix the loader")
 
     # labeling table
     say("\nLabeling for C and D, next to B's zero labels (hours at "
@@ -737,26 +791,34 @@ def main() -> int:
         c, pt = r["components"], r["parties"]
         h = p.horizon_months
         return [lab, rate, vol, r["option"], r["label"], r["scenario"], "modelled", r["feasible_data_stays"], r["quality"],
-                f"{r['precisely']:.2f}", f"{r['customer']:.2f}", f"{r['total']:.2f}",
-                f"{r['precisely'] * h:.2f}", f"{r['customer'] * h:.2f}", f"{r['total'] * h:.2f}",
+                usd_or_nm(r["precisely"]) + (" + n/m" if r["precisely_partial"] else ""), f"{r['customer']:.2f}", f"{r['total']:.2f}",
+                (NM if r["precisely"] is None else f"{r['precisely'] * h:.2f}") + (" + n/m" if r["precisely_partial"] else ""), f"{r['customer'] * h:.2f}", f"{r['total'] * h:.2f}",
                 f"{c['llm']:.2f}", pt["llm"], f"{r['hosting_model']:.2f}", f"{r['hosting_verity']:.2f}", pt["hosting"], f"{c['operations']:.2f}", pt["operations"],
                 f"{c['development']:.2f}", pt["development"], f"{c['labeling']:.2f}", pt["labeling"], f"{r['calls_per_day']:.0f}",
                 f"{r['cores_model']}", f"{r['cores_verity']}", r["not_modeled"]]
 
-    grid = []
+    d_off_q = ctx["d_off"]["quality"] if ctx["d_off"] else "not measured"
+    grid, grid_svc = [], []
     for lab in LABEL_SCENARIOS:
         for rate in RATES:
             for vol in VOLUMES:
                 for opt in OPTIONS:
-                    for r in scenario_rows(p, opt, vol, rate, lab):
+                    for r in scenario_rows(p, opt, vol, rate, lab, d_off_quality=d_off_q):
                         grid.append(grid_row(lab, rate, vol, r))
-    write_csv(out / "cost_model.csv",
-              ["labels_for_C_and_D", "hourly_rate_usd", "records_per_day", "option", "option_row", "scenario", "status",
+    for lab in LABEL_SCENARIOS:
+        for rate in RATES:
+            for vol in VOLUMES:
+                for opt in ("C", "D"):
+                    for r in scenario_rows(p, opt, vol, rate, lab, labeling_payer="Precisely", d_off_quality=d_off_q):
+                        grid_svc.append(grid_row(lab, rate, vol, r))
+    GRID_HEADER = ["labels_for_C_and_D", "hourly_rate_usd", "records_per_day", "option", "option_row", "scenario", "status",
                "feasible_when_data_cannot_leave_the_environment", "quality", "precisely_usd_month", "customer_usd_month", "total_usd_month",
-               "precisely_usd_12_months", "customer_usd_12_months", "total_usd_12_months", "llm_usd_month", "llm_paid_by", "hosting_model_usd_month",
+               "precisely_usd_12_months", "customer_usd_12_months", "total_usd_12_months_(S3: customer only)", "llm_usd_month", "llm_paid_by", "hosting_model_usd_month",
                "hosting_verity_usd_month", "hosting_paid_by", "operations_usd_month", "operations_paid_by", "development_amortized_usd_month",
                "development_paid_by", "labeling_amortized_usd_month", "labeling_paid_by", "llm_calls_per_day", "cores_model", "cores_verity",
-               "not_modeled"], grid, draft)
+               "not_modeled"]
+    write_csv(out / "cost_model.csv", GRID_HEADER, grid, draft)
+    write_csv(out / "cost_model_labeling_by_precisely.csv", GRID_HEADER, grid_svc, draft)
 
     say("\nDeployment scenarios (assumed; who pays is a commercial decision this PoC can inform but not settle)")
     for sc, text in SCENARIOS.items():
@@ -765,8 +827,11 @@ def main() -> int:
     say(f"    {'component':<62}{'S1':<12}{'S2':<12}S3")
     for c in COMPONENTS:
         say(f"    {COMPONENT_TEXT[c]:<62}{PARTY['S1'][c]:<12}{PARTY['S2'][c]:<12}{PARTY['S3'][c]}")
-    say("    Labeling is assumed to be done by Precisely when it hosts the matcher and by the customer when the matcher runs in their environment.")
-    say("  S3 feasibility when data cannot leave the environment: A yes, B no, C yes, D yes with the LLM fallback off (its quality in that case is not measured).")
+    say("    Labeling is paid by the customer in all three scenarios (assumed: the customer's data stewards hold the knowledge about which records are the same entity). "
+        "Sensitivity: Precisely pays for labeling (a services engagement) at the same hourly rates; both are shown below for C and D.")
+    say("    n/m = not modeled: in S3 Precisely's development and support are not modeled, so the S3 total is the customer's cost only; in S1 the price passed through to the customer is not modeled.")
+    say("  S3 feasibility when data cannot leave the environment: A yes, B no, C yes, D yes with the LLM fallback off (its quality in that case is C's, measured: "
+        "identical to C by construction, verified; see the S3 D row below).")
 
     say(f"\nMonthly cost by component at the base case (hourly rate ${BASE_RATE:g}, labels {BASE_LABELS:,}, standard prices with cache, hit ratio {p.hit_ratio:.3f}), "
         f"USD per month, all parties together")
@@ -782,20 +847,52 @@ def main() -> int:
         f"{p.verity_cpu_s_per_record * 1000:.1f} ms of one core per record{'' if p.verity_quotable else ', NOT FOR QUOTING'}; "
         f"one-time = the Verity build and productization shared by every option, plus labeling for C and D)")
 
-    for vol in (BASE_VOLUME, 100_000, 10_000_000):
-        say(f"\nWho pays at {vol:,} records per day, USD per month (hourly rate ${BASE_RATE:g}; C and D with {LABEL_SCENARIOS[-1]:,} labels, as evaluated; "
-            f"development and labeling amortized over {p.horizon_months} months)")
-        say(f"  {'option':<24}{'scen.':<6}{'Precisely':>13}{'customer':>13}{'total':>13}   {'feasible if data cannot leave (S3)':<36}quality")
-        for opt in OPTIONS:
-            for r in scenario_rows(p, opt, vol, BASE_RATE, LABEL_SCENARIOS[-1]):
-                if r["status"] == "not run":
-                    say(f"  {'E':<24}      not run (no results; no numbers)")
-                    continue
-                pre = f"{r['precisely']:,.0f}" if r["scenario"] != "S3" else f"{r['precisely']:,.0f}*"
-                say(f"  {r['label']:<24}{r['scenario']:<6}{pre:>13}{r['customer']:>13,.0f}{r['total']:>13,.0f}   "
-                    f"{r['feasible_data_stays'] if r['scenario'] == 'S3' else '':<36}{r['quality'] if opt == 'D' and r['scenario'] == 'S3' else ''}")
-        say("  * S3: Precisely's development and support are not modeled (shown as 0); S1: the price passed through to the customer is not modeled. "
+    def pre_text(r):
+        if r["precisely"] is None:
+            return NM
+        return f"{r['precisely']:,.0f}" + (" + n/m" if r["precisely_partial"] else "")
+
+    def short_quality(r):
+        return r["quality"].split("; band F1")[0] if (r["option"] == "D" and r["scenario"] == "S3" and r["label"].startswith("D (LLM")) else ""
+
+    def print_rows(rows, suffix=""):
+        for r in rows:
+            if r["status"] == "not run":
+                say(f"  {'E':<64}not run (no results; no numbers)")
+                continue
+            say(f"  {r['label'] + suffix:<64}{r['scenario']:<5}{pre_text(r):>12}{r['customer']:>12,.0f}{r['total']:>12,.0f}   "
+                f"{r['feasible_data_stays'] if r['scenario'] == 'S3' else '':<32}{short_quality(r)}")
+
+    hdr = f"  {'option':<64}{'scen.':<5}{'Precisely':>12}{'customer':>12}{'total':>12}   {'feasible if data cannot leave (S3)':<32}quality"
+    foot = ("  n/m = not modeled: in S3 Precisely's development and support are not modeled, so the S3 total is the customer's cost only ('+ n/m': Precisely pays "
+            "for labeling in the services sensitivity and its development and support are still n/m). S1: the price passed through to the customer is not modeled. "
             "B in S3 is costed with the customer's own key and is not feasible when data cannot leave the environment.")
+    for vol in (100_000, 10_000_000):
+        say(f"\nWho pays at {vol:,} records per day, USD per month (hourly rate ${BASE_RATE:g}; C and D with {LABEL_SCENARIOS[-1]:,} labels, as evaluated, labeling paid by the customer; "
+            f"development and labeling amortized over {p.horizon_months} months)")
+        say(hdr)
+        for opt in OPTIONS:
+            print_rows(scenario_rows(p, opt, vol, BASE_RATE, LABEL_SCENARIOS[-1], d_off_quality=d_off_q))
+        say(foot)
+    vol = BASE_VOLUME
+    say(f"\nWho pays at {vol:,} records per day, USD per month (hourly rate ${BASE_RATE:g}; development and labeling amortized over {p.horizon_months} months). "
+        f"For C and D at 2,000 and at {LABEL_SCENARIOS[-1]:,} labels, with labeling paid by the customer (the assumed default) and, as a sensitivity, by Precisely "
+        f"(a services engagement, same hourly rate)")
+    say(hdr)
+    for opt in ("A", "B"):
+        print_rows(scenario_rows(p, opt, vol, BASE_RATE, LABEL_SCENARIOS[-1], d_off_quality=d_off_q))
+    for opt in ("C", "D"):
+        for labs in (BASE_LABELS, LABEL_SCENARIOS[-1]):
+            for payer in ("customer", "Precisely"):
+                tag = f" [{labs:,} labels, lab. by {payer}{' (default)' if payer == 'customer' else ' (sens.)'}]"
+                print_rows(scenario_rows(p, opt, vol, BASE_RATE, labs, labeling_payer=payer, d_off_quality=d_off_q), tag)
+    print_rows(scenario_rows(p, "E", vol, BASE_RATE, 0))
+    say("  lab. = labeling: by customer is the assumed default; by Precisely is the sensitivity (a services engagement, same hourly rate).")
+    say(foot)
+    if ctx["d_off"]:
+        say(f"  S3 'D (LLM fallback off)' quality: {ctx['d_off']['quality']}.")
+        say(f"  {ctx['d_off']['routed']} LLM-routed pairs take C's own decision; {ctx['d_off']['differing']} of {ctx['d_off']['pairs']:,} pairs differ from C v1 LightGBM's decisions"
+            f"{' (identical by construction, verified)' if ctx['d_off']['identical'] else ''}.")
     make_who_pays_chart(p, out, draft)
     cpm = calls_per_day(p, "B", 100_000) / 1440
     say(f"\nThroughput: B at 100K records/day needs {calls_per_day(p, 'B', 100_000):,.0f} calls a day = {cpm:,.0f} calls per minute "
@@ -1059,7 +1156,7 @@ def make_who_pays_chart(p: Params, out: Path, draft: bool) -> None:
             sel = [r for r in rows if show_b or r["option"] != "B"]
             short = {"B (own key connected)": "B\nown key", "D (LLM fallback off)": "D\nfallback off", "D (own key connected)": "D\nown key"}
             names = [short.get(r["label"], r["label"]) for r in sel]
-            pre = [r["precisely"] for r in sel]
+            pre = [r["precisely"] or 0.0 for r in sel]
             cus = [r["customer"] for r in sel]
             ax.bar(names, pre, color="#1f77b4", label="Precisely")
             ax.bar(names, cus, bottom=pre, color="#ff7f0e", label="customer")
@@ -1067,14 +1164,15 @@ def make_who_pays_chart(p: Params, out: Path, draft: bool) -> None:
                 ax.text(k, pre[k] + cus[k], f"${pre[k] + cus[k]:,.0f}" + ("*" if sc == "S3" else ""), ha="center", va="bottom", fontsize=7)
                 if sc == "S3" and r["option"] == "B":
                     ax.text(k, 0, "not feasible if\ndata cannot leave", ha="center", va="bottom", fontsize=6, color="white")
-            ax.set_title(f"{sc}" + ("" if show_b else " (B removed, zoom)"), fontsize=10)
+            ax.set_title(f"{sc}" + (" (Precisely: n/m)" if sc == "S3" else "") + ("" if show_b else " (B removed, zoom)"), fontsize=10)
             ax.set_ylabel("USD per month")
             ax.tick_params(axis="x", labelsize=7)
             ax.margins(y=0.15)
     axes[0][0].legend(fontsize=8)
     fig.text(0.5, 0.005, f"{BASE_VOLUME:,} records/day, ${BASE_RATE:g}/h, C and D with {LABEL_SCENARIOS[-1]:,} labels (as evaluated). E: not run. "
-             "S1: price passed through to the customer not modeled. S3: * Precisely's development and support not modeled. Who pays is a commercial decision this PoC "
-             "can inform but not settle.", ha="center", fontsize=7)
+             "Labeling is paid by the customer (assumed).\n"
+             "n/m = not modeled: S1 price passed through to the customer; S3 * Precisely's development and support (the S3 total is the customer's cost only).\n"
+             "Who pays is a commercial decision this PoC can inform but not settle.", ha="center", fontsize=7)
     fig.suptitle(("DRAFT: effort log incomplete, one-time costs for B and D undercounted\n" if draft else "") + "Who pays, monthly cost per option and scenario")
     fig.tight_layout(rect=(0, 0.03, 1, 0.94))
     fig.savefig(out / "chart_who_pays.png", dpi=120)

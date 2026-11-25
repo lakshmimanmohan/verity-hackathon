@@ -12,6 +12,7 @@ The rule that picks lo and hi is in results/<run>/options/d_hybrid/selection_rul
   python options/d_hybrid.py sweep results/<run>
   python options/d_hybrid.py list-routed results/<run>     # the full test band's pairs that go to the LLM (no truth)
   python options/d_hybrid.py full results/<run>            # exact D decisions for every test band pair (no sampling)
+  python options/d_hybrid.py full results/<run> --fallback off   # every LLM-routed pair takes C's own decision; compared with C
 
 Inputs (all under results/<run>/options/):
   c_model/c_v1_lgbm/decisions.csv        C's decision and calibrated confidence for every test band pair
@@ -229,6 +230,42 @@ def cmd_full(args) -> int:
     return 0
 
 
+def build_fallback_off(c: dict, lo: float, hi: float | None) -> list[dict]:
+    """D with the LLM fallback off: routed exactly as D does, but a pair routed to the LLM takes C's own decision (C's
+    calibrated cutoff) instead of B's answer. Every other pair is decided by the route."""
+    rows = []
+    for k in sorted(c):
+        cd, p = c[k]
+        r = route_of(p, lo, hi)
+        d = cd if r == "llm" else ("same" if r == "c_same" else "different")
+        rows.append({"record_a": k[0], "record_b": k[1], "decision": d, "confidence": p, "route": r, "weight": 1.0})
+    return rows
+
+
+def cmd_full_off(args) -> int:
+    P = paths(args.run)
+    lo, hi = frozen_lo_hi(P)
+    c = load_c(P["c"])
+    rows = build_fallback_off(c, lo, hi)
+    out = P["dir"] / "decisions_fullband_fallback_off.csv"
+    write_decisions(out, rows)
+    differing = [(r["record_a"], r["record_b"]) for r in rows if r["decision"] != c[(r["record_a"], r["record_b"])][0]]
+    routed = sum(r["route"] == "llm" for r in rows)
+    doc = {"pairs": len(rows), "llm_routed_pairs": routed, "differing_from_c": len(differing), "identical_to_c": not differing,
+           "lo": lo, "hi": hi, "compared_with": "options/c_model/c_v1_lgbm/decisions.csv (C's calibrated cutoff)",
+           "differing_examples": [list(x) for x in differing[:5]]}
+    if differing:
+        score_out = P["dir"] / "score_report_fallback_off.txt"
+        r = subprocess.run([sys.executable, str(REPO / "eval" / "score_option.py"), str(args.run), "--decisions", str(out), "--name",
+                            "D, LLM fallback off (full band)", "--json-out", str(P["dir"] / "score_fallback_off.json")], capture_output=True, text=True, encoding="utf-8")
+        score_out.write_text(r.stdout, encoding="utf-8")
+        doc["scored"] = score_out.name
+    (P["dir"] / "fallback_off_check.json").write_text(json.dumps(doc, indent=1) + "\n", encoding="utf-8")
+    print(f"D with the LLM fallback off, {len(rows):,} test band pairs: {routed} LLM-routed pairs take C's own decision; "
+          f"{len(differing)} pairs differ from C v1 LightGBM's decisions ({'identical' if not differing else 'NOT identical: scored with score_option.py'}) -> {out}")
+    return 0
+
+
 def cmd_route(args) -> int:
     P = paths(args.run)
     hi = None if args.hi.lower() == "none" else float(args.hi)
@@ -325,8 +362,13 @@ def main() -> int:
     s.add_argument("run", type=Path)
     s.add_argument("--workers", type=int, default=4)
     for name in ("list-routed", "full"):
-        sub.add_parser(name).add_argument("run", type=Path)
+        sp = sub.add_parser(name)
+        sp.add_argument("run", type=Path)
+        if name == "full":
+            sp.add_argument("--fallback", choices=("on", "off"), default="on")
     args = ap.parse_args()
+    if args.cmd == "full" and args.fallback == "off":
+        return cmd_full_off(args)
     return {"route": cmd_route, "sweep": cmd_sweep, "list-routed": cmd_list_routed, "full": cmd_full}[args.cmd](args)
 
 

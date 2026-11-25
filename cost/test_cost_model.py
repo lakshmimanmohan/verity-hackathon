@@ -20,8 +20,11 @@ call, hit ratio 0.5, prices $2.0 / $0.2 / $10.0 per million tokens (input / cach
 Who pays, per month, at 1,000 records/day (components: llm, hosting, operations, development, labeling)
   A   0, 0.304, 100, 1,500, 0                  B   364.80, 0.304, 600, 1,500, 0
   C   0, 0.3344, 600, 1,500, 83.3333           D   36.48, 0.3344, 1,000, 1,500, 83.3333
-  S1 everything is Precisely's; S2 the LLM line is the customer's; S3 the LLM, hosting, operations and labeling lines are the
-  customer's and Precisely's development is not modeled (left out of the total).
+  Labeling is the customer's in every scenario (the default); the sensitivity moves it to Precisely.
+  S1 Precisely pays llm, hosting, operations, development; the customer pays labeling.
+  S2 the LLM line is also the customer's.
+  S3 the customer pays llm, hosting, operations and labeling; Precisely's development and support are not modeled: its entry is None
+  (n/m) and the total is the customer's cost only.
 """
 
 from __future__ import annotations
@@ -108,46 +111,80 @@ class CostTests(unittest.TestCase):
         self.assertAlmostEqual(b["running"], 364.80 + 0.304 + 600, places=6)
         self.assertAlmostEqual(b["total_horizon"], 18000 + 12 * 965.104, places=4)
 
-    def rows(self, option):
-        return {(r["scenario"], r["label"]): r for r in M.scenario_rows(self.p, option, 1000, 100, 2000)}
+    def rows(self, option, payer="customer", **kw):
+        return {(r["scenario"], r["label"]): r for r in M.scenario_rows(self.p, option, 1000, 100, 2000, labeling_payer=payer, **kw)}
 
-    def test_s1_everything_is_precisely(self):
-        for o, total in (("A", 100 + 0.304 + 1500), ("B", 364.80 + 0.304 + 600 + 1500), ("C", 0.3344 + 600 + 1500 + 1000 / 12),
-                         ("D", 36.48 + 0.3344 + 1000 + 1500 + 1000 / 12)):
+    LAB = 1000 / 12                       # labeling amortized, C and D
+
+    def test_s1_precisely_pays_everything_but_labeling_which_is_the_customers(self):
+        for o, pre, cus in (("A", 100 + 0.304 + 1500, 0.0), ("B", 364.80 + 0.304 + 600 + 1500, 0.0), ("C", 0.3344 + 600 + 1500, self.LAB),
+                            ("D", 36.48 + 0.3344 + 1000 + 1500, self.LAB)):
             r = self.rows(o)[("S1", o)]
-            self.assertAlmostEqual(r["precisely"], total, places=6, msg=o)
-            self.assertEqual(r["customer"], 0.0)
-            self.assertAlmostEqual(r["total"], total, places=6)
+            self.assertAlmostEqual(r["precisely"], pre, places=6, msg=o)
+            self.assertAlmostEqual(r["customer"], cus, places=6, msg=o)
+            self.assertAlmostEqual(r["total"], pre + cus, places=6)
+            self.assertFalse(r["precisely_partial"])
 
-    def test_s2_only_the_llm_line_moves_to_the_customer(self):
+    def test_s2_the_llm_line_and_labeling_are_the_customers(self):
         b = self.rows("B")[("S2", "B")]
         self.assertAlmostEqual(b["customer"], 364.80, places=6)
         self.assertAlmostEqual(b["precisely"], 0.304 + 600 + 1500, places=6)
         self.assertAlmostEqual(b["total"], self.rows("B")[("S1", "B")]["total"], places=9)         # the split changes, not the total
         d = self.rows("D")[("S2", "D")]
-        self.assertAlmostEqual(d["customer"], 36.48, places=6)
-        self.assertEqual(self.rows("C")[("S2", "C")]["customer"], 0.0)                              # C has no LLM line
+        self.assertAlmostEqual(d["customer"], 36.48 + self.LAB, places=6)
+        self.assertAlmostEqual(d["precisely"], 0.3344 + 1000 + 1500, places=6)
+        c = self.rows("C")[("S2", "C")]
+        self.assertAlmostEqual(c["customer"], self.LAB, places=6)                                   # C has no LLM line: only labeling
 
-    def test_s3_customer_pays_hosting_operations_labeling_and_the_llm_if_connected(self):
+    def test_s3_precisely_is_not_modeled_and_the_total_is_the_customers(self):
         c = self.rows("C")[("S3", "C")]
-        self.assertAlmostEqual(c["customer"], 0.3344 + 600 + 1000 / 12, places=6)
-        self.assertEqual(c["precisely"], 0.0)                                                       # development and support not modeled
+        self.assertIsNone(c["precisely"])                                                           # n/m, not 0
+        self.assertAlmostEqual(c["customer"], 0.3344 + 600 + self.LAB, places=6)
         self.assertAlmostEqual(c["total"], c["customer"], places=9)
         self.assertEqual(c["feasible_data_stays"], "yes")
-        self.assertEqual(self.rows("A")[("S3", "A")]["feasible_data_stays"], "yes")
-        self.assertAlmostEqual(self.rows("A")[("S3", "A")]["customer"], 0.304 + 100, places=6)
+        a = self.rows("A")[("S3", "A")]
+        self.assertIsNone(a["precisely"])
+        self.assertEqual(a["feasible_data_stays"], "yes")
+        self.assertAlmostEqual(a["customer"], 0.304 + 100, places=6)
         b = self.rows("B")[("S3", "B (own key connected)")]
         self.assertAlmostEqual(b["customer"], 364.80 + 0.304 + 600, places=6)
         self.assertEqual(b["feasible_data_stays"], "no")
+        self.assertIsNone(b["precisely"])
 
     def test_s3_d_has_two_rows_and_the_fallback_off_row_has_no_llm_cost(self):
-        rows = self.rows("D")
+        rows = self.rows("D", d_off_quality="measured: identical to C by construction, verified")
         off, on = rows[("S3", "D (LLM fallback off)")], rows[("S3", "D (own key connected)")]
-        self.assertAlmostEqual(off["customer"], 0.3344 + 1000 + 1000 / 12, places=6)
+        self.assertAlmostEqual(off["customer"], 0.3344 + 1000 + self.LAB, places=6)
         self.assertAlmostEqual(on["customer"] - off["customer"], 36.48, places=6)
-        self.assertEqual((off["quality"], on["quality"]), ("not measured", "as evaluated"))
+        self.assertEqual((off["quality"], on["quality"]), ("measured: identical to C by construction, verified", "as evaluated"))
+        self.assertEqual(self.rows("D")[("S3", "D (LLM fallback off)")]["quality"], "not measured")      # the default when no check exists
         self.assertEqual(off["feasible_data_stays"], "yes, with the LLM fallback off")
         self.assertEqual(off["calls_per_day"], 0.0)
+        self.assertIsNone(off["precisely"])
+
+    def test_labeling_paid_by_precisely_is_the_sensitivity(self):
+        c = self.rows("C", payer="Precisely")
+        self.assertAlmostEqual(c[("S1", "C")]["precisely"], 0.3344 + 600 + 1500 + self.LAB, places=6)
+        self.assertEqual(c[("S1", "C")]["customer"], 0.0)
+        self.assertAlmostEqual(c[("S2", "C")]["precisely"], 0.3344 + 600 + 1500 + self.LAB, places=6)
+        s3 = c[("S3", "C")]
+        self.assertAlmostEqual(s3["precisely"], self.LAB, places=6)                                 # labeling only
+        self.assertTrue(s3["precisely_partial"])                                                    # development and support still n/m
+        self.assertAlmostEqual(s3["customer"], 0.3344 + 600, places=6)
+        self.assertAlmostEqual(s3["total"], 0.3344 + 600 + self.LAB, places=6)                      # the same total as with the customer paying
+        self.assertAlmostEqual(self.rows("C")[("S3", "C")]["total"], s3["total"], places=9)
+        # labeling is zero for A and B, so the payer changes nothing for them
+        self.assertEqual(self.rows("B", payer="Precisely")[("S1", "B")]["precisely"], self.rows("B")[("S1", "B")]["precisely"])
+
+    def test_totals_do_not_depend_on_who_pays_in_s1_and_s2(self):
+        for o in "ABCD":
+            for sc in ("S1", "S2"):
+                self.assertAlmostEqual(self.rows(o, "customer")[(sc, o)]["total"], self.rows(o, "Precisely")[(sc, o)]["total"], places=9)
+
+    def test_n_m_formatting(self):
+        self.assertEqual(M.usd_or_nm(None), "n/m")
+        self.assertEqual(M.usd_or_nm(12.345), "12.35")
+        self.assertEqual(M.NM, "n/m")
 
     def test_every_option_has_every_scenario_and_e_is_not_run(self):
         self.assertEqual(sorted({r["scenario"] for r in M.scenario_rows(self.p, "B", 1000, 100, 2000)}), ["S1", "S2", "S3"])
@@ -157,6 +194,7 @@ class CostTests(unittest.TestCase):
     def test_party_table_covers_every_component(self):
         for sc in M.SCENARIOS:
             self.assertEqual(set(M.PARTY[sc]), set(M.COMPONENTS))
+            self.assertEqual(M.PARTY[sc]["labeling"], "customer")                                   # the default in all three scenarios
         self.assertEqual(M.PARTY["S1"]["llm"], "Precisely")
         self.assertEqual(M.PARTY["S2"]["llm"], "customer")
         self.assertEqual(M.PARTY["S3"]["hosting"], "customer")
@@ -164,7 +202,7 @@ class CostTests(unittest.TestCase):
 
     def test_scenario_total_horizon_is_twelve_months_of_the_total(self):
         self.assertAlmostEqual(M.scenario_total_horizon(self.p, "C", 1000, 100, 2000, "S1"), M.total_horizon(self.p, "C", 1000, 100, 2000), places=6)
-        self.assertAlmostEqual(M.scenario_total_horizon(self.p, "C", 1000, 100, 2000, "S3"), 12 * (0.3344 + 600 + 1000 / 12), places=6)
+        self.assertAlmostEqual(M.scenario_total_horizon(self.p, "C", 1000, 100, 2000, "S3"), 12 * (0.3344 + 600 + 1000 / 12), places=6)   # customer only
 
     def test_option_e_is_not_run(self):
         e = M.monthly(self.p, "E", 1000, 100, 2000)
