@@ -4,6 +4,7 @@ p is in [lo, hi)) routes anything, and where C's band errors lie in p.
 
   python eval/d_study.py prepare --seed 11          # results/dstudy_11: generate, Verity, checks, split, sample, A, C
   python eval/d_study.py report --runs results/dstudy_11 results/dstudy_12 ... [--out results/dstudy_summary]
+  python eval/d_study.py fine [--runs ...]    # finer p bins with C's band FP / FN; lo x hi settings: routed pairs and errors in range
 
 prepare runs the same commands as eval/freeze_run.py stages 1 to 6 (rehearsal settings: sample = every same-entity
 test band pair + 60 non-matches), with no B call. Seed 7919 is refused. The run folder must not hold data.
@@ -172,9 +173,109 @@ def report(runs: list[Path], out: Path) -> int:
     return 0
 
 
+FINE_BINS = [(0.0, 0.001), (0.001, 0.005), (0.005, 0.01), (0.01, 0.05), (0.05, 0.1), (0.1, 0.5), (0.5, 0.9), (0.9, 0.99), (0.99, 1.0), (1.0, None)]
+FINE_LO = (0.005, 0.01, 0.05, 0.1, 0.5)
+FINE_HI = (0.9, 0.99, None)
+DEFAULT_FINE_RUNS = ("dstudy_11", "dstudy_12", "dstudy_13", "rehearsal_42", "rehearsal_2026")
+
+
+def fine_bin(p: float) -> int:
+    if p >= 1.0:
+        return len(FINE_BINS) - 1
+    for i, (lo, hi) in enumerate(FINE_BINS[:-1]):
+        if lo <= p < hi:
+            return i
+    return 0
+
+
+def bin_label(i: int) -> str:
+    lo, hi = FINE_BINS[i]
+    return "p = 1.0" if hi is None else f"[{lo:g}, {hi:g})"
+
+
+def fine_rows(run: Path) -> list[tuple[float, bool]]:
+    """(calibrated p, C's decision is wrong) for every test band pair of the run."""
+    ent = {r["record_id"]: r["true_entity_id"] for r in read(run / "orgs_raw_truth.csv")}
+    out = []
+    for r in read(run / "options" / "c_model" / "c_v1_lgbm" / "decisions.csv"):
+        same = ent[r["record_a"]] == ent[r["record_b"]]
+        out.append((float(r["confidence"]), (r["decision"] == "same") != same, (r["decision"] == "same") and not same))
+    return out
+
+
+def fine(runs: list[Path], out: Path) -> int:
+    data = {r.name: fine_rows(r) for r in runs}
+    names = [r.name for r in runs]
+    L = ["Finer error table: C's calibrated p on the test band (no LLM calls, no rule change). Error = C's band decision against the truth sidecar;",
+         "FP = decided same, different entities; FN = decided different, same entity. Reads each run's C decisions and truth sidecar only.", ""]
+    csv_rows = [["table", "run", "key", "pairs", "fp", "fn"]]
+    L.append("1. Pairs, C band FP and FN by calibrated p")
+    for name in names:
+        rows = data[name]
+        L.append(f"  {name}  ({len(rows):,} test band pairs, {sum(e for _, e, _ in rows)} errors)")
+        L.append(f"    {'p bin':<18}{'pairs':>9}{'FP':>5}{'FN':>5}")
+        for i in range(len(FINE_BINS)):
+            g = [(e, f) for p, e, f in rows if fine_bin(p) == i]
+            fp, fn = sum(f for _, f in g), sum(e and not f for e, f in g)
+            L.append(f"    {bin_label(i):<18}{len(g):>9,}{fp:>5}{fn:>5}")
+            csv_rows.append(["bins", name, bin_label(i), len(g), fp, fn])
+    L += ["", "2. Per seed and setting: pairs routed (lo <= p < hi; hi none = no upper limit), share of the test band, C band errors inside the routed range"]
+    L.append(f"  {'lo':>6} {'hi':>5}  " + "".join(f"{n:>22}" for n in names))
+    L.append(f"  {'':>6} {'':>5}  " + "".join(f"{'routed (share) err':>22}" for _ in names))
+    tot: dict = {}
+    for lo in FINE_LO:
+        for hi in FINE_HI:
+            cells = []
+            for n in names:
+                rows = data[n]
+                routed = [(e, f) for p, e, f in rows if route_of(p, lo, hi) == "llm"]
+                errs = sum(e for e, _ in routed)
+                cells.append(f"{len(routed):>6} ({len(routed) / len(rows):6.2%}) {errs:>3}")
+                t = tot.setdefault((lo, hi), {"routed": 0, "errors": 0, "per_seed_errors": {}})
+                t["routed"] += len(routed)
+                t["errors"] += errs
+                t["per_seed_errors"][n] = errs
+                csv_rows.append(["settings", n, f"lo={lo:g} hi={'none' if hi is None else hi}", len(routed), errs, ""])
+            L.append(f"  {lo:>6g} {'none' if hi is None else hi:>5}  " + "".join(f"{c:>22}" for c in cells))
+    all_err = sum(e for rows in data.values() for _, e, _ in rows)
+    all_pairs = sum(len(rows) for rows in data.values())
+    L += ["", f"3. Totals over the {len(names)} seeds ({all_pairs:,} test band pairs, {all_err} C band errors)",
+          f"  {'lo':>6} {'hi':>5}{'routed':>9}{'share of band':>15}{'errors in range':>17}{'share of all errors':>21}{'errors per routed pair':>25}"]
+    for lo in FINE_LO:
+        for hi in FINE_HI:
+            t = tot[(lo, hi)]
+            L.append(f"  {lo:>6g} {'none' if hi is None else hi:>5}{t['routed']:>9,}{t['routed'] / all_pairs:>15.3%}{t['errors']:>17}{t['errors'] / all_err:>21.1%}"
+                     f"{(t['errors'] / t['routed'] if t['routed'] else 0):>25.4f}")
+            csv_rows.append(["totals", "all", f"lo={lo:g} hi={'none' if hi is None else hi}", t["routed"], t["errors"], ""])
+    best_ratio = max(tot, key=lambda k: tot[k]["errors"] / tot[k]["routed"] if tot[k]["routed"] else 0)
+    best_catch = max(tot, key=lambda k: tot[k]["errors"])
+    fmt = lambda k: f"lo {k[0]:g}, hi {'none' if k[1] is None else k[1]}"
+    br, bc = tot[best_ratio], tot[best_catch]
+    L += ["", "4. Reading (descriptive; no change to the rule is recommended)",
+          f"  Most errors caught per routed pair: {fmt(best_ratio)} with {br['errors']} errors in {br['routed']} routed pairs ({br['errors'] / br['routed']:.4f} per pair).",
+          f"  Most errors caught in total: {fmt(best_catch)} with {bc['errors']} of {all_err} errors ({bc['errors'] / all_err:.1%}) in {bc['routed']:,} routed pairs ({bc['errors'] / bc['routed']:.4f} per pair)."]
+    for hi in FINE_HI:
+        base = tot[(0.5, hi)]["per_seed_errors"]
+        for lo in FINE_LO[:-1]:
+            more = [n for n in names if tot[(lo, hi)]["per_seed_errors"][n] > base[n]]
+            L.append(f"  Lowering lo from 0.5 to {lo:g} (hi {'none' if hi is None else hi}) adds errors in range on {len(more)} of {len(names)} seeds"
+                     + (f": {', '.join(f'{n} +{tot[(lo, hi)]['per_seed_errors'][n] - base[n]}' for n in more)}" if more else "")
+                     + f"; total {tot[(lo, hi)]['errors']} vs {tot[(0.5, hi)]['errors']} at lo 0.5, routed {tot[(lo, hi)]['routed']:,} vs {tot[(0.5, hi)]['routed']:,}.")
+    text = "\n".join(L) + "\n"
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "d_study_fine.txt").write_text(text, encoding="utf-8")
+    with (out / "d_study_fine.csv").open("w", newline="", encoding="utf-8") as f:
+        csv.writer(f).writerows(csv_rows)
+    print(text)
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
+    fp_ = sub.add_parser("fine")
+    fp_.add_argument("--runs", type=Path, nargs="+", default=[REPO / "results" / n for n in DEFAULT_FINE_RUNS])
+    fp_.add_argument("--out", type=Path, default=REPO / "results" / "dstudy_summary")
     p = sub.add_parser("prepare")
     p.add_argument("--seed", type=int, required=True)
     r = sub.add_parser("report")
@@ -184,6 +285,8 @@ def main() -> int:
     if args.cmd == "prepare":
         prepare(args.seed)
         return 0
+    if args.cmd == "fine":
+        return fine(args.runs, args.out)
     return report(args.runs, args.out)
 
 
