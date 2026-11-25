@@ -161,7 +161,12 @@ class OverrideTests(unittest.TestCase):
         self.assertEqual(src.count("results\" / \"llm_cache"), 1)             # the default lives in one place only
 
     def test_cli_estimate_counts_answers_in_the_override_not_in_the_real_cache(self):
-        sample = DEV / "options" / "b_llm" / "test_sample5000.csv"
+        sample = self.tmp / "sample50.csv"                                  # 50 pairs: a small gate, whatever the ledger headroom is
+        with sample.open("w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            w.writerow(B.SAMPLE_COLUMNS)
+            for a_, b_ in sample_pairs(50):
+                w.writerow([a_, b_, "1.0"])
         base = [sys.executable, str(HERE / "b_llm_baseline.py"), str(DEV), "--provider", "openai", "--final-sample", str(sample),
                 "--label", "override_test", "--max-usd", "0.10", "--estimate-only"]
         env = {k: v for k, v in os.environ.items() if k != B.CACHE_DIR_ENV}
