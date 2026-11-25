@@ -1,0 +1,186 @@
+{
+ "pairs": 44882,
+ "omp_num_threads": "1",
+ "host": {
+  "cpu_model": "Intel(R) Core(TM) Ultra 7 265U",
+  "logical_cores": 14,
+  "ram_gb": 31.5,
+  "os": "Windows-11-10.0.26300-SP0",
+  "python": "3.13.16",
+  "torch_threads": 1,
+  "omp_num_threads": "1"
+ },
+ "started": "2026-11-24T19:42:48",
+ "frozen_lo_hi": [
+  0.5,
+  0.9
+ ],
+ "decision_mismatches_C_vs_decisions_csv": 0,
+ "decision_mismatches_D_vs_decisions_fullband_csv": 0,
+ "C": {
+  "repeats": [
+   {
+    "p50_ms": 0.057,
+    "p95_ms": 0.1294,
+    "max_ms": 59.8667,
+    "mean_ms": 0.0758,
+    "pairs": 44882,
+    "total_s": 3.436
+   },
+   {
+    "p50_ms": 0.0508,
+    "p95_ms": 0.1057,
+    "max_ms": 1.9077,
+    "mean_ms": 0.0602,
+    "pairs": 44882,
+    "total_s": 2.727
+   },
+   {
+    "p50_ms": 0.0502,
+    "p95_ms": 0.0835,
+    "max_ms": 0.8791,
+    "mean_ms": 0.0563,
+    "pairs": 44882,
+    "total_s": 2.552
+   }
+  ],
+  "median_of_repeats": {
+   "p50_ms": 0.0508,
+   "p95_ms": 0.1057,
+   "max_ms": 1.9077,
+   "mean_ms": 0.0602
+  }
+ },
+ "D": {
+  "repeats": [
+   {
+    "p50_ms": 0.0572,
+    "p95_ms": 0.13,
+    "max_ms": 59.8703,
+    "mean_ms": 0.0762,
+    "pairs": 44882,
+    "total_s": 3.436
+   },
+   {
+    "p50_ms": 0.051,
+    "p95_ms": 0.1063,
+    "max_ms": 1.9091,
+    "mean_ms": 0.0605,
+    "pairs": 44882,
+    "total_s": 2.727
+   },
+   {
+    "p50_ms": 0.0505,
+    "p95_ms": 0.0839,
+    "max_ms": 0.8801,
+    "mean_ms": 0.0566,
+    "pairs": 44882,
+    "total_s": 2.552
+   }
+  ],
+  "median_of_repeats": {
+   "p50_ms": 0.051,
+   "p95_ms": 0.1063,
+   "max_ms": 1.9091,
+   "mean_ms": 0.0605
+  }
+ },
+ "routing_step": {
+  "repeats": [
+   {
+    "p50_ms": 0.0003,
+    "p95_ms": 0.0006,
+    "max_ms": 0.1658,
+    "mean_ms": 0.0004,
+    "pairs": 44882
+   },
+   {
+    "p50_ms": 0.0003,
+    "p95_ms": 0.0005,
+    "max_ms": 0.059,
+    "mean_ms": 0.0003,
+    "pairs": 44882
+   },
+   {
+    "p50_ms": 0.0002,
+    "p95_ms": 0.0004,
+    "max_ms": 0.0235,
+    "mean_ms": 0.0003,
+    "pairs": 44882
+   }
+  ],
+  "median_of_repeats": {
+   "p50_ms": 0.0003,
+   "p95_ms": 0.0005,
+   "max_ms": 0.059,
+   "mean_ms": 0.0003
+  }
+ },
+ "single_core_pairs_per_second_C": 16611.3,
+ "single_core_pairs_per_second_D": 16528.9,
+ "parallel": {
+  "processes": 10,
+  "threads_per_process": 1,
+  "pairs": 44882,
+  "wall_s": 0.606,
+  "pairs_per_second_total": 74083.5,
+  "p50_ms_under_load": 0.1101,
+  "p95_ms_under_load": 0.1411,
+  "max_ms_under_load": 71.2705,
+  "mean_ms_under_load": 0.1277,
+  "per_process_p95_ms": [
+   0.1316,
+   0.1365,
+   0.1395,
+   0.1397,
+   0.14,
+   0.1406,
+   0.1418,
+   0.145,
+   0.1453,
+   0.1518
+  ],
+  "worker_wall_s": [
+   0.5,
+   0.57,
+   0.57,
+   0.58,
+   0.59,
+   0.59,
+   0.59,
+   0.59,
+   0.61,
+   0.61
+  ],
+  "decision_mismatches_C": 0,
+  "D": {
+   "pairs_per_second_total": 74083.5,
+   "p50_ms_under_load": 0.1106,
+   "p95_ms_under_load": 0.1417,
+   "max_ms_under_load": 71.2728,
+   "mean_ms_under_load": 0.1282
+  },
+  "reported": "the median pass by pairs per second",
+  "passes": [
+   {
+    "pairs_per_second_total": 73501.0,
+    "wall_s": 0.611,
+    "p95_ms_under_load": 0.1402,
+    "p50_ms_under_load": 0.1101
+   },
+   {
+    "pairs_per_second_total": 74083.5,
+    "wall_s": 0.606,
+    "p95_ms_under_load": 0.1411,
+    "p50_ms_under_load": 0.1101
+   },
+   {
+    "pairs_per_second_total": 74158.1,
+    "wall_s": 0.605,
+    "p95_ms_under_load": 0.1396,
+    "p50_ms_under_load": 0.1101
+   }
+  ],
+  "scaling_vs_one_core": 4.46
+ }
+}

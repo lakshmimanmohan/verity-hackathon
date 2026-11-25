@@ -1,0 +1,160 @@
+{
+ "folder": "dev_2026_timing_1thread_r2",
+ "git_commit": "c90091f526d2ac0ef9d7dfda083e2af9b32c847c",
+ "git_src_uncommitted_changes": false,
+ "model_cache_hit": true,
+ "nn_mode_resolved": "exact",
+ "pythonhashseed": "0",
+ "n_records_in_index": 10000,
+ "host": {
+  "cpu_model": "Intel(R) Core(TM) Ultra 7 265U",
+  "logical_cores": 14,
+  "ram_gb": 31.5,
+  "os": "Windows-11-10.0.26300-SP0",
+  "python": "3.13.16",
+  "torch_threads": 1,
+  "omp_num_threads": "1"
+ },
+ "timings": [
+  {
+   "stage": "verity.startup",
+   "parent": null,
+   "seconds": 7.221601,
+   "items": null,
+   "item": null,
+   "note": "main.py imports, argument parsing, data folder, store check"
+  },
+  {
+   "stage": "verity.rule_learning",
+   "parent": null,
+   "seconds": 9.29691,
+   "items": null,
+   "item": null,
+   "note": "rule_learner subprocess, including its Python start-up"
+  },
+  {
+   "stage": "verity.build_graph",
+   "parent": null,
+   "seconds": 0.973647,
+   "items": null,
+   "item": null,
+   "note": ""
+  },
+  {
+   "stage": "verity.embed.model_load",
+   "parent": "verity.embed",
+   "seconds": 0.521438,
+   "items": null,
+   "item": null,
+   "note": "model all-MiniLM-L6-v2; model_cache_hit=True"
+  },
+  {
+   "stage": "verity.embed.encode",
+   "parent": "verity.embed",
+   "seconds": 112.267195,
+   "items": 34001,
+   "item": "segment",
+   "note": "sentence-transformers encode only, 10000 record(s) embedded"
+  },
+  {
+   "stage": "verity.embed",
+   "parent": null,
+   "seconds": 113.725495,
+   "items": null,
+   "item": null,
+   "note": ""
+  },
+  {
+   "stage": "verity.embed.other",
+   "parent": "verity.embed",
+   "seconds": 0.936862,
+   "items": null,
+   "item": null,
+   "note": "untimed remainder of the parent stage"
+  },
+  {
+   "stage": "verity.neighbors.build",
+   "parent": "verity.match",
+   "seconds": 0.017466,
+   "items": 10000,
+   "item": "record",
+   "note": "sklearn NearestNeighbors fit (cosine, brute)"
+  },
+  {
+   "stage": "verity.neighbors.query",
+   "parent": "verity.match",
+   "seconds": 1.975663,
+   "items": 10000,
+   "item": "record",
+   "note": "kneighbors top-30 + pair set"
+  },
+  {
+   "stage": "verity.score",
+   "parent": "verity.match",
+   "seconds": 35.817624,
+   "items": 216458,
+   "item": "pair",
+   "note": "per pair: field similarity, score, shared keys, evidence; plus the decision pass",
+   "per_item_ms": {
+    "p50": 0.1435,
+    "p95": 0.2427,
+    "max": 318.5994
+   }
+  },
+  {
+   "stage": "verity.write_outputs",
+   "parent": "verity.match",
+   "seconds": 8.030152,
+   "items": 222792,
+   "item": "row",
+   "note": "match_candidates.csv, scored_pairs.csv, scored_pairs_columns.json"
+  },
+  {
+   "stage": "verity.match",
+   "parent": null,
+   "seconds": 47.70348,
+   "items": null,
+   "item": null,
+   "note": ""
+  },
+  {
+   "stage": "verity.match.other",
+   "parent": "verity.match",
+   "seconds": 1.862575,
+   "items": null,
+   "item": null,
+   "note": "untimed remainder of the parent stage"
+  },
+  {
+   "stage": "verity.merge",
+   "parent": null,
+   "seconds": 1.290817,
+   "items": null,
+   "item": null,
+   "note": ""
+  },
+  {
+   "stage": "verity.explore",
+   "parent": null,
+   "seconds": 0.295171,
+   "items": null,
+   "item": null,
+   "note": "match_explorer.html and match_summary.csv"
+  },
+  {
+   "stage": "verity.total",
+   "parent": null,
+   "seconds": 180.525677,
+   "items": null,
+   "item": null,
+   "note": "from main.py import to the end of the run (interpreter start-up excluded)"
+  }
+ ],
+ "timing_summary": {
+  "cold_total_s": 180.526,
+  "warm_total_s": 180.004,
+  "model_load_s": 0.521,
+  "definition": "cold = total; warm = total minus model load"
+ },
+ "started_utc": "2026-11-25T01:34:51Z"
+}

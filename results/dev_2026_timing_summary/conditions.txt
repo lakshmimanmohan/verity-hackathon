@@ -1,0 +1,7 @@
+﻿Conditions at the start of the Verity timing repeats
+time: 2026-11-24 19:26:08 local
+AC status: BatteryStatus 2 (2 = on AC power), charge 100%
+active power plan: 
+Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)
+power mode overlay (AC): ded574b5-45a0-4f42-8737-46345c09c238 = Best performance (ded574b5-45a0-4f42-8737-46345c09c238)
+power settings were not changed; the machine was kept awake by a SetThreadExecutionState holder process during the runs
