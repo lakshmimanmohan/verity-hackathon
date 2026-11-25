@@ -312,7 +312,7 @@ def load_inputs(repo: Path, run: Path, out_rows: list, productization_hours: flo
     p.in_tokens = int(m.group(1).replace(",", "")) / n_calls
     p.out_tokens = int(m.group(3).replace(",", "")) / n_calls
     p.hit_ratio = meta["prompt_cache"]["cached_tokens"] / meta["prompt_cache"]["input_tokens"]
-    src = str(b.relative_to(repo)) if b.is_relative_to(repo) else str(b)
+    src = b.relative_to(repo).as_posix() if b.is_relative_to(repo) else b.as_posix()
     add("B calls in the final run", n_calls, "calls", "measured", f"{src}/run_meta.json")
     add("B input tokens per call", round(p.in_tokens, 1), "tokens", "measured", f"{src}/sample_report.txt")
     add("B output tokens per call", round(p.out_tokens, 2), "tokens", "measured", f"{src}/sample_report.txt")
@@ -388,19 +388,21 @@ def load_inputs(repo: Path, run: Path, out_rows: list, productization_hours: flo
         add("ledger: UNCLASSIFIED spend", round(led["by_class"]["unclassified"], 4), "USD", "measured", "results/llm_ledger.jsonl", "add a rule in classify_ledger_label")
 
     cc = run / "options" / "b_llm" / "openai" / "concurrency" / "concurrency.json"
+    conc = None
     if cc.exists():
-        c = json.loads(cc.read_text(encoding="utf-8"))
+        c = conc = json.loads(cc.read_text(encoding="utf-8"))
         for lv in c["levels"]:
-            add(f"concurrency test, {lv['workers']} workers: calls per minute", lv["calls_per_minute"], "calls per minute", "measured", str(cc.relative_to(repo)),
+            add(f"concurrency test, {lv['workers']} workers: calls per minute", lv["calls_per_minute"], "calls per minute", "measured", cc.relative_to(repo).as_posix(),
                 f"latency p50 {lv['latency_p50_s']} s, p95 {lv['latency_p95_s']} s, max {lv['latency_max_s']} s; hit ratio excl. first calls {lv['hit_ratio_excl_first']}; errors {lv['errors']}; 16 keys, no limiter")
-        add("concurrency test: last clean level", c.get("last_clean_workers"), "workers", "measured", str(cc.relative_to(repo)), c.get("stopped") or "no error at any level")
+        add("concurrency test: last clean level", c.get("last_clean_workers"), "workers", "measured", cc.relative_to(repo).as_posix(), c.get("stopped") or "no error at any level")
 
     add("hosting: always-on price", p.core_hour_always_on, "USD per core-hour", "assumed", "generic cloud list price, replace with a quote")
     add("hosting: serverless price", round(p.core_second_serverless * 3600, 4), "USD per core-hour of use", "assumed", "generic cloud list price, replace with a quote")
     add("hosting: always-on utilisation", p.utilization, "ratio", "assumed", "model parameter")
     for k, v in (("monitoring", p.monitor_hours), ("retraining, per run", p.retrain_hours_per_run), ("retraining runs per month", p.retrains_per_month),
                  ("LLM upkeep (model retirements, prompt re-validation)", p.llm_upkeep_hours), ("option A operations", p.a_ops_hours)):
-        add(f"operations: {k}", v, "hours per month" if "runs" not in k and "per run" not in k else ("runs" if "runs" in k else "hours"), "assumed", "model parameter", "retraining sensitivity: weekly 4.33, monthly 1, quarterly 0.33")
+        add(f"operations: {k}", v, "hours per month" if "runs" not in k and "per run" not in k else ("runs" if "runs" in k else "hours"), "assumed", "model parameter",
+            "sensitivity: weekly 4.33, monthly 1, quarterly 0.33" if "retraining" in k else "")
     for v in VOLUMES:
         add(f"volume {v:,} records per day", v, "records per day", "assumed", "protocol.md")
     add("hourly rates", "50, 100, 200", "USD per hour", "assumed", "your instruction")
@@ -409,7 +411,7 @@ def load_inputs(repo: Path, run: Path, out_rows: list, productization_hours: flo
     add("option E", "not run", "", "measured", "options/e_slm.py has no results", "no numbers are invented")
     lc = list(csv.DictReader((run / "options" / "c_model" / "lc_v2" / "learning_curve.csv").open(encoding="utf-8")))
     f1 = {int(r["n"]): float(r["f1_mean"]) for r in lc}
-    return p, {"log": log, "buckets": buckets, "ledger": led, "lc_f1": f1, "full_f1": 0.9653, "n_band": n_band}
+    return p, {"log": log, "buckets": buckets, "ledger": led, "lc_f1": f1, "full_f1": 0.9653, "n_band": n_band, "conc": conc}
 
 
 # ---------------------------------------------------------------------------------------------- outputs
@@ -508,6 +510,21 @@ def main() -> int:
     say(f"\nThroughput: B at 100K records/day needs {calls_per_day(p, 'B', 100_000):,.0f} calls a day = {cpm:,.0f} calls per minute "
         f"({cpm / 60:.1f} per second; about {cpm / 60 * 0.95:.0f} requests in flight at the measured p50 latency of 0.95 s). "
         f"1M and 10M records/day need 10x and 100x that. D needs {calls_per_day(p, 'D', 10_000_000) / 1440:,.0f} calls per minute at 10M records/day.")
+
+    conc = ctx["conc"]
+    if conc:
+        clean = [lv for lv in conc["levels"] if lv["workers"] == conc["last_clean_workers"]]
+        say("\nMeasured concurrency (16 cache keys, per-key limiter off, 100 calls per level, Balanced power plan, on AC):")
+        for lv in conc["levels"]:
+            say(f"  {lv['workers']:>2} workers: {lv['calls_per_minute']:>6.1f} calls per minute, latency p50 {lv['latency_p50_s']} s, p95 {lv['latency_p95_s']} s, "
+                f"max {lv['latency_max_s']} s, hit ratio excluding first calls {lv['hit_ratio_excl_first']}, errors {lv['errors']}")
+        if clean:
+            top = clean[0]
+            need = calls_per_day(p, "B", 100_000) / 1440
+            say(f"  Highest clean level: {top['workers']} workers = {top['calls_per_minute']:.0f} calls per minute (no 429 or other error at any level; the SDK retries "
+                f"a 429 twice before it would show). B at 100K records/day needs {need:,.0f} calls per minute, {need / top['calls_per_minute']:.1f}x that; at the "
+                f"measured near-linear scaling (about {top['calls_per_minute'] / top['workers']:.0f} calls per minute per worker) that is about {need / (top['calls_per_minute'] / top['workers']):.0f} "
+                f"workers, UNTESTED above {top['workers']}. 1M and 10M records/day need 10x and 100x more and would need a higher rate limit from the provider (not measured).")
 
     # break-even
     be_rows, be_text = [], []
