@@ -1,21 +1,14 @@
 # DRAFT: effort log incomplete, one-time costs for B and D undercounted
 kind,item,hours,usd_at_50_per_hour,usd_at_100_per_hour,usd_at_200_per_hour
-effort-log hours,bucket A,1,50.00,100.00,200.00
-effort-log hours,bucket B,3.75,187.50,375.00,750.00
-effort-log hours,bucket C,1.5,75.00,150.00,300.00
-effort-log hours,bucket D,0.5,25.00,50.00,100.00
-effort-log hours,bucket eval,6.5,325.00,650.00,1300.00
-effort-log hours,bucket verity,4,200.00,400.00,800.00
-effort-log hours,total,17.25,862.50,1725.00,3450.00
-API spend (ledger),cache_diagnostic (B development),,0.0868,0.0868,0.0868
-API spend (ledger),cache_diagnostic_r2 (B development),,0.0213,0.0213,0.0213
-API spend (ledger),cache_diagnostic_r3 (B development),,0.0065,0.0065,0.0065
-API spend (ledger),concurrency (B development),,0.4976,0.4976,0.4976
-API spend (ledger),decoycheck (evaluation),,0.1168,0.1168,0.1168
-API spend (ledger),dfull (evaluation),,0.0316,0.0316,0.0316
-API spend (ledger),sample5000 (evaluation),,7.6220,7.6220,7.6220
-API spend (ledger),smoke5 (B development),,0.0241,0.0241,0.0241
-API spend (ledger),tune1 (B development),,1.5304,1.5304,1.5304
-API spend (ledger),tune2 (B development),,1.5454,1.5454,1.5454
-API spend (ledger),total,,11.4825,11.4825,11.4825
-total,hours x rate + API spend,,873.98,1736.48,3461.48
+effort-log hours (evidence),bucket B,2.25,112.50,225.00,450.00
+effort-log hours (evidence),bucket C,1,50.00,100.00,200.00
+effort-log hours (evidence),bucket eval,6.5,325.00,650.00,1300.00
+effort-log hours (evidence),bucket verity,0.5,25.00,50.00,100.00
+effort-log hours (evidence),total,10.25,512.50,1025.00,2050.00
+"API spend (ledger, evaluation)",decoycheck,,0.1168,0.1168,0.1168
+"API spend (ledger, evaluation)",dfull,,0.0316,0.0316,0.0316
+"API spend (ledger, evaluation)",sample5000,,7.6220,7.6220,7.6220
+"API spend (ledger, evaluation)",total,,7.7704,7.7704,7.7704
+total,evidence hours x rate + evaluation API spend,,520.27,1032.77,2057.77
+charged to options (reference),production-needed hours,7,350.00,700.00,1400.00
+charged to options (reference),B development API spend (ledger),,3.7121,3.7121,3.7121
