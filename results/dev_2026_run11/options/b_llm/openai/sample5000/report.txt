@@ -1,0 +1,22 @@
+Option B openai / gpt-5.4-2026-03-05 (max_output_tokens=64;reasoning_effort=none): 5000 TEST band sample pairs (test_sample5000.csv)
+calls 4993, cache hits 0, spent $7.6226, pending 0, refusals 0, models reported {'gpt-5.4-2026-03-05': 4993}
+prefix-length check: system prompt 6,684 characters (appendix 885 characters, sha256 857de291325e); predicted shared prefix 1910 tokens, inside the target 1900 to 1950
+first live call: input_tokens 2097, cached 0, pair about 132 tokens: observed shared prefix 1965 (outside)
+hit ratio after 500 calls: overall 0.842 (885,248 / 1,051,483 input tokens); excluding each key's first call 0.849 (492 calls); cost so far $0.7794; 94.9 calls per minute
+hit ratio after 1000 calls: overall 0.847 (1,781,248 / 2,103,022 input tokens); excluding each key's first call 0.850 (992 calls); cost so far $1.5347; 95.1 calls per minute
+hit ratio after 1500 calls: overall 0.849 (2,677,248 / 3,154,487 input tokens); excluding each key's first call 0.851 (1492 calls); cost so far $2.2899; 95.1 calls per minute
+hit ratio after 2000 calls: overall 0.849 (3,571,456 / 4,206,082 input tokens); excluding each key's first call 0.851 (1992 calls); cost so far $3.0494; 95.0 calls per minute
+hit ratio after 2500 calls: overall 0.846 (4,447,744 / 5,257,494 input tokens); excluding each key's first call 0.847 (2492 calls); cost so far $3.8488; 95.1 calls per minute
+hit ratio after 3000 calls: overall 0.847 (5,343,744 / 6,308,891 input tokens); excluding each key's first call 0.848 (2992 calls); cost so far $4.6038; 95.2 calls per minute
+hit ratio after 3500 calls: overall 0.848 (6,239,744 / 7,360,294 input tokens); excluding each key's first call 0.849 (3492 calls); cost so far $5.3588; 95.0 calls per minute
+hit ratio after 4000 calls: overall 0.848 (7,135,744 / 8,411,855 input tokens); excluding each key's first call 0.849 (3992 calls); cost so far $6.1142; 95.1 calls per minute
+hit ratio after 4500 calls: overall 0.848 (8,028,160 / 9,463,310 input tokens); excluding each key's first call 0.849 (4492 calls); cost so far $6.8774; 95.1 calls per minute
+final hit ratio after 4993 calls: overall 0.849 (8,911,616 / 10,500,304 input tokens); excluding each key's first call 0.849 (4985 calls)
+api errors 0, unusable answers 0; prompt-cache keys 8, 12 requests per minute per key, 2 workers
+latency per call: p50 0.95s, p95 1.20s, max 11.90s
+gate: cost gate: 4,993 pairs to call x $0.001545 (pilot cost per call) x 1.3 = $10.03; ledger total $3.2145, remaining under the $45 cap $41.79; platform limit $30 - ledger total = $26.79 -> PASS
+power: ac
+started utc: 2026-11-24T23:47:21Z
+ended utc: 2026-11-25T00:39:53Z
+run time minutes: 52.53
+decisions: results\dev_2026_run11\options\b_llm\openai\sample5000\decisions.csv

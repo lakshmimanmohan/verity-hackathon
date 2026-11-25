@@ -1,0 +1,110 @@
+{
+ "provider": "openai",
+ "requested_model": "gpt-5.4-2026-03-05",
+ "models_reported": {
+  "gpt-5.4-2026-03-05": 4993
+ },
+ "settings": "max_output_tokens=64;reasoning_effort=none",
+ "system_prompt_sha256": "857de291325e9b49d7878eb34d180c180e716c99da5a96b60a5aaf747fd5ac94",
+ "answer_settings": {
+  "max_output_tokens": 64,
+  "reasoning_effort": "none"
+ },
+ "mode": "live",
+ "pairs": 5000,
+ "distinct_prompts": 4993,
+ "cache_hits": 0,
+ "calls": 4993,
+ "spent_usd": 7.622629,
+ "pending": 0,
+ "stopped": null,
+ "refusals": 0,
+ "api_errors": 0,
+ "unusable_answers": 0,
+ "prefix_check": {
+  "predicted_tokens": 1910,
+  "predicted_status": "ok",
+  "first_call": {
+   "input_tokens": 2097,
+   "cached_tokens": 0,
+   "pair_tokens_estimate": 132,
+   "observed_prefix_tokens": 1965,
+   "status": "outside"
+  }
+ },
+ "prompt_cache_keys": 8,
+ "key_rpm": 12.0,
+ "concurrency": 2,
+ "prompt_cache": {
+  "calls": 4993,
+  "input_tokens": 10500304,
+  "cached_tokens": 8911616,
+  "hit_ratio": 0.8487007614255739,
+  "calls_excl_first_per_key": 4985,
+  "input_tokens_excl_first": 10483496,
+  "cached_tokens_excl_first": 8904448,
+  "hit_ratio_excl_first": 0.8493777266667532,
+  "keys_used": 8,
+  "per_key": {
+   "0": {
+    "calls": 623,
+    "input_tokens": 1310367,
+    "cached_tokens": 1111040
+   },
+   "1": {
+    "calls": 625,
+    "input_tokens": 1314570,
+    "cached_tokens": 1114624
+   },
+   "2": {
+    "calls": 624,
+    "input_tokens": 1312138,
+    "cached_tokens": 1114624
+   },
+   "3": {
+    "calls": 625,
+    "input_tokens": 1314193,
+    "cached_tokens": 1112832
+   },
+   "4": {
+    "calls": 623,
+    "input_tokens": 1310078,
+    "cached_tokens": 1111040
+   },
+   "5": {
+    "calls": 624,
+    "input_tokens": 1312163,
+    "cached_tokens": 1116416
+   },
+   "6": {
+    "calls": 624,
+    "input_tokens": 1312336,
+    "cached_tokens": 1114624
+   },
+   "7": {
+    "calls": 625,
+    "input_tokens": 1314459,
+    "cached_tokens": 1116416
+   }
+  }
+ },
+ "hit_log": [
+  "hit ratio after 500 calls: overall 0.842 (885,248 / 1,051,483 input tokens); excluding each key's first call 0.849 (492 calls); cost so far $0.7794; 94.9 calls per minute",
+  "hit ratio after 1000 calls: overall 0.847 (1,781,248 / 2,103,022 input tokens); excluding each key's first call 0.850 (992 calls); cost so far $1.5347; 95.1 calls per minute",
+  "hit ratio after 1500 calls: overall 0.849 (2,677,248 / 3,154,487 input tokens); excluding each key's first call 0.851 (1492 calls); cost so far $2.2899; 95.1 calls per minute",
+  "hit ratio after 2000 calls: overall 0.849 (3,571,456 / 4,206,082 input tokens); excluding each key's first call 0.851 (1992 calls); cost so far $3.0494; 95.0 calls per minute",
+  "hit ratio after 2500 calls: overall 0.846 (4,447,744 / 5,257,494 input tokens); excluding each key's first call 0.847 (2492 calls); cost so far $3.8488; 95.1 calls per minute",
+  "hit ratio after 3000 calls: overall 0.847 (5,343,744 / 6,308,891 input tokens); excluding each key's first call 0.848 (2992 calls); cost so far $4.6038; 95.2 calls per minute",
+  "hit ratio after 3500 calls: overall 0.848 (6,239,744 / 7,360,294 input tokens); excluding each key's first call 0.849 (3492 calls); cost so far $5.3588; 95.0 calls per minute",
+  "hit ratio after 4000 calls: overall 0.848 (7,135,744 / 8,411,855 input tokens); excluding each key's first call 0.849 (3992 calls); cost so far $6.1142; 95.1 calls per minute",
+  "hit ratio after 4500 calls: overall 0.848 (8,028,160 / 9,463,310 input tokens); excluding each key's first call 0.849 (4492 calls); cost so far $6.8774; 95.1 calls per minute"
+ ],
+ "final_sample": "results\\dev_2026_run11\\options\\b_llm\\test_sample5000.csv",
+ "frozen_prompt": "results\\dev_2026_run11\\options\\b_llm\\frozen_prompt.json",
+ "gate": "cost gate: 4,993 pairs to call x $0.001545 (pilot cost per call) x 1.3 = $10.03; ledger total $3.2145, remaining under the $45 cap $41.79; platform limit $30 - ledger total = $26.79 -> PASS",
+ "power": "ac",
+ "started_utc": "2026-11-24T23:47:21Z",
+ "ended_utc": "2026-11-25T00:39:53Z",
+ "run_time_minutes": 52.53,
+ "test_pairs": 5000
+}

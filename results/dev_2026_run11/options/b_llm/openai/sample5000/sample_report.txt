@@ -1,0 +1,51 @@
+Option B final run sample5000 on test_sample5000.csv: 5000 sampled test band pairs (340 same, 4660 different; weights sum to 44,882.0 = 340 same + 44,542 different in the test band)
+errors among the sampled pairs: 2 false non-matches, 0 false matches
+  zero-error bounds (exact one-sided 95% Clopper-Pearson; the bootstrap interval is degenerate when an error count is 0):
+    false matches: 0 of 4,660 false pairs; false-match rate <= 0.00064 (up to 29 false matches on 44,542 false pairs)
+    implied worst case on a band of 340 true and 44,542 false pairs: precision >= 0.9219, recall = 0.9941, F1 >= 0.9567
+
+False negatives (same organization, decided different): 2, all shown
+  R26d9e258da | R7d9b66f0ab   decision different, p_same 0.22, weight 1.0000, tags acronym+standard+typo_address
+      address_line     1636 Oak Ln.                                 | 1366 Oak Lane Suite 100
+      city             Albany                                       | Albany
+      company_name     R.B.E.S. Inc                                 | Rivera & Brooks Environmental Services Inc
+      phone            (233) 427-1421                               | 2334271421
+      postal_code      12280                                        | 12280-6981
+      state            NY                                           | NY
+      website          riverabrooks.com                             | (missing)
+  Ra4031214fc | Rd26638834d   decision different, p_same 0.35, weight 1.0000, tags po_box+typo
+      address_line     Post Office Box 6145                         | P.O. Box 64455
+      city             Atlanta                                      | Atlanta
+      company_name     Northgate Pinecrest Construction Company     | Nortthgate Pinecrest Construction Co
+      phone            (missing)                                    | (644) 276-8332
+      postal_code      30367                                        | 30367
+      state            GA                                           | GA
+      website          northgatepinecrest.com                       | (missing)
+
+False positives (different organizations, decided same): 0, all shown
+
+Errors by tag (a pair counts under every hard tag either record carries); weighted = estimate for the test band
+  tag           pairs  same  diff   FN   FP   recall (w)   false-match rate (w)   FP-rate bound
+  acronym         566   145   421    1    0       0.9931                0.00000   <= 0.0071
+  truncation      675    51   624    0    0       1.0000                0.00000   <= 0.0048
+  po_box          591   197   394    1    0       0.9949                0.00000   <= 0.0076
+  decoy             4     0     4    0    0            -                0.00000   <= 0.5271
+  easy            820    10   810    0    0       1.0000                0.00000   <= 0.0037
+  no tag         2489     0  2489    0    0            -                0.00000   <= 0.0012
+
+p_same in 5 bins against truth (sample counts; weighted counts estimate the test band)
+  bin           pairs  same  decided same  weighted pairs  weighted frac same
+  [0.0, 0.2)     4660     0             0        44,542.0              0.0000
+  [0.2, 0.4)        2     2             0             2.0              1.0000
+  [0.4, 0.6)        0     0             0             0.0              0.0000
+  [0.6, 0.8)        2     2             2             2.0              1.0000
+  [0.8, 1.0]      336   336           336           336.0              1.0000
+  inconsistent answers (decision against p_same at 0.5): 0 of 5000
+
+Run (calls.jsonl, run_meta.json)
+  calls 4993 (log lines), cache hits 0, pairs 5000, distinct prompts 4993; models reported {'gpt-5.4-2026-03-05': 4993}
+  tokens: input 10,500,304, cached 8,911,616, output 94,867; hit ratio overall 0.849, excluding each key's first call 0.849 (8 keys)
+  cost: total $7.6220, per call $0.001527
+  latency per call: p50 0.95 s, p95 1.20 s, max 11.90 s
+  refusals 0, parse failures 0, API errors 0 (error lines 0), stopped None
+  run time 52.53 minutes (2026-11-24T23:47:21Z to 2026-11-25T00:39:53Z)
