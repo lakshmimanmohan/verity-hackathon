@@ -80,11 +80,11 @@ class Fixture(unittest.TestCase):
         self.w(o + "c_model/c_v1_lgbm/score_report.txt", report("C", "0.8100", "0.7100", "0.9100", "0.9100", "0.7600", "0.9700", "0.5500", ece="0.0200", dp="30", dw="2", dpct="6.67"))
         self.w(o + "d_hybrid/score_report_fullband.txt", report("D", "0.8900", "0.8100", "0.9600", "0.9200", "0.8800", "0.9800", "0.5900", ece="0.0300"))
         self.w(o + "d_hybrid/score_report_fullband_original.txt", report("Do", "0.8300", "0.7600", "0.9100", "0.9100", "0.8100", "0.9700", "0.5600", ece="0.0250"))
-        bh = ["option", "basis", "band_f1", "f1_diff_vs_B", "f1_diff_lo", "f1_diff_hi", "f1_bar", "meets_every_bar"]
-        self.wcsv("bars_table.csv", bh, [["A", "x", 0.11, -0.8, -0.9, -0.7, "fail", "no"], ["B", "x", 0.9, "", "", "", "reference (B is the baseline)", "yes"],
-                                          ["C", "x", 0.81, -0.1, -0.2, 0.01, "inconclusive (straddles)", "not shown (inconclusive)"],
-                                          ["D", "x", 0.89, -0.02, -0.05, 0.01, "pass (lower end above)", "yes"],
-                                          ["D (orig)", "x", 0.83, -0.07, -0.1, 0.0, "inconclusive (straddles)", "not shown (inconclusive)"]], banner=False)
+        bh = ["option", "basis", "band_f1", "f1_diff_vs_B", "f1_diff_lo", "f1_diff_hi", "f1_bar", "llm_share", "meets_every_bar"]
+        self.wcsv("bars_table.csv", bh, [["A", "x", 0.11, -0.8, -0.9, -0.7, "fail", "", "no"], ["B", "x", 0.9, "", "", "", "reference (B is the baseline)", "", "yes"],
+                                          ["C", "x", 0.81, -0.1, -0.2, 0.01, "inconclusive (straddles)", "", "not shown (inconclusive)"],
+                                          ["D", "x", 0.89, -0.02, -0.05, 0.01, "pass (lower end above)", 0.01, "yes"],
+                                          ["D (orig)", "x", 0.83, -0.07, -0.1, 0.0, "inconclusive (straddles)", 0.001, "not shown (inconclusive)"]], banner=False)
         rh = ["option", "llm_usd_per_1000_band_pairs"]
         self.wcsv("results_table.csv", rh, [["A", "0.0000"], ["B", "2.0000"], ["C", "0.0000"], ["D", "0.0200"], ["D (orig)", "0.0010"]], banner=False)
         ch = ["labels_for_C_and_D", "hourly_rate_usd", "records_per_day", "option", "option_row", "scenario", "precisely_usd_month", "customer_usd_month", "total_usd_month",
@@ -144,7 +144,7 @@ class CellTests(Fixture):
         self.assertEqual(self.T.get("D", "F1 verdict"), "pass")
         self.assertEqual(self.T.get("C", "F1 verdict"), "inconclusive")
         self.assertEqual(self.T.get("B", "F1 vs B [95% CI]"), "baseline")
-        self.assertEqual(self.T.get("D", "meets every bar"), "yes")
+        self.assertEqual(self.T.get("D", H.EVERY_SAMPLE), "yes")
         self.assertEqual(self.T.cells[("D", "band F1 [95% CI]")][1], "results/eval_7919/options/d_hybrid/score_report_sample5000.txt")
         self.assertEqual(self.T.cells[("D (orig)", "band F1 [95% CI]")][1], "results/eval_7919/options/d_hybrid/score_report_sample5000_original.txt")
 
@@ -165,7 +165,7 @@ class CellTests(Fixture):
             txt = self.T.get("D (orig)", col)
             self.assertTrue(txt.startswith("missing (expected source: cost/cost_model.csv"), txt)
         self.assertEqual(self.T.get("D (orig)", "monthly $ at 1M records/day (Precisely / customer / total)"), "missing / missing / 555.50 (total only)")
-        self.assertTrue(self.T.get("A", "latency per pair (p50, p95)").startswith("missing (expected source: options/latency/latency_summary.json"))
+        self.assertEqual(self.T.get("A", "latency per pair (p50, p95)"), "not measured (threshold comparison)")
         self.assertTrue(self.T.get("D (orig)", "break-even vs B at $100/h, labels as evaluated").startswith("missing (expected source: cost/break_even.csv"))
 
     def test_latency_and_break_even(self):
@@ -178,7 +178,9 @@ class CellTests(Fixture):
 
     def test_full_band_table_uses_the_full_band_reports_and_has_no_b_row(self):
         full = self.res["full"]
-        self.assertEqual([o for o in H.OPTS if (o, "band F1 [95% CI]") in full.cells], ["A", "C", "D", "D (orig)"])
+        self.assertEqual(H.full_rows(full), ["A", "C", "D"])                               # D (orig) is in the secondary table
+        self.assertEqual(H.full_rows(full, H.OPTS), ["A", "C", "D", "D (orig)"])
+        self.assertEqual(full.get("D (orig)", "band F1 [95% CI]"), "0.8300 [0.7600, 0.9100]")
         self.assertEqual(full.get("D", "band F1 [95% CI]"), "0.8900 [0.8100, 0.9600]")
         self.assertEqual(full.cells[("C", "band recall")][1], "results/eval_7919/options/c_model/c_v1_lgbm/score_report.txt")
 
@@ -191,11 +193,103 @@ class CellTests(Fixture):
 
     def test_slides_numbers(self):
         S = self.res["slides"]
-        self.assertEqual(S["effort_log_sha256"], "ab" * 32)
+        self.assertEqual(S["effort_log_sha256_frozen_run"], "ab" * 32)
         self.assertEqual(S["draft_banner"], "DRAFT: test banner")
         self.assertEqual(S["label_cost"][("C", "as evaluated")], ("500", "2.5", "125/250/500"))
         self.assertEqual(S["build"], [("C", "100.0", "18000", "18450", "1000", "33015.5")])
         self.assertEqual([r for r in S["who_pays"] if r[1] == "S3"][0][2], "n/m")
+
+
+class BarsAndBasesTests(Fixture):
+    """The two 'meets every bar' columns, the bases text, the secondary table and --cost-dir."""
+
+    def setUp(self):
+        super().setUp()
+        H.REPO_BACKUP, H.REPO = H.REPO, self.root
+
+    def tearDown(self):
+        H.REPO = H.REPO_BACKUP
+        super().tearDown()
+
+    def build(self, cost_dir=None):
+        R = H.Reader([self.run, self.freeze])
+        return H.build(self.run, self.freeze, R, cost_dir), R
+
+    def test_both_columns_by_the_protocol_rules_hand_computed(self):
+        res, _ = self.build()
+        T = res["T"]
+        # sample basis (fixture): A recall 0.5000. B p 0.98 r 0.60 -> yes. C p 0.9700 < 0.98 -> fail -> no. D p 0.98, r 0.59 >= 0.55, ECE 0.03, share 0.01, F1 pass -> yes
+        self.assertEqual([T.get(o, H.EVERY_SAMPLE) for o in H.MAIN], ["no", "yes", "no", "yes"])
+        self.assertEqual([T.get(o, H.EVERY_FULL) for o in H.MAIN], ["no", "n/a (B exists only on the sample)", "no", "yes"])
+        self.assertEqual(T.get("D (orig)", H.EVERY_FULL), "not computed (column is for A, C and D only)")
+        self.assertEqual(res["bar_notes"], [])                                            # the two columns agree
+
+    def test_a_note_names_the_bar_and_both_values_when_the_columns_differ(self):
+        self.w("options/d_hybrid/score_report_fullband.txt", report("D", "0.8900", "0.8100", "0.9600", "0.9200", "0.8800", "0.9700", "0.5900", ece="0.0300"))
+        res, _ = self.build()
+        T = res["T"]
+        self.assertEqual(T.get("D", H.EVERY_SAMPLE), "yes")
+        self.assertEqual(T.get("D", H.EVERY_FULL), "no")
+        self.assertEqual(len(res["bar_notes"]), 1)
+        note = res["bar_notes"][0]
+        self.assertIn("D: bar 'overall precision >= 0.98'", note)
+        self.assertIn("sample basis 0.9800 (pass)", note)
+        self.assertIn("full-band basis 0.9700 (fail)", note)
+        H.write_outputs(res, self.out)
+        self.assertIn("Where the two columns differ:", (self.out / "head_to_head.md").read_text(encoding="utf-8"))
+
+    def test_the_rules_function_directly(self):
+        self.assertEqual(H.bar_verdicts("D", 0.99, 0.60, 0.50, 0.04, "pass", None, 0.30)[0], "no")             # LLM share 30% > 20%
+        self.assertEqual(H.bar_verdicts("D", 0.99, 0.549, 0.50, 0.04, "pass", None, 0.01)[0], "no")           # recall 0.549 < 0.50 + 0.05
+        self.assertEqual(H.bar_verdicts("D", 0.99, 0.55, 0.50, 0.04, "pass", None, 0.01)[0], "yes")           # exactly A + 0.05 passes
+        self.assertEqual(H.bar_verdicts("C", 0.99, 0.60, 0.50, 0.04, "pass", 25.0, None)[0], "no")           # latency p95 25 ms > 20 ms
+        self.assertEqual(H.bar_verdicts("C", 0.99, 0.60, 0.50, 0.04, "inconclusive", 0.3, None)[0], "not shown (inconclusive)")
+        self.assertEqual(H.bar_verdicts("A", 1.0, 0.5, 0.5, None, "pass", None, None)[0], "no")
+
+    def test_bases_text_and_secondary_table_in_the_markdown(self):
+        res, _ = self.build()
+        H.write_outputs(res, self.out)
+        md = (self.out / "head_to_head.md").read_text(encoding="utf-8")
+        self.assertIn(H.BARS_TEXT, md)
+        self.assertEqual(H.BARS_TEXT, "Quality columns (band F1 and its interval, band precision and recall, overall precision and recall, ECE, F1 versus B) are on the fixed "
+                                      "5,000-pair sample. Cost, break-even and latency columns come from the cost model and benchmarks and are not sample figures.")
+        main, secondary = md.split("## Secondary row: D (orig)")
+        self.assertNotIn("| D (orig) |", main.split("## Table 2")[0])                      # not a row of Table 1
+        self.assertIn("missing (expected source: cost/break_even.csv (no row for D (orig)))", secondary)
+        self.assertIn("meets every bar (sample basis)", md)
+        self.assertIn("meets every bar (full-band basis, A, C and D only)", md)
+        self.assertNotIn("**DRAFT", md.split("## Cost numbers")[0])
+
+    def test_cost_dir_selects_the_cost_outputs_and_the_default_is_the_stage_12_folder(self):
+        final = self.run / "cost_final"
+        for name in ("cost_model.csv", "options_vs_bars.csv", "break_even.csv", "assumptions.csv", "one_time_cost.csv", "summary.txt"):
+            (final / name).parent.mkdir(exist_ok=True)
+            text = (self.run / "cost" / name).read_text(encoding="utf-8")
+            if name == "one_time_cost.csv":
+                text = text.replace("18450", "19999")
+            if name == "summary.txt":
+                text = text.replace("DRAFT: test banner", "Effort log: 36 rows with hours")
+            (final / name).write_text(text, encoding="utf-8")
+        res_default, _ = self.build()
+        res_final, _ = self.build(final)
+        self.assertEqual(res_default["slides"]["build"][0][3], "18450")
+        self.assertEqual(res_final["slides"]["build"][0][3], "19999")
+        self.assertEqual(res_final["slides"]["cost_dir"], "results/eval_7919/cost_final")
+        self.assertEqual(res_default["slides"]["cost_dir"], "results/eval_7919/cost")
+        self.assertTrue(res_default["slides"]["draft_banner"].startswith("DRAFT"))
+        self.assertFalse(res_final["slides"]["draft_banner"].startswith("DRAFT"))
+        H.write_outputs(res_final, self.out)
+        self.assertIn("No DRAFT banner", (self.out / "head_to_head.md").read_text(encoding="utf-8"))
+        # the cost dir must lie under the run: anything else is refused
+        with self.assertRaises(SystemExit):
+            H.Reader([self.run, self.freeze]).path(self.root / "elsewhere")
+
+    def test_hand_check_files_are_never_read(self):
+        (self.run / "hand_check").mkdir()
+        (self.run / "hand_check" / "hand_check_key.csv").write_text("secret", encoding="utf-8")
+        R = H.Reader([self.run, self.freeze])
+        with self.assertRaises(SystemExit):
+            R.text(self.run / "hand_check" / "hand_check_key.csv")
 
 
 class ReadingRulesAndOutputs(Fixture):
@@ -249,7 +343,8 @@ class ReadingRulesAndOutputs(Fixture):
         with (self.out / "head_to_head.csv").open(newline="", encoding="utf-8") as f:
             rows = list(csv.reader(f))
         self.assertEqual(rows[0][0], "option")
-        self.assertEqual([r[0] for r in rows[1:6]], ["A", "B", "C", "D", "D (orig)"])
+        self.assertEqual([r[0] for r in rows[1:5]], ["A", "B", "C", "D"])                  # D (orig) is a secondary row below
+        self.assertIn(["# secondary row"], rows)
 
 
 if __name__ == "__main__":

@@ -1,14 +1,18 @@
 """
-Head-to-head table of options A, B, C, D and D (orig) from the frozen outputs of the freeze run. Read-only: it reads only files under
-results/eval_7919 and results/freeze_<date> (anything else is refused) and writes head_to_head.csv, head_to_head.md and
-head_to_head_sources.csv into results/eval_7919/head_to_head/. Every cell is read from a file (or derived by plain arithmetic from cells
-read from files, and marked as derived); a figure the frozen outputs do not hold prints "missing" with its expected source. Nothing is
-invented, nothing is rerun, no truth file and no data file is opened.
+Head-to-head table of options A, B, C, D and the secondary row D (orig) from the frozen outputs of the freeze run. Read-only: it reads
+only files under results/eval_7919 and results/freeze_<date> (anything else is refused) and writes head_to_head.csv, head_to_head.md
+and head_to_head_sources.csv into --out-dir (default results/eval_7919/head_to_head/). Every cell is read from a file (or derived by plain
+arithmetic from cells read from files, and marked as derived); a figure the frozen outputs do not hold prints "missing" with its expected
+source. Nothing is invented, nothing is rerun, no truth file and no data file is opened.
 
   python eval/head_to_head.py [--run results/eval_7919] [--freeze results/freeze_2026-11-25]
+                              [--cost-dir results/eval_7919/cost] [--out-dir results/eval_7919/head_to_head]
 
-Bases (printed in the output): the main table is on the 5,000-pair sample basis (weighted estimates; B exists only there). The second
-table is the full band (exact for A, C, D, D (orig)) and is not comparable with B's sample figures.
+--cost-dir is the folder of the cost model outputs to read (default: the freeze run's stage 12 outputs, <run>/cost; for example
+results/eval_7919/cost_final for the rerun with the complete effort log). It must lie under the run folder.
+
+Bases: the quality columns are on the fixed 5,000-pair sample; cost, break-even and latency columns come from the cost model and
+benchmarks and are not sample figures. The full-band table is exact for A, C and D and is not comparable with B's sample figures.
 """
 
 from __future__ import annotations
@@ -22,9 +26,18 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 OPTS = ("A", "B", "C", "D", "D (orig)")
+MAIN = ("A", "B", "C", "D")
+SECONDARY = "D (orig)"
 RATES = ("50.0", "100.0", "200.0")
 VOLUMES = (("100000", "100K"), ("1000000", "1M"), ("10000000", "10M"))
-BASE_RATE, BASE_LABELS_KEY = "100.0", "as evaluated"
+BASE_RATE = "100.0"
+BARS_TEXT = ("Quality columns (band F1 and its interval, band precision and recall, overall precision and recall, ECE, F1 versus B) are on the "
+             "fixed 5,000-pair sample. Cost, break-even and latency columns come from the cost model and benchmarks and are not sample figures.")
+EVERY_SAMPLE = "meets every bar (sample basis)"
+EVERY_FULL = "meets every bar (full-band basis, A, C and D only)"
+
+# the protocol's bars (protocol.md), applied as in cost/cost_model.py bars_row
+BAR_PRECISION, BAR_RECALL_OVER_A, BAR_ECE, BAR_LATENCY_C_P95_MS, BAR_LLM_SHARE = 0.98, 0.05, 0.05, 20.0, 0.20
 
 
 class Reader:
@@ -42,8 +55,8 @@ class Reader:
 
     def text(self, p: Path) -> str:
         q = self.path(p)
-        if q.name.startswith("orgs_raw") or "truth" in q.name:
-            raise SystemExit(f"refusing to read {q.name}: data and truth files are never read here")
+        if q.name.startswith("orgs_raw") or "truth" in q.name or q.name.startswith("hand_check") or "hand_check" in q.parts:
+            raise SystemExit(f"refusing to read {q.name}: data, truth and hand-check files are never read here")
         self.read.append(q)
         return q.read_text(encoding="utf-8")
 
@@ -104,9 +117,42 @@ def fmt_money(x: str) -> str:
         return str(x)
 
 
+# ---------------------------------------------------------------------------------------------- the protocol bars
+
+def bar_verdicts(opt: str, overall_p: float, overall_r: float, a_recall: float, ece: float | None, f1_verdict: str,
+                 latency_p95_ms: float | None, llm_share: float | None) -> tuple[str, dict]:
+    """The verdict per bar and whether every bar is met, by the protocol rules (the same rules as cost/cost_model.py bars_row).
+    Returns (meets every bar, {bar: (value text, verdict)})."""
+    v: dict[str, tuple[str, str]] = {}
+    if opt == "B":
+        v["F1 within 2 points of B"] = ("baseline", "reference")
+    else:
+        v["F1 within 2 points of B"] = (f1_verdict, f1_verdict)
+    v["overall precision >= 0.98"] = (f"{overall_p:.4f}", "pass" if overall_p >= BAR_PRECISION else "fail")
+    if opt == "A":
+        v["overall recall >= A + 0.05"] = (f"{overall_r:.4f}", "reference")
+    else:
+        v["overall recall >= A + 0.05"] = (f"{overall_r:.4f} (A {a_recall:.4f})", "pass" if overall_r >= a_recall + BAR_RECALL_OVER_A - 1e-12 else "fail")
+    if opt in ("C", "D"):
+        v["ECE <= 0.05"] = (f"{ece:.4f}", "pass" if ece <= BAR_ECE else "fail")
+    if opt == "C":
+        v["C latency p95 <= 20 ms"] = (f"{latency_p95_ms} ms", "pass" if latency_p95_ms <= BAR_LATENCY_C_P95_MS else "fail")
+    if opt == "D":
+        v["D LLM share <= 20%"] = (f"{llm_share:.5f}", "pass" if llm_share <= BAR_LLM_SHARE else "fail")
+    checked = [x[1] for x in v.values() if x[1] in ("pass", "fail", "inconclusive")]
+    if "fail" in checked or opt == "A":
+        every = "no"
+    elif "inconclusive" in checked:
+        every = "not shown (inconclusive)"
+    else:
+        every = "yes"
+    return every, v
+
+
 # ---------------------------------------------------------------------------------------------- the tables
 
-def build(run: Path, freeze: Path, R: Reader) -> dict:
+def build(run: Path, freeze: Path, R: Reader, cost_dir: Path | None = None) -> dict:
+    cost_dir = Path(cost_dir) if cost_dir else run / "cost"
     rel = lambda p: Path(p).resolve().relative_to(REPO).as_posix()
     O = run / "options"
     sample_reports = {"A": O / "a_threshold" / "score_report_sample5000.txt", "B": O / "b_llm" / "openai" / "sample5000" / "score_report_sample5000.txt",
@@ -118,28 +164,31 @@ def build(run: Path, freeze: Path, R: Reader) -> dict:
     bars_src = rel(run / "bars_table.csv")
     results = {r["option"]: r for r in R.csv(run / "results_table.csv")}
     results_src = rel(run / "results_table.csv")
-    cost = R.csv(run / "cost" / "cost_model.csv")
-    cost_src = rel(run / "cost" / "cost_model.csv")
-    ovb = {r["option"]: r for r in R.csv(run / "cost" / "options_vs_bars.csv")}
-    ovb_src = rel(run / "cost" / "options_vs_bars.csv")
-    be = R.csv(run / "cost" / "break_even.csv")
-    be_src = rel(run / "cost" / "break_even.csv")
-    assumptions = {r["name"]: r for r in R.csv(run / "cost" / "assumptions.csv")}
-    assumptions_src = rel(run / "cost" / "assumptions.csv")
+    cost = R.csv(cost_dir / "cost_model.csv")
+    cost_src = rel(cost_dir / "cost_model.csv")
+    ovb = {r["option"]: r for r in R.csv(cost_dir / "options_vs_bars.csv")}
+    ovb_src = rel(cost_dir / "options_vs_bars.csv")
+    be = R.csv(cost_dir / "break_even.csv")
+    be_src = rel(cost_dir / "break_even.csv")
+    assumptions = {r["name"]: r for r in R.csv(cost_dir / "assumptions.csv")}
+    assumptions_src = rel(cost_dir / "assumptions.csv")
     lat = R.json(O / "latency" / "latency_summary.json")
     lat_src = rel(O / "latency" / "latency_summary.json")
     btim = R.json(O / "b_llm" / "openai" / "sample5000" / "timings.json")
     btim_src = rel(O / "b_llm" / "openai" / "sample5000" / "timings.json")
     T = Table()
-    bar_name = {"A": "A", "B": "B", "C": "C", "D": "D", "D (orig)": "D (orig)"}
     cost_opt = {"A": "A", "B": "B", "C": "C", "D": "D"}
-
     bpr = assumptions["band pairs per record"]["value"]                     # band pairs per record, from the run
+    parsed = {o: parse_report(R.text(sample_reports[o])) for o in OPTS}
+    parsed_full = {o: parse_report(R.text(p)) for o, p in full_reports.items()}
+    c_p95 = lat["C"]["median_of_repeats"]["p95_ms"]
+    d_share = {o: float(bars[o]["llm_share"]) if bars[o]["llm_share"] != "" else None for o in ("D", "D (orig)")}
+
     for o in OPTS:
         src = rel(sample_reports[o])
-        rep = parse_report(R.text(sample_reports[o]))
+        rep = parsed[o]
         T.put(o, "band F1 [95% CI]", f"{f4(rep['f1'])} [{f4(rep['f1_lo'])}, {f4(rep['f1_hi'])}]", src)
-        b = bars[bar_name[o]]
+        b = bars[o]
         if o == "B":
             T.put(o, "F1 vs B [95% CI]", "baseline", bars_src)
             T.put(o, "F1 verdict", "reference (B is the baseline)", bars_src)
@@ -154,13 +203,29 @@ def build(run: Path, freeze: Path, R: Reader) -> dict:
             T.put(o, "ECE", "not reported (bar is for C and D)", src, "read")
         else:
             T.put(o, "ECE", f4(rep["ece"]), src)
+        # the protocol bars, computed from the frozen reports, on the two bases
+        f1v = T.get(o, "F1 verdict").split(" (")[0]
+        a_rec_s = float(parsed["A"]["overall_recall"])
+        every_s, _ = bar_verdicts(o, float(rep["overall_precision"]), float(rep["overall_recall"]), a_rec_s,
+                                  None if rep["ece"] is None else float(rep["ece"]), f1v, c_p95, d_share.get(o))
+        T.put(o, EVERY_SAMPLE, every_s, f"{src}; {parsed_src(sample_reports['A'], rel)}; {bars_src}; {lat_src}",
+              "derived: the protocol's bars applied to the sample-basis report" + ("; LLM share from bars_table.csv" if o in d_share else ""))
+        if o in ("A", "C", "D"):
+            fr = parsed_full[o]
+            every_f, _ = bar_verdicts(o, float(fr["overall_precision"]), float(fr["overall_recall"]), float(parsed_full["A"]["overall_recall"]),
+                                      None if fr["ece"] is None else float(fr["ece"]), f1v, c_p95, d_share.get(o))
+            T.put(o, EVERY_FULL, every_f, f"{rel(full_reports[o])}; {rel(full_reports['A'])}; {bars_src}; {lat_src}",
+                  "derived: the protocol's bars applied to the full-band report" + ("; LLM share from bars_table.csv" if o in d_share else ""))
+        elif o == "B":
+            T.put(o, EVERY_FULL, "n/a (B exists only on the sample)", "", "constant text")
+        else:
+            T.put(o, EVERY_FULL, "not computed (column is for A, C and D only)", "", "constant text")
         # LLM cost per 1,000 band pairs and per record
         per1000 = results[o]["llm_usd_per_1000_band_pairs"]
         T.put(o, "LLM $ per 1,000 band pairs", f"{float(per1000):.4f}", results_src)
         T.put(o, "LLM $ per record", f"{float(per1000) * float(bpr) / 1000:.5f}", f"{results_src}; {assumptions_src}",
               f"derived: per 1,000 band pairs x {bpr} band pairs per record / 1,000")
         T.put(o, "band pairs per record", bpr, assumptions_src)
-        T.put(o, "meets every bar", b["meets_every_bar"], bars_src)
 
     # monthly cost: S1, $100/h, labels as evaluated; Precisely / customer / total
     labels_eval = assumptions["labels as evaluated (C and D)"]["value"]
@@ -185,7 +250,7 @@ def build(run: Path, freeze: Path, R: Reader) -> dict:
         m = lat[k]["median_of_repeats"]
         return f"p50 {m['p50_ms']} ms, p95 {m['p95_ms']} ms"
     llm = [t for t in btim["timings"] if t["stage"].endswith("llm_call")][0]["per_item_ms"]
-    T.missing("A", "latency per pair (p50, p95)", "options/latency/latency_summary.json (no entry for A)")
+    T.put("A", "latency per pair (p50, p95)", "not measured (threshold comparison)", "", "constant text")
     T.put("B", "latency per pair (p50, p95)", f"p50 {llm['p50'] / 1000:.3f} s, p95 {llm['p95'] / 1000:.3f} s (per LLM call)", btim_src)
     T.put("C", "latency per pair (p50, p95)", lat_text("C") + " (one core, features included)", lat_src)
     T.put("D", "latency per pair (p50, p95)", lat_text("D") + " (one core, features included, plus routing)", lat_src)
@@ -197,7 +262,7 @@ def build(run: Path, freeze: Path, R: Reader) -> dict:
         elif o in ("D", "D (orig)"):
             T.missing(o, "D fallback tail", "cost/assumptions.csv row 'D per-pair latency with the LLM fallback (simulation)'")
         else:
-            T.put(o, "D fallback tail", "n/a (no LLM fallback)", "")
+            T.put(o, "D fallback tail", "n/a (no LLM fallback)", "", "constant text")
 
     # break-even against B
     for rate in RATES:
@@ -217,11 +282,28 @@ def build(run: Path, freeze: Path, R: Reader) -> dict:
     # full-band table
     full = Table()
     for o, p in full_reports.items():
-        rep = parse_report(R.text(p))
+        rep = parsed_full[o]
         src = rel(p)
         full.put(o, "band F1 [95% CI]", f"{f4(rep['f1'])} [{f4(rep['f1_lo'])}, {f4(rep['f1_hi'])}]", src)
         full.put(o, "band precision", f4(rep["band_precision"]), src)
         full.put(o, "band recall", f4(rep["band_recall"]), src)
+
+    # the two "meets every bar" columns: a note when they differ for any option
+    bar_notes = []
+    for o in ("A", "C", "D"):
+        f1v = T.get(o, "F1 verdict").split(" (")[0]
+        every_s, vs = bar_verdicts(o, float(parsed[o]["overall_precision"]), float(parsed[o]["overall_recall"]), float(parsed["A"]["overall_recall"]),
+                                   None if parsed[o]["ece"] is None else float(parsed[o]["ece"]), f1v, c_p95, d_share.get(o))
+        every_f, vf = bar_verdicts(o, float(parsed_full[o]["overall_precision"]), float(parsed_full[o]["overall_recall"]), float(parsed_full["A"]["overall_recall"]),
+                                   None if parsed_full[o]["ece"] is None else float(parsed_full[o]["ece"]), f1v, c_p95, d_share.get(o))
+        if every_s != every_f:
+            before = len(bar_notes)
+            for bar in vs:
+                if vs[bar][1] != vf[bar][1]:
+                    bar_notes.append(f"{o}: bar '{bar}': sample basis {vs[bar][0]} ({vs[bar][1]}); full-band basis {vf[bar][0]} ({vf[bar][1]}); "
+                                     f"meets every bar: sample basis '{every_s}', full-band basis '{every_f}'.")
+            if len(bar_notes) == before:
+                bar_notes.append(f"{o}: meets every bar differs: sample basis '{every_s}', full-band basis '{every_f}'.")
 
     # decoys
     decoys = []
@@ -245,17 +327,19 @@ def build(run: Path, freeze: Path, R: Reader) -> dict:
 
     # cost numbers for the slides
     slides: dict = {}
-    ot = R.csv(run / "cost" / "one_time_cost.csv")
+    ot = R.csv(cost_dir / "one_time_cost.csv")
     slides["build"] = [(r["option"], r["hourly_rate_usd"], r["build_before_usd"], r["build_after_usd"], r["labeling_2000_labels_at_100_per_hour_usd"],
                         r["labeling_as_evaluated_labels_at_100_per_hour_usd"]) for r in ot]
-    slides["build_src"] = rel(run / "cost" / "one_time_cost.csv")
-    summ = R.text(run / "cost" / "summary.txt")
+    slides["build_src"] = rel(cost_dir / "one_time_cost.csv")
+    summ = R.text(cost_dir / "summary.txt")
     slides["draft_banner"] = summ.splitlines()[0]
-    slides["summary_src"] = rel(run / "cost" / "summary.txt")
+    slides["summary_src"] = rel(cost_dir / "summary.txt")
     lab = {}
     for m in re.finditer(r"\n  ([CD])\s+(as evaluated|at 2,000)\s+([\d,]+)\s+([\d.]+)\s+([\d,]+/[\d,]+/[\d,]+)", summ):
         lab[(m.group(1), m.group(2))] = (m.group(3), m.group(4), m.group(5))
     slides["label_cost"] = lab
+    m = re.search(r"Effort log: (\d+) rows with hours", summ)
+    slides["effort_log_rows"] = m.group(1) if m else "missing"
     pays = []
     for r in cost:
         if r["labels_for_C_and_D"] == labels_eval and r["hourly_rate_usd"] == BASE_RATE and r["records_per_day"] == "1000000" and r["option"] in "ABCD" and r["scenario"]:
@@ -271,10 +355,16 @@ def build(run: Path, freeze: Path, R: Reader) -> dict:
     slides["break_even_src"] = be_src
     fr = R.text(freeze / "freeze_report.txt")
     m = re.search(r"effort log read as it is \(not frozen\): sha256 ([0-9a-f]{64})", fr)
-    slides["effort_log_sha256"] = m.group(1) if m else "missing (expected source: freeze_report.txt stage 12 note)"
+    slides["effort_log_sha256_frozen_run"] = m.group(1) if m else "missing (expected source: freeze_report.txt stage 12 note)"
     slides["effort_log_src"] = rel(freeze / "freeze_report.txt")
     slides["labels_eval"] = labels_eval
-    return {"T": T, "full": full, "decoys": decoys, "decoy_check": decoy_check, "slides": slides, "bpr": bpr, "labels_eval": labels_eval}
+    slides["cost_dir"] = rel(cost_dir)
+    return {"T": T, "full": full, "decoys": decoys, "decoy_check": decoy_check, "slides": slides, "bpr": bpr, "labels_eval": labels_eval, "bar_notes": bar_notes}
+
+
+def parsed_src(path: Path, rel) -> str:
+    """The source path of A's sample report (the recall bar's reference)."""
+    return rel(path)
 
 
 # ---------------------------------------------------------------------------------------------- output
@@ -284,19 +374,26 @@ def md_table(headers: list[str], rows: list[list[str]]) -> str:
     return "\n".join(["| " + " | ".join(esc(h) for h in headers) + " |", "|" + "|".join("---" for _ in headers) + "|"] + ["| " + " | ".join(esc(c) for c in r) + " |" for r in rows])
 
 
+def full_rows(full: Table, opts=MAIN) -> list[str]:
+    return [o for o in opts if (o, "band F1 [95% CI]") in full.cells]
+
+
 def write_outputs(res: dict, out: Path) -> None:
     out.mkdir(parents=True, exist_ok=True)
     T, full, S = res["T"], res["full"], res["slides"]
-    # csv: one row per option, one column per figure
     with (out / "head_to_head.csv").open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow(["option"] + T.columns)
-        for o in OPTS:
+        for o in MAIN:
             w.writerow([o] + [T.get(o, c) for c in T.columns])
+        w.writerow([])
+        w.writerow(["# secondary row"])
+        w.writerow(["option"] + T.columns)
+        w.writerow([SECONDARY] + [T.get(SECONDARY, c) for c in T.columns])
         w.writerow([])
         w.writerow(["# full band, not comparable with B's sample figures"])
         w.writerow(["option"] + full.columns)
-        for o in full_rows(full):
+        for o in full_rows(full, OPTS):
             w.writerow([o] + [full.get(o, c) for c in full.columns])
     with (out / "head_to_head_sources.csv").open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
@@ -308,26 +405,37 @@ def write_outputs(res: dict, out: Path) -> None:
     L = ["# Head to head: options A to D (freeze run, seed 7919)", "",
          "Everything below is read from files under `results/eval_7919` and `results/freeze_2026-11-25` (see the sources section). "
          "`missing` means the frozen outputs do not hold the figure; the expected source is named. Nothing was rerun or invented.", "",
-         "## Bases", "",
-         "- **Table 1 (sample basis):** all columns of the main table are on the fixed 5,000-pair sample of the test band, weighted estimates "
-         "(B exists only on this basis). Cost, latency and break-even cells are model or measurement figures, not sample estimates.",
-         "- **Table 2 (full band):** exact figures on every test band pair for A, C, D and D (orig). **Full band, not comparable with B's sample figures.**",
-         f"- Labels as evaluated for C and D in this run: {int(res['labels_eval']):,} (cost/assumptions.csv). Hourly rate $100 and scenario S1 unless a column says otherwise.",
-         "- 'LLM $' columns are the LLM cost only (LLM share x B's measured cost per call); the total cost is in the monthly table.", ""]
-    groups = [("Quality, sample basis", ["band F1 [95% CI]", "F1 vs B [95% CI]", "F1 verdict", "band precision", "band recall", "overall precision", "overall recall", "ECE", "meets every bar"]),
-              ("Cost per pair and per record", ["LLM $ per 1,000 band pairs", "LLM $ per record", "band pairs per record"]),
-              ("Monthly cost (S1, $100/h, labels as evaluated)", [c for c in T.columns if c.startswith("monthly")]),
-              ("Latency", ["latency per pair (p50, p95)", "D fallback tail"]),
-              ("Break-even against B (S1 and S2 total)", [c for c in T.columns if c.startswith("break-even")])]
+         "## Bases", "", BARS_TEXT, "",
+         "Notes:", "",
+         f"- Cost outputs read from `{S['cost_dir']}` (effort log: {S['effort_log_rows']} rows).",
+         f"- Labels as evaluated for C and D in this run: {int(res['labels_eval']):,} (`assumptions.csv` of the cost outputs). Hourly rate $100 and scenario S1 unless a column says otherwise.",
+         "- 'LLM $' columns are the LLM cost only (LLM share x B's measured cost per call); the total cost is in the monthly table.",
+         "- Table 2 (full band) is exact for A, C and D and is **not comparable with B's sample figures**. The secondary row D (orig) is in its own table.", ""]
+    groups = [("Quality, sample basis", ["band F1 [95% CI]", "F1 vs B [95% CI]", "F1 verdict", "band precision", "band recall", "overall precision", "overall recall", "ECE"]),
+              ("Protocol bars (computed from the frozen reports with the protocol rules)", [EVERY_SAMPLE, EVERY_FULL]),
+              ("Cost per pair and per record (not sample figures)", ["LLM $ per 1,000 band pairs", "LLM $ per record", "band pairs per record"]),
+              ("Monthly cost (S1, $100/h, labels as evaluated; cost model, not sample figures)", [c for c in T.columns if c.startswith("monthly")]),
+              ("Latency (benchmarks, not sample figures)", ["latency per pair (p50, p95)", "D fallback tail"]),
+              ("Break-even against B (S1 and S2 total; cost model, not sample figures)", [c for c in T.columns if c.startswith("break-even")])]
     n = 1
     for title, cols in groups:
-        L += [f"### Table 1.{n}: {title}", "", md_table(["option"] + cols, [[o] + [T.get(o, c) for c in cols] for o in OPTS]), ""]
-        if n == 1:
-            L += ["`F1 vs B` and its verdict, and `meets every bar`, are read from `bars_table.csv`: the protocol rules applied there use the paired sample comparison for the F1 bar "
-                  "and the full band for A, C and D on the other bars, so `meets every bar` is not a sample-basis figure.", ""]
+        L += [f"### Table 1.{n}: {title}", "", md_table(["option"] + cols, [[o] + [T.get(o, c) for c in cols] for o in MAIN]), ""]
+        if n == 2:
+            L += ["Bars (protocol.md): F1 within 2 points of B on the paired sample (from `bars_table.csv`); overall precision >= 0.98; overall recall at least 5 points above A; "
+                  "ECE <= 0.05 (C, D); C latency p95 <= 20 ms; D LLM share <= 20% (from `bars_table.csv`). The two columns apply the same rules to the sample-basis reports and to the "
+                  "full-band reports; the F1 verdict, the latency and the LLM share are the same in both.", ""]
+            if res["bar_notes"]:
+                L += ["Where the two columns differ:", ""] + [f"- {x}" for x in res["bar_notes"]] + [""]
+            else:
+                L += ["The two columns agree for A, C and D (B has no full-band value): no bar's verdict differs between the sample-basis and the full-band reports.", ""]
         n += 1
     L += ["## Table 2: full band, not comparable with B's sample figures", "",
           md_table(["option"] + full.columns, [[o] + [full.get(o, c) for c in full.columns] for o in full_rows(full)]), ""]
+
+    L += ["## Secondary row: D (orig) (the original routing rule, lo 0.5, hi 0.9)", "",
+          "Same figures as Table 1, one per line. `missing` marks a figure the frozen outputs do not hold, with its expected source.", "",
+          md_table(["figure", "D (orig)"], [[c, T.get(SECONDARY, c)] for c in T.columns]), "",
+          "Full band (exact, not comparable with B's sample figures): " + "; ".join(f"{c} {full.get(SECONDARY, c)}" for c in full.columns), ""]
 
     L += ["## Decoy outcomes (same name, different entity; test group)", "",
           md_table(["option", "basis", "decoy pairs", "wrongly matched", "source"], [list(d) for d in res["decoys"]]), ""]
@@ -335,9 +443,11 @@ def write_outputs(res: dict, out: Path) -> None:
     L += [f"B's decoy check: {dc['pairs']} test band decoy pairs, {dc['false_matches']} false matches; one-sided 95% bound on the false-match rate <= {dc['bound']}; "
           f"{dc['live_calls']} live calls and {dc['cache_hits']} cache hits, ${dc['spent_usd']:.4f} (sources: {', '.join(dc['sources'])}).", ""]
 
+    banner = S["draft_banner"]
     L += ["## Cost numbers for the slides", "",
-          f"- Effort log used: sha256 `{S['effort_log_sha256']}` (source: {S['effort_log_src']}).",
-          f"- Banner of the cost outputs (first line of {S['summary_src']}): **{S['draft_banner']}** The DRAFT banner is on.", "",
+          f"- Effort log of the freeze run's stage 12: sha256 `{S['effort_log_sha256_frozen_run']}` (source: {S['effort_log_src']}). The cost outputs read here are from `{S['cost_dir']}`, "
+          f"which used an effort log of {S['effort_log_rows']} rows.",
+          f"- First line of {S['summary_src']}: " + (f"**{banner}** The DRAFT banner is on." if banner.startswith("DRAFT") else f"\"{banner}\". No DRAFT banner."), "",
           "### One-time build cost per option (USD; before = Verity pre-existing build and productization only; after = plus the option's own hours)", "",
           md_table(["option", "$/h", "build before", "build after", "labeling at 2,000 labels ($100/h)", "labeling as evaluated ($100/h)"],
                    [[o, f"{float(r):.0f}", fmt_money(b), fmt_money(a), fmt_money(l2), fmt_money(le)] for o, r, b, a, l2, le in S["build"]]), "",
@@ -355,11 +465,10 @@ def write_outputs(res: dict, out: Path) -> None:
                     for o, r, lab, res_, be in S["b_cheaper_below"]]), "",
           f"Where the result is 'option cheaper above N', B is cheaper below N records/day. Where it is 'option cheaper everywhere in range', B is not cheaper anywhere in the range 1,000 to 100,000,000 records/day. Source: {S['break_even_src']}.", ""]
 
-    # sources table (grouped)
     L += ["## Sources", "", "Per column, the file each option's cell was read from (the full cell-by-cell list is `head_to_head_sources.csv`). "
-          "'derived' cells are plain arithmetic on cells read from files.", ""]
+          "'derived' cells are plain arithmetic or the protocol's rules applied to cells read from files.", ""]
     rows = []
-    for tname, tab in (("Table 1", T), ("Table 2", full)):
+    for tname, tab in (("Table 1 and secondary row", T), ("Table 2", full)):
         for col in tab.columns:
             by_src: dict[str, list[str]] = {}
             for o in OPTS:
@@ -371,23 +480,22 @@ def write_outputs(res: dict, out: Path) -> None:
     (out / "head_to_head.md").write_text("\n".join(L), encoding="utf-8")
 
 
-def full_rows(full: Table) -> list[str]:
-    return [o for o in OPTS if (o, "band F1 [95% CI]") in full.cells]
-
-
 def main() -> int:
     ap = argparse.ArgumentParser(description="Head-to-head table from the frozen outputs of the freeze run.")
     ap.add_argument("--run", type=Path, default=REPO / "results" / "eval_7919")
     ap.add_argument("--freeze", type=Path, default=None)
-    ap.add_argument("--out", type=Path, default=None)
+    ap.add_argument("--cost-dir", type=Path, default=None, help="folder of the cost model outputs to read (default: <run>/cost, the freeze run's stage 12 outputs)")
+    ap.add_argument("--out-dir", type=Path, default=None, help="where to write (default: <run>/head_to_head)")
     args = ap.parse_args()
     run = args.run.resolve()
     freeze = args.freeze or next(iter(sorted((REPO / "results").glob("freeze_????-??-??"))), None)
     if freeze is None:
         raise SystemExit("no results/freeze_<date> folder")
     R = Reader([run, Path(freeze)])
-    res = build(run, Path(freeze).resolve(), R)
-    out = args.out or run / "head_to_head"
+    cost_dir = (args.cost_dir or run / "cost").resolve()
+    R.path(cost_dir)                                              # must lie under the allowed roots
+    res = build(run, Path(freeze).resolve(), R, cost_dir)
+    out = args.out_dir or run / "head_to_head"
     write_outputs(res, out)
     print(f"wrote {out / 'head_to_head.csv'}, head_to_head.md and head_to_head_sources.csv; read {len(set(R.read))} files, all under {[str(r.relative_to(REPO)) for r in R.roots]}")
     return 0
