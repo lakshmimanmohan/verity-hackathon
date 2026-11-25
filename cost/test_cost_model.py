@@ -221,6 +221,24 @@ class VariantAndBarTests(unittest.TestCase):
         self.assertEqual(M.parse_f1_diff(cmp_), (-0.0075, -0.0154, 0.0))
 
 
+class PipelineFactorTests(unittest.TestCase):
+    def test_the_shared_pipeline_cost_scales_and_is_the_same_line_for_every_option(self):
+        p = small()
+        base = M.hosting_month(p, "B", 1000)["verity"]["used"]                       # 100 core-s a day, serverless 0.304
+        self.assertAlmostEqual(base, 0.304, places=6)
+        p10 = replace(p, verity_cost_factor=10.0)
+        self.assertAlmostEqual(M.hosting_month(p10, "B", 1000)["verity"]["used"], 3.04, places=6)      # 1,000 core-s a day x 30.4 x 0.0001
+        for o in "ABCD":                                                                     # the same added cost for every option
+            self.assertAlmostEqual(M.monthly(p10, o, 1000, 100, 2000)["hosting_verity"] - M.monthly(p, o, 1000, 100, 2000)["hosting_verity"], 3.04 - 0.304, places=6)
+        self.assertEqual(M.hosting_month(replace(p, verity_cost_factor=1e7), "A", 1000)["verity"]["cores"], 23149)   # 1e7 x 100 = 1e9 core-s / 86,400 / 0.5 rounded up to whole cores
+
+    def test_the_gap_between_options_does_not_depend_on_the_pipeline_factor(self):
+        p, p100 = small(), replace(small(), verity_cost_factor=100.0)
+        gap = lambda q: M.monthly(q, "B", 1000, 100, 2000)["total_month"] - M.monthly(q, "C", 1000, 100, 2000)["total_month"]
+        # C's model hosting differs from B's (none), so the gap moves only by that hosting line, never by the pipeline
+        self.assertAlmostEqual(gap(p), gap(p100), places=6)
+
+
 class BreakEvenTests(unittest.TestCase):
     def test_linear_crossing(self):
         r = M.break_even(lambda v: 1000 + 2 * v, lambda v: 100 + 5 * v, lo=1, hi=1e4)

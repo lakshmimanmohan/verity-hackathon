@@ -102,6 +102,7 @@ class Params:
     horizon_months: int = 12
     verity_quotable: bool = False
     latency_loaded: bool = False
+    verity_cost_factor: float = 1.0       # sensitivity: the shared pipeline's cost per record x this (exact neighbor search scales with record count)
 
 
 def llm_cost_per_call(p: Params, mode: str = "standard", hit_ratio: float | None = None) -> float:
@@ -146,7 +147,7 @@ def model_core_seconds(p: Params, option: str, records_per_day: float) -> float:
 
 def hosting_month(p: Params, option: str, records_per_day: float) -> dict:
     model = hosting_component(model_core_seconds(p, option, records_per_day), p)
-    verity = hosting_component(records_per_day * p.verity_cpu_s_per_record, p)
+    verity = hosting_component(records_per_day * p.verity_cpu_s_per_record * p.verity_cost_factor, p)
     return {"model": model, "verity": verity, "used": model["used"] + verity["used"]}
 
 
@@ -533,7 +534,8 @@ def load_inputs(repo: Path, run: Path, out_rows: list, productization_hours: flo
             tot = st["stage"]["verity.total"]
             add(f"Verity pipeline total, {setting}, per record (median of {len(st['repeats'])} repeats)", round(tot["median"] / vt["records"] * 1000, 2), "ms", "measured",
                 vt_path.relative_to(repo).as_posix(),
-                f"min {tot['min']:.1f} s, max {tot['max']:.1f} s, cold {tot['cold']:.1f} s, warm {tot['warm']:.1f} s; spread (max-min)/median {st['total_spread_pct']:.1f}%; "
+                f"min {tot['min']:.1f} s, max {tot['max']:.1f} s, first of 3 repeats after other runs {tot['first_of_3_after_other_runs']:.1f} s, median of the other 2 {tot['median_of_other_2']:.1f} s "
+                f"(a cold start after a reboot was not measured); spread (max-min)/median {st['total_spread_pct']:.1f}%; "
                 + ("the repeats agree within 10%: label removed" if st["total_within_10pct"] else "NOT FOR QUOTING: the repeats differ by more than 10% on total time")
                 + "; includes startup; shared by every option, B included")
         one = vt["settings"]["1thread"]
@@ -560,6 +562,28 @@ def load_inputs(repo: Path, run: Path, out_rows: list, productization_hours: flo
         p.c_cpu_s_per_pair = latency["C"]["median_of_repeats"]["mean_ms"] / 1000
         p.d_cpu_s_per_pair = latency["D"]["median_of_repeats"]["mean_ms"] / 1000
         p.latency_loaded = True
+    mix_path = run / "options" / "latency" / "d_latency_mixture.json"
+    mixture = None
+    if mix_path.exists():
+        mixture = json.loads(mix_path.read_text(encoding="utf-8"))
+        src_m = mix_path.relative_to(repo).as_posix()
+        d_ = mixture["d"]
+        add("D per-pair latency with the LLM fallback (simulation)", f"p50 {d_['p50_ms']} ms, p95 {d_['p95_ms']} ms, p99 {d_['p99_ms']} ms, p99.9 {d_['p99.9_ms']} ms, "
+            f"p99.95 {d_['p99.95_ms']} ms, max {d_['max_ms']} ms", "ms", "measured-derived", src_m,
+            f"a SIMULATION from measured distributions, not a direct measurement: {mixture['draws']:,} draws, seed {mixture['seed']}; a pair takes C's per-pair latency "
+            f"({mixture['c_pairs_pooled']:,} measured values, 3 repeats) and with probability {mixture['fallback_share_text']} also one B call "
+            f"({mixture['b_calls_pooled']:,} measured call latencies at one thread level: sample5000, tune2, decoy check, D routed pairs, concurrency 2 workers)")
+        add("B call latency, pooled (2-worker level)", f"p50 {mixture['b_pooled']['p50_ms']} ms, p95 {mixture['b_pooled']['p95_ms']} ms, p99 {mixture['b_pooled']['p99_ms']} ms, "
+            f"max {mixture['b_pooled']['max_ms']} ms", "ms", "measured", src_m + " (b_call_latencies.csv)", "the first call of each run runs alone with a cold cache and is included")
+        pr = mixture["per_record"]
+        add("B per-record latency", f"about {pr['b_calls_per_record']:.0f} calls per record; at 10 workers about {pr['b_seconds_per_record_at_10_workers_mean']} s "
+            f"({pr['b_seconds_per_record_at_10_workers_whole_rounds']} s counting whole rounds of 10 calls)", "s", "measured-derived", src_m,
+            f"band pairs per record x measured p50 call latency at 10 workers ({pr['b_p50_s_at_10_workers']} s); queueing not included")
+        add("D LLM calls per record", f"{pr['d_expected_llm_calls_per_record']} on average; {pr['d_records_with_any_llm_call_pct']}% of records need any call", "calls", "measured-derived", src_m,
+            "band pairs per record x the exact routed share")
+    add("ANN (approximate neighbor search) timing", "not measured", "", "measured", "results/dev_2026_ann/ann_not_measured.txt",
+        "annoy==1.17.3 failed to build on this machine (error class: Microsoft Visual C++ 14.0 or greater is required; no Windows wheel); one attempt, no retry. "
+        "The shared pipeline's cost uses exact search only")
 
     log = read_effort_log(repo / "cost" / "effort_log.csv")
     p.label_hours_per_1000 = label_hours_per_1000_from_log(log)
@@ -628,7 +652,7 @@ def load_inputs(repo: Path, run: Path, out_rows: list, productization_hours: flo
     lc = list(csv.DictReader((run / "options" / "c_model" / "lc_v2" / "learning_curve.csv").open(encoding="utf-8")))
     f1 = {int(r["n"]): float(r["f1_mean"]) for r in lc}
     return p, {"log": log, "buckets": buckets, "ledger": led, "lc_f1": f1, "full_f1": 0.9653, "n_band": n_band, "conc": conc,
-               "latency": latency}
+               "latency": latency, "mixture": mixture}
 
 
 # ---------------------------------------------------------------------------------------------- outputs
@@ -862,17 +886,19 @@ def main() -> int:
                 f"workers, UNTESTED above {top['workers']}. 1M and 10M records/day need 10x and 100x more and would need a higher rate limit from the provider (not measured).")
 
     # break-even
-    be_rows, be_text = [], []
+    be_rows, be_text, be_map = [], [], {}
     for lab in LABEL_SCENARIOS:
         for rate in RATES:
             for opt in ("A", "C", "D"):
                 r = break_even(lambda v, o=opt: total_horizon(p, o, v, rate, lab), lambda v: total_horizon(p, "B", v, rate, lab))
                 be_rows.append(["S1 and S2 (same total)", lab, rate, opt, "" if r["volume"] is None else f"{r['volume']:.0f}", r["kind"]])
+                be_map[("S1 and S2", lab, rate, opt)] = r
                 if lab == BASE_LABELS:
                     be_text.append((opt, rate, r))
                 r3 = break_even(lambda v, o=opt: scenario_total_horizon(p, o, v, rate, lab, "S3"), lambda v: scenario_total_horizon(p, "B", v, rate, lab, "S3"))
                 be_rows.append(["S3 (D with the LLM fallback off; B with the customer's key, not feasible if data cannot leave)", lab, rate, opt,
                                 "" if r3["volume"] is None else f"{r3['volume']:.0f}", r3["kind"]])
+                be_map[("S3", lab, rate, opt)] = r3
     write_csv(out / "break_even.csv", ["scenario", "labels_for_C_and_D", "hourly_rate_usd", "option", "break_even_records_per_day", "result"], be_rows, draft)
     say(f"\nBreak-even against B (total over {p.horizon_months} months equal; labels {BASE_LABELS:,}; volume range 1,000 to 100,000,000 records per day)")
     for opt, rate, r in be_text:
@@ -891,6 +917,86 @@ def main() -> int:
     say("  Where no break-even is listed for an option, it is cheaper than B overall at every volume in the range: " +
         (", ".join(f"{o} at ${rt:g}/h" for o, rt in nb) if nb else "none") + ". At the measured price B costs about "
         f"${llm_cost_per_call(p) * p.band_pairs_per_record * 1000:,.0f} per 1,000 records in LLM calls alone, so any one-time saving is spent within days.")
+
+    def below_text(r):
+        if r["kind"] == "option cheaper above":
+            return f"B cheaper below {r['volume']:,.0f} records/day"
+        if r["kind"] == "option cheaper below":
+            return f"B cheaper above {r['volume']:,.0f} records/day"
+        if r["kind"] == "B cheaper everywhere in range":
+            return "B cheaper at every volume in range"
+        return "B never cheaper in range (1,000 to 100,000,000)"
+
+    say("\nVolume below which B is cheaper overall (from the break-even table; total cost over 12 months, S1 and S2 total; S3 in the CSV)")
+    say(f"  {'labels for C and D':<22}{'option':<8}" + "".join(f"{'$' + format(r, 'g') + '/h':<48}" for r in RATES))
+    for lab in (BASE_LABELS, LABEL_SCENARIOS[-1]):
+        for opt in ("A", "C", "D"):
+            say(f"  {lab:<22,}{opt:<8}" + "".join(f"{below_text(be_map[('S1 and S2', lab, r, opt)]):<48}" for r in RATES))
+    say("  (labels 2,000: base case; labels 63,665: as evaluated for C and D.)")
+
+    # shared pipeline cost x 1, 10, 100 (exact neighbor search scales with record count)
+    pipe_rows, ranks = [], {}
+    factors = (1, 10, 100)
+    for f in factors:
+        pf = replace(p, verity_cost_factor=float(f))
+        for vol in VOLUMES:
+            ms_ = {o: monthly(pf, o, vol, BASE_RATE, BASE_LABELS) for o in "ABCD"}
+            order = sorted("ABCD", key=lambda o: ms_[o]["total_month"])
+            ranks[(f, vol)] = order
+            for o in "ABCD":
+                pipe_rows.append([f, vol, o, f"{ms_[o]['hosting_verity']:.2f}", f"{ms_[o]['hosting_model']:.2f}", f"{ms_[o]['hosting']:.2f}", f"{ms_[o]['total_month']:.2f}",
+                                  f"{ms_[o]['total_horizon']:.2f}", order.index(o) + 1, f"{ms_[o]['cores_verity']}"])
+        for lab in (BASE_LABELS, LABEL_SCENARIOS[-1]):
+            for rate in RATES:
+                for opt in ("A", "C", "D"):
+                    r = break_even(lambda v, o=opt: total_horizon(pf, o, v, rate, lab), lambda v: total_horizon(pf, "B", v, rate, lab))
+                    be_map[(f"pipeline x{f}", lab, rate, opt)] = r
+    write_csv(out / "sensitivity_pipeline.csv", ["pipeline_cost_factor", "records_per_day", "option", "verity_hosting_usd_month", "model_hosting_usd_month",
+                                                  "hosting_usd_month", "total_usd_month", "total_usd_12_months", "rank_cheapest_first", "verity_cores_always_on"], pipe_rows, draft)
+    say(f"\nSensitivity: the shared pipeline's cost per record x 1, 10, 100 (exact neighbor search scales with record count), every option, "
+        f"hourly rate ${BASE_RATE:g}, labels {BASE_LABELS:,}; total USD per month (S1 and S2 total)")
+    say(f"  {'records/day':>12}{'factor':>8}" + "".join(f"{o:>14}" for o in "ABCD") + "   cheapest first")
+    for vol in VOLUMES:
+        for f in factors:
+            ms_ = {o: monthly(replace(p, verity_cost_factor=float(f)), o, vol, BASE_RATE, BASE_LABELS) for o in "ABCD"}
+            say(f"  {vol:>12,}{('x' + str(f)):>8}" + "".join(f"{ms_[o]['total_month']:>14,.0f}" for o in "ABCD") + "   " + " < ".join(ranks[(f, vol)]))
+    changed = [(f, vol, ranks[(f, vol)]) for f in factors[1:] for vol in VOLUMES if ranks[(f, vol)] != ranks[(1, vol)]]
+    if changed:
+        say("  RANKING CHANGES against x1: " + "; ".join(f"x{f} at {vol:,} records/day: {' < '.join(o)} (x1: {' < '.join(ranks[(1, vol)])})" for f, vol, o in changed))
+    else:
+        say("  The ranking of the options by total monthly cost does not change at x10 or x100 at any of the three volumes.")
+    diffs = []
+    for f in factors[1:]:
+        for lab in (BASE_LABELS, LABEL_SCENARIOS[-1]):
+            for rate in RATES:
+                for opt in ("A", "C", "D"):
+                    a_, b_ = be_map[("S1 and S2", lab, rate, opt)], be_map[(f"pipeline x{f}", lab, rate, opt)]
+                    if a_["kind"] != b_["kind"] or (a_["volume"] or 0) and abs((b_["volume"] or 0) - a_["volume"]) / a_["volume"] > 0.01:
+                        diffs.append(f"x{f}, labels {lab:,}, ${rate:g}/h, {opt}: {below_text(a_)} -> {below_text(b_)}")
+    if diffs:
+        say("  Break-even conclusions that change: " + "; ".join(diffs[:12]) + ("; ..." if len(diffs) > 12 else ""))
+    else:
+        say("  No break-even conclusion changes at x10 or x100 (same kind and the same volumes within 1%): B is cheaper below the same volumes as at x1.")
+    say(f"  At x100 the shared pipeline needs {monthly(replace(p, verity_cost_factor=100.0), 'A', 10_000_000, BASE_RATE, BASE_LABELS)['cores_verity']:,} always-on cores at 10M records/day "
+        f"(x1: {monthly(p, 'A', 10_000_000, BASE_RATE, BASE_LABELS)['cores_verity']:,}); it is the same line in every option, B included, so it cannot reorder them.")
+
+    # latency of D including the fallback
+    mix = ctx["mixture"]
+    if mix:
+        say("\nPer-pair latency of D including the LLM fallback (a SIMULATION from measured distributions; results/dev_2026_run11/options/latency/d_latency_mixture.json)")
+        say(f"  {mix['draws']:,} draws, seed {mix['seed']}: C's measured per-pair latency ({mix['c_pairs_pooled']:,} values, 3 repeats), plus one B call "
+            f"({mix['b_calls_pooled']:,} measured latencies, 2-worker level) with probability {mix['fallback_share_text']}")
+        keys_ = ("p50_ms", "p95_ms", "p99_ms", "p99.9_ms", "p99.95_ms", "max_ms")
+        say(f"  {'':<20}" + "".join(f"{k.replace('_ms', ''):>12}" for k in keys_) + "   (ms)")
+        for name, key in (("C alone (measured)", "c_pooled"), ("B call (measured)", "b_pooled"), ("D (simulated)", "d")):
+            say(f"  {name:<20}" + "".join(f"{mix[key][k]:>12,.3f}" for k in keys_))
+        pr = mix["per_record"]
+        say(f"  B's per-record latency: about {pr['b_calls_per_record']:.0f} calls per record (band pairs per record); at 10 workers one record takes about "
+            f"{pr['b_seconds_per_record_at_10_workers_mean']} s ({pr['b_seconds_per_record_at_10_workers_whole_rounds']} s counting whole rounds of 10; queueing not included). "
+            f"D: {pr['d_expected_llm_calls_per_record']} LLM calls per record on average, {pr['d_records_with_any_llm_call_pct']}% of records need one.")
+        say("  p99.9 is still C's tail; the LLM call shows from p99.95.")
+    say("  ANN timing: not measured (annoy 1.17.3 failed to build here; see results/dev_2026_ann/ann_not_measured.txt).")
+    say("  Verity timings: 'first of 3 repeats after other runs' is the first repeat after other work on this machine; a cold start after a reboot was not measured.")
 
     # sensitivity
     sens = []

@@ -10,10 +10,11 @@ file, run_info.json, verity_run.log, match_candidates_check.txt and evaluator ou
 embeddings, scored_pairs.csv, match_candidates.csv, the input csv and so on).
 
 summarize reads the runs results/dev_2026_timing_<setting>_r1..r3 for the settings "allthreads" and "1thread" and
-writes <out>/verity_timing.json and <out>/verity_timing.txt: per stage the median, min and max across repeats; cold =
-the first repeat; warm = the median of the others; the model load (verity.embed.model_load) separately; the total's
-spread (max - min) / median and whether the repeats agree within 10%; and whether each run's match_candidates.csv was
-byte-identical to run 11's.
+writes <out>/verity_timing.json and <out>/verity_timing.txt: per stage the median, min and max across repeats; "first of 3
+after other runs" = the first repeat (it follows other runs on the same machine; it is NOT a cold start after a reboot,
+which was not measured); "median of the other 2" = the median of the other repeats; the model load (verity.embed.model_load)
+separately; the total's spread (max - min) / median and whether the repeats agree within 10%; and whether each run's
+match_candidates.csv was byte-identical to run 11's.
 """
 
 from __future__ import annotations
@@ -80,7 +81,7 @@ def summarize(root: Path, out: Path) -> dict:
                 continue
             warm = statistics.median(vals[1:])
             stages[st] = {"values": [round(v, 3) for v in vals], "median": round(statistics.median(vals), 3), "min": round(min(vals), 3),
-                          "max": round(max(vals), 3), "cold": round(vals[0], 3), "warm": round(warm, 3)}
+                          "max": round(max(vals), 3), "first_of_3_after_other_runs": round(vals[0], 3), "median_of_other_2": round(warm, 3)}
         total = stages["verity.total"]
         spread = (total["max"] - total["min"]) / total["median"]
         host = runs[0][1]["host"]
@@ -94,15 +95,19 @@ def summarize(root: Path, out: Path) -> dict:
         lines.append(f"   host: {host.get('cpu_model')}, {host.get('logical_cores')} logical cores, torch_threads {host.get('torch_threads')}, "
                      f"omp_num_threads {host.get('omp_num_threads')}; commit {summary['settings'][setting]['commits']}; model_cache_hit {summary['settings'][setting]['model_cache_hit']}")
         lines.append(f"   byte comparison with run 11: {summary['settings'][setting]['match_candidates_vs_run11']}")
-        lines.append(f"   {'stage':<32}{'r1 (cold)':>11}{'r2':>9}{'r3':>9}{'median':>9}{'min':>9}{'max':>9}{'warm':>9}")
+        lines.append(f"   {'stage':<32}{'r1*':>11}{'r2':>9}{'r3':>9}{'median':>9}{'min':>9}{'max':>9}{'other 2':>9}")
         for st, v in stages.items():
             indent = "  " if st.count(".") > 1 else ""
-            lines.append(f"   {indent + st:<32}{v['values'][0]:>11.2f}{v['values'][1]:>9.2f}{v['values'][2]:>9.2f}{v['median']:>9.2f}{v['min']:>9.2f}{v['max']:>9.2f}{v['warm']:>9.2f}")
+            lines.append(f"   {indent + st:<32}{v['values'][0]:>11.2f}{v['values'][1]:>9.2f}{v['values'][2]:>9.2f}{v['median']:>9.2f}{v['min']:>9.2f}{v['max']:>9.2f}{v['median_of_other_2']:>9.2f}")
         ml = stages.get("verity.embed.model_load")
-        lines.append(f"   model load (verity.embed.model_load), reported separately: cold {ml['cold']:.2f} s, warm {ml['warm']:.2f} s, median {ml['median']:.2f} s" if ml else "   model load: not recorded")
-        lines.append(f"   total: median {total['median']:.1f} s, min {total['min']:.1f}, max {total['max']:.1f}, cold {total['cold']:.1f}, warm {total['warm']:.1f}; "
+        lines.append(f"   model load (verity.embed.model_load), reported separately: first of 3 after other runs {ml['first_of_3_after_other_runs']:.2f} s, median of the other 2 "
+                     f"{ml['median_of_other_2']:.2f} s, median {ml['median']:.2f} s" if ml else "   model load: not recorded")
+        lines.append(f"   total: median {total['median']:.1f} s, min {total['min']:.1f}, max {total['max']:.1f}, first of 3 after other runs {total['first_of_3_after_other_runs']:.1f}, "
+                     f"median of the other 2 {total['median_of_other_2']:.1f}; "
                      f"spread (max - min) / median {100 * spread:.1f}% -> {'agree within 10%' if spread <= WITHIN else 'DO NOT agree within 10%'}")
         lines.append("")
+    summary["notes"] = ["r1 = first of 3 repeats after other runs on the same machine; a cold start after a reboot was not measured"]
+    lines.append("* r1 = the first of 3 repeats after other runs (the machine had been running other work); a cold start after a reboot was not measured.")
     (out / "verity_timing.json").write_text(json.dumps(summary, indent=1) + "\n", encoding="utf-8")
     text = "\n".join(lines)
     (out / "verity_timing.txt").write_text(text + "\n", encoding="utf-8")
