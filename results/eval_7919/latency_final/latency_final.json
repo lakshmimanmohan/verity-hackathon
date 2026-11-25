@@ -1,0 +1,89 @@
+{
+ "note": "numbers behind latency_final.md; read from the freeze run's files (B per-record rows marked DEV use the dev concurrency measurement)",
+ "routed_pairs": 426,
+ "band_pairs": 44022,
+ "routed_share": 0.009676979691972195,
+ "test_group_records": 4500,
+ "records_with_routed_pair": 518,
+ "records_with_routed_pair_share": 0.11511111111111111,
+ "routed_pairs_per_record_both_ends": 0.18933333333333333,
+ "routed_pairs_per_record_once": 0.09466666666666666,
+ "max_routed_pairs_on_one_record": 12,
+ "records_by_routed_pairs": {
+  "1": 343,
+  "2": 98,
+  "3": 37,
+  "4": 19,
+  "5": 12,
+  "6": 5,
+  "7": 1,
+  "8": 1,
+  "9": 1,
+  "12": 1
+ },
+ "expected_share_independent": 0.1771384772234783,
+ "expected_share_exponent": 20.0499,
+ "expected_share_independent_degree": 0.17325202290973163,
+ "expected_share_degree_exponent": 19.565333333333335,
+ "b_call_latency_sample5000": {
+  "calls": 4996,
+  "p50_s": 1.0454311500070617,
+  "p95_s": 1.3297550250426866,
+  "max_s": 9.280476799991447,
+  "source": "results/eval_7919/options/b_llm/openai/sample5000/calls.jsonl"
+ },
+ "c_latency_median_of_repeats": {
+  "p50_ms": 0.0826,
+  "p95_ms": 0.2791,
+  "max_ms": 2.1451,
+  "mean_ms": 0.1027,
+  "pairs": 44022,
+  "source": "results/eval_7919/options/latency/latency_summary.json"
+ },
+ "c_per_pair_array_saved": false,
+ "d_fallback_simulation_run": false,
+ "b_calls_per_record": 20.0499,
+ "b_per_record": [
+  {
+   "latency_used": "freeze run, call p50 (2 workers)",
+   "latency_s": 1.0454651,
+   "mean_time_per_record_s": 2.096147070849,
+   "whole_rounds_time_per_record_s": 3.1363952999999998,
+   "workers": 10,
+   "basis": "freeze run"
+  },
+  {
+   "latency_used": "freeze run, call p95 (2 workers)",
+   "latency_s": 1.3296981,
+   "mean_time_per_record_s": 2.6660313935190003,
+   "whole_rounds_time_per_record_s": 3.9890943000000005,
+   "workers": 10,
+   "basis": "freeze run"
+  },
+  {
+   "latency_used": "DEV: call p50 at 10 workers",
+   "latency_s": 1.041,
+   "mean_time_per_record_s": 2.08719459,
+   "whole_rounds_time_per_record_s": 3.1229999999999998,
+   "workers": 10,
+   "basis": "dev"
+  },
+  {
+   "latency_used": "DEV: call p95 at 10 workers",
+   "latency_s": 1.32,
+   "mean_time_per_record_s": 2.6465868000000006,
+   "whole_rounds_time_per_record_s": 3.96,
+   "workers": 10,
+   "basis": "dev"
+  }
+ ],
+ "sources": {
+  "routed_records": [
+   "results/eval_7919/split_records.csv",
+   "results/eval_7919/options/d_hybrid/routed_fullband_pairs.csv",
+   "results/eval_7919/options/c_model/c_v1_lgbm/decisions.csv"
+  ],
+  "b_timings": "results/eval_7919/options/b_llm/openai/sample5000/timings.json",
+  "dev_concurrency": "results/dev_2026_run11/options/b_llm/openai/concurrency/concurrency.json"
+ }
+}
