@@ -17,9 +17,9 @@ gpt-5.4 batch output price,7.5,USD per million tokens,measured,"options/prices.j
 LLM price factor,1.0,x,assumed,model parameter,sensitivity 0.5 and 1.5
 "D routed share (exact, full test band)",0.000847,ratio,measured,results/.../options/d_hybrid/routed_fullband_pairs.csv and c_v1_lgbm/decisions.csv,"38 of 44,882 band pairs; sensitivity 0.001, 0.01, 0.05, 0.20"
 band pairs per record,20.0854,pairs,measured,dev_2026_run11/README.txt,"200,854 / 10,000; sensitivity 5, 10, 20"
-"C per-pair CPU time, mean",0.186,ms,measured,options/c_model/c_v1_lgbm/timings.json,"one core, one pair at a time; features + predict + calibrate"
-"C per-pair CPU time, p95",0.3279,ms,measured,options/c_model/c_v1_lgbm/timings.json,
-D per-pair CPU time,0.186,ms,assumed,derived from C,D runs C on every band pair; the routing test is negligible; D has no timing file of its own
+"C per-pair CPU time, mean (first measurement, one repeat)",0.186,ms,measured,options/c_model/c_v1_lgbm/timings.json,"one core, one pair at a time; features + predict + calibrate; replaced by the 3-repeat measurement when present"
+"C per-pair CPU time, p95 (first measurement)",0.3279,ms,measured,options/c_model/c_v1_lgbm/timings.json,
+D per-pair CPU time (before the D measurement),0.186,ms,assumed,derived from C,D runs C on every band pair; the routing test is negligible; replaced by the measurement when present
 A per-pair CPU time,0.0,ms,assumed,not measured,a threshold test; treated as zero
 "Verity pipeline time per record, one thread",41.97,ms,measured,"results/dev_2026_run10_1core/verity_data/run_info.json (verity.total / 10,000 records)","NOT FOR QUOTING until a controlled run exists: uncontrolled laptop state; includes 14 s of startup; shared by every option, B included"
 "labeling hours per 1,000 pairs",5.0,hours,measured,cost/effort_log.csv row 'Hand check of 100 pairs' (0.5 h),"sensitivity 2 and 10; the hand check was blind agreement checking, not a labeling workflow"

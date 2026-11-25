@@ -52,10 +52,55 @@ Monthly cost at the base case (hourly rate $100, labels 2,000, standard prices w
 
 Throughput: B at 100K records/day needs 2,008,540 calls a day = 1,395 calls per minute (23.2 per second; about 22 requests in flight at the measured p50 latency of 0.95 s). 1M and 10M records/day need 10x and 100x that. D needs 118 calls per minute at 10M records/day.
 
+Options against the protocol bars (protocol.md), with cost at 1,000,000 records per day (hourly rate $100; C and D as evaluated: 63,665 labels)
+  F1 bar: band F1 within 2 points of B, judged on the paired 5,000-pair sample (pass: interval lower end above -0.02; fail: upper end below; else inconclusive).
+  Precision bar: overall precision >= 0.98. Recall bar: overall recall at least 5 points above A. ECE <= 0.05 (C, D). C latency p95 <= 20 ms. D LLM share <= 20%.
+  option  F1 vs B [95% CI]              F1 bar           prec   bar  recall   bar  ECE bar  latency LLM share  every bar?          cost/month   12-month total
+  A       -0.8250 [-0.8739, -0.7722]    fail           1.0000  pass  0.5248 refer     n/a      n/a       n/a   no                       1,674          20,088
+  B       baseline                      reference (B   1.0000  pass  0.5800  pass     n/a      n/a       n/a   yes                    934,353      11,212,237
+  C       -0.0464 [-0.0936, -0.0045]    inconclusive   0.9944  pass  0.5793  pass     pass     pass      n/a   not shown (inconclusive)       4,826          57,916
+  D       -0.0075 [-0.0154, +0.0000]    pass           0.9988  pass  0.5791  pass     pass     n/a       pass  yes                      6,033          72,390
+  E       not run (no results; no numbers)
+  B's overall figures are sample estimates; A, C and D are exact on the full test band. A is the reference for the recall bar and fails the F1 bar; C's F1 bar is inconclusive at this sample size (its interval straddles -0.02).
+
+Label rows for C and D: the label cost is only ever shown next to the F1 measured with that label count
+  optionrow             labels label hours   label cost at $50/$100/$200                   band F1  12-month total at 1M/day
+  C     as evaluated    63,665       318.3          15,916/31,832/63,665              0.9653 (full band)        57,916
+  D     as evaluated    63,665       318.3          15,916/31,832/63,665              0.9838 (full band)        72,390
+  C     at 2,000         2,000        10.0               500/1,000/2,000        0.8999 (mean of 5 seeds)   27,083
+  D     at 2,000         2,000        10.0               500/1,000/2,000              not measured        41,558
+  'As evaluated' is what the dev results used (every train band pair, labels free from the generator); it is not a recommended budget. D's F1 was never measured with fewer labels, so no F1 is shown for D at 2,000. The C figure at 2,000 is the mean over 5 sampling seeds of the learning curve (individual seeds ranged widely), not a paired test result.
+
+B variants (cost only; no quality claim for either) at 1,000,000 records per day, $100/h, USD
+  variant                                                                    LLM / month  total / month  12-month total
+  B as measured (gpt-5.4, frozen prompt)                                         932,175        934,353      11,212,237
+  B, LLM price -70% (mini-class, price only, no quality claim)                   279,652        281,831       3,381,970
+  B without the shared Verity build in its one-time costs                        932,175        932,824      11,193,887
+  Break-even of A, C and D against each B variant (labels 2,000; range 1,000 to 100,000,000 records per day):
+    B, price -70%       A at $50/h: no crossing: option cheaper everywhere in range
+    B, price -70%       A at $100/h: no crossing: option cheaper everywhere in range
+    B, price -70%       A at $200/h: no crossing: option cheaper everywhere in range
+    B, price -70%       C at $50/h: no crossing: option cheaper everywhere in range
+    B, price -70%       C at $100/h: no crossing: option cheaper everywhere in range
+    B, price -70%       C at $200/h: no crossing: option cheaper everywhere in range
+    B, price -70%       D at $50/h: no crossing: option cheaper everywhere in range
+    B, price -70%       D at $100/h: 1,763 records per day (option cheaper above)
+    B, price -70%       D at $200/h: 3,526 records per day (option cheaper above)
+    B, no Verity build  A at $50/h: no crossing: option cheaper everywhere in range
+    B, no Verity build  A at $100/h: 1,099 records per day (option cheaper above)
+    B, no Verity build  A at $200/h: 2,199 records per day (option cheaper above)
+    B, no Verity build  C at $50/h: no crossing: option cheaper everywhere in range
+    B, no Verity build  C at $100/h: 1,721 records per day (option cheaper above)
+    B, no Verity build  C at $200/h: 3,441 records per day (option cheaper above)
+    B, no Verity build  D at $50/h: 1,085 records per day (option cheaper above)
+    B, no Verity build  D at $100/h: 2,170 records per day (option cheaper above)
+    B, no Verity build  D at $200/h: 4,339 records per day (option cheaper above)
+
 Measured concurrency (16 cache keys, per-key limiter off, 100 calls per level, Balanced power plan, on AC):
    2 workers:   94.6 calls per minute, latency p50 1.019 s, p95 1.436 s, max 3.148 s, hit ratio excluding first calls 0.852, errors 0
    5 workers:  234.2 calls per minute, latency p50 1.004 s, p95 1.22 s, max 2.043 s, hit ratio excluding first calls 0.8419, errors 0
   10 workers:  399.0 calls per minute, latency p50 1.041 s, p95 1.32 s, max 1.37 s, hit ratio excluding first calls 0.8319, errors 0
+  Capacity line: B at 100K records/day needs about 1,395 calls/min, measured only up to about 399 (10 workers); the rest is extrapolated.
   Highest clean level: 10 workers = 399 calls per minute (no 429 or other error at any level; the SDK retries a 429 twice before it would show). B at 100K records/day needs 1,395 calls per minute, 3.5x that; at the measured near-linear scaling (about 40 calls per minute per worker) that is about 35 workers, UNTESTED above 10. 1M and 10M records/day need 10x and 100x more and would need a higher rate limit from the provider (not measured).
 
 Break-even against B (total over 12 months equal; labels 2,000; volume range 1,000 to 100,000,000 records per day)
