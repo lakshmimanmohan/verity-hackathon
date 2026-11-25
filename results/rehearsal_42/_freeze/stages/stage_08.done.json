@@ -1,0 +1,55 @@
+{
+ "stage": 8,
+ "name": "option D",
+ "mode": "rehearsal",
+ "seed": 42,
+ "ended_utc": "2026-11-25T02:52:06Z",
+ "seconds": 45.8,
+ "ledger_cost_usd": 0.0,
+ "exit": 0,
+ "reads_truth": [
+  "score D, LLM fallback off (full band)",
+  "score D. hybrid, exact full test band",
+  "score D. hybrid (C + LLM) (sample)"
+ ],
+ "guards": [
+  {
+   "time": "2026-11-25T02:51:20Z",
+   "stage": 8,
+   "guard": "frozen files unchanged since the manifest",
+   "fired": false,
+   "detail": "all match"
+  },
+  {
+   "time": "2026-11-25T02:51:20Z",
+   "stage": 8,
+   "guard": "frozen asset selection_rule.txt matches the manifest",
+   "fired": false,
+   "detail": "results/dev_2026_run11/options/d_hybrid/selection_rule.txt -> results/rehearsal_42/options/d_hybrid/selection_rule.txt"
+  },
+  {
+   "time": "2026-11-25T02:51:20Z",
+   "stage": 8,
+   "guard": "frozen asset frozen_settings.json matches the manifest",
+   "fired": false,
+   "detail": "results/dev_2026_run11/options/d_hybrid/frozen_settings.json -> results/rehearsal_42/options/d_hybrid/frozen_settings.json"
+  }
+ ],
+ "notes": [
+  "0 test band pairs routed to the LLM",
+  "no routed pairs: the B dfull call is skipped",
+  "fallback off: C's cutoff 1.0000, [lo, hi) = [0.5, 0.9): outside [lo, hi): computed and scored; 0 pairs differ from C"
+ ],
+ "outputs": {
+  "results/rehearsal_42/options/d_hybrid/selection_rule.txt": "74964ba785815b63cbde4e15f9b8c555545d8853a385ccaeba0cd53fa5e9b3f8",
+  "results/rehearsal_42/options/d_hybrid/frozen_settings.json": "271f25b4e8367b55c1fd60226c855fab0feb993c5d49caed17b2a7e9a0ac039f",
+  "results/rehearsal_42/options/d_hybrid/routed_fullband_pairs.csv": "3e2c9d781d33eddc96c97d2e1f1c1cf0068de70ca84c406bc2f78500a4023c0a",
+  "results/rehearsal_42/options/d_hybrid/decisions_fullband.csv": "fdc5688bc46965621067cccafddacd4eaa498b352c57ca33944f2a501969a8d8",
+  "results/rehearsal_42/options/d_hybrid/fallback_off_check.json": "967925d38fe9d5b6c0babe98df3fdd3fe1328cbc00654932d6fc50dcc080b7ec",
+  "results/rehearsal_42/options/d_hybrid/decisions.csv": "e231f948abef9247a4bbe331f20347fa1de10456cacb5147cb03d44fee5a318f",
+  "results/rehearsal_42/options/latency/latency_summary.json": "38c3094bb4a270e978f9c3e9051bd6b064462004177388e26179b648e4196e8c",
+  "results/rehearsal_42/options/d_hybrid/score_report_fullband.txt": "7ff3e095b5257c701faa819677035096121d5921f4d83c4c987b209817d9c17c",
+  "results/rehearsal_42/options/d_hybrid/score_report_sample5000.txt": "df8a31fb2914306d41239b24fe6ca425e6ec26b69e94042426acc6f1d28ab9c2"
+ },
+ "manifest_sha256": "3da152e8394c55905211d1bb218cdbc63ea2a7e3a3f181fa85d28041938c28fe"
+}

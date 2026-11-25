@@ -1,0 +1,238 @@
+Option D, exact decisions for all 44,985 test band pairs (lo 0.5, hi 0.9), run rehearsal_42
+routes: {'c_different': 44658, 'c_same': 327}; LLM share 0.00000 (0 pairs: 0 with a B answer)
+
+Exact errors: 6 false matches, 12 false non-matches
+
+False matches (different organizations decided same): 6, all shown
+  R2fd4b0c2e8 | R3034da5a8e   decision same, p 1.000, route c_same, tags standard
+      address_line     2092 Center Boulevard                        | 5021 Mill Lane
+      city             Albany                                       | Albany
+      company_name     Moreau and Hughes Manufacturing L.L.C.       | Bennett Medical Supply Ltd
+      phone            684-351-4443                                 | 673.519.4443
+      postal_code      12202                                        | 12290
+      state            NY                                           | NY
+      website          (missing)                                    | (missing)
+  R3034da5a8e | R436f4d7510   decision same, p 1.000, route c_same, tags acronym+standard+typo_address
+      address_line     5021 Mill Lane                               | 2092 Cente rBlvd Ste 210
+      city             Albany                                       | Albany
+      company_name     Bennett Medical Supply Ltd                   | MHM L.L.C.
+      phone            673.519.4443                                 | 684-351-4443
+      postal_code      12290                                        | 12202-9685
+      state            NY                                           | NY
+      website          (missing)                                    | (missing)
+  R328fe4a992 | Re0cd72f297   decision same, p 1.000, route c_same, tags clean+missing_phone+truncation
+      address_line     6823 Enterprise Parkway                      | 5602 Main Lane
+      city             Pittsburgh                                   | Pittsburgh
+      company_name     Silverline Packaging                         | Silverline Equipment Ren
+      phone            (683) 975-8806                               | (missing)
+      postal_code      15270                                        | 15270
+      state            PA                                           | PA
+      website          silverlinepackaging.com                      | silverlineequipment.com
+  R436f4d7510 | R544898bcd8   decision same, p 1.000, route c_same, tags acronym+typo_address
+      address_line     2092 Cente rBlvd Ste 210                     | 5021 Mill Lane
+      city             Albany                                       | Albany
+      company_name     MHM L.L.C.                                   | B.M.S. Ltd.
+      phone            684-351-4443                                 | 673-519-4443
+      postal_code      12202-9685                                   | 12290-3573
+      state            NY                                           | NY
+      website          (missing)                                    | (missing)
+  Ra42aae9298 | Rad9d1046db   decision same, p 1.000, route c_same, tags clean+missing_phone+typo
+      address_line     5653 Highland Rd                             | 9950 Center Way
+      city             Nashville                                    | Nashville
+      company_name     Silverline Willow Environmenntal Services, L | Silverline Willow Pharmacy LLC
+      phone            (missing)                                    | 482.923.8378
+      postal_code      37226                                        | 37228
+      state            TN                                           | TN
+      website          silverlinewillow.com                         | silverlinewillow.com
+  Rad125d0ae6 | Rf8c5ecdda6   decision same, p 1.000, route c_same, tags case+po_box
+      address_line     3471 Main Dr.                                | P.O. Box 66104
+      city             Omaha                                        | Omaha
+      company_name     PRAIRIE CLEARVIEW ENERGY SOLUTIONS, LTD.     | Okafor & Carter Staffing Solutions
+      phone            (695) 860-7209                               | (missing)
+      postal_code      68150                                        | 68150
+      state            NE                                           | NE
+      website          (missing)                                    | (missing)
+
+False non-matches (same organization decided different): 12, all shown
+  R056ae34b28 | R33c04b4826   decision different, p 0.301, route c_different, tags po_box+truncation
+      address_line     2569 Mill Parkway                            | Post Office Box 35945
+      city             Omaha                                        | Omaha
+      company_name     Granite Northgat                             | Granite Northgate Staffing Solutions, Compan
+      phone            279-881-7924                                 | (missing)
+      postal_code      68130                                        | 68130
+      state            NE                                           | NE
+      website          granitenorthgate.com                         | (missing)
+  R0e1241e40a | R77b89d7310   decision different, p 0.301, route c_different, tags acronym+missing_phone+po_box
+      address_line     8797 Industrial Boulevard                    | P.O. Box 62066
+      city             Sacramento                                   | Sacramento
+      company_name     L.H.P. Corporation                           | Lakeshore Health Partners Corporation
+      phone            +1 700 438 5189                              | (missing)
+      postal_code      95816-7394                                   | 95816-8201
+      state            CA                                           | CA
+      website          lakeshorehealth.com                          | lakeshorehealth.com
+  R1e07b5777a | Rf8c5ecdda6   decision different, p 0.433, route c_different, tags acronym+po_box
+      address_line     7642 Park Drive                              | P.O. Box 66104
+      city             Omaha                                        | Omaha
+      company_name     O.C.S.S.                                     | Okafor & Carter Staffing Solutions
+      phone            +1 772 935 7559                              | (missing)
+      postal_code      68150                                        | 68150
+      state            NE                                           | NE
+      website          (missing)                                    | (missing)
+  R21400a4280 | Ra96e227283   decision different, p 0.000, route c_different, tags acronym+po_box+typo_address
+      address_line     7101 Jefferson Drive                         | Pots Office Box 47552
+      city             Tampa                                        | Tampa
+      company_name     M.R.F.L. Corp.                               | Morgan and Reed Freight Lines Corp
+      phone            (492) 906-0118                               | (missing)
+      postal_code      33684-7908                                   | 33684
+      state            FL                                           | FL
+      website          morganreed.com                               | (missing)
+  R3e2d47b3d5 | Rb73e644279   decision different, p 0.002, route c_different, tags missing_phone+po_box+truncation
+      address_line     8209 Market Avenue                           | Post Office Box 13283
+      city             Tampa                                        | TAMPA
+      company_name     Ironwood Evergreen                           | Ironwood Evergreen Realty Co
+      phone            (missing)                                    | (missing)
+      postal_code      33618                                        | 33618-7920
+      state            FL                                           | FL
+      website          (missing)                                    | ironwoodevergreen.com
+  R4d3b8a5632 | R67743925b9   decision different, p 0.433, route c_different, tags po_box+truncation
+      address_line     PO Box 14298                                 | 2405 Industrial Ln
+      city             Portland                                     | Portland
+      company_name     Crescent Granite Staffing Solutions          | Crescent Granite Staffi
+      phone            (missing)                                    | 596-467-3168
+      postal_code      97262                                        | 97262-8743
+      state            OR                                           | OR
+      website          www.crescentgranite.com                      | crescentgranite.com
+  R4d3b8a5632 | Rbdc5ccfe29   decision different, p 0.433, route c_different, tags acronym+po_box
+      address_line     PO Box 14298                                 | 2405 Industrial Ln.
+      city             Portland                                     | Portland
+      company_name     Crescent Granite Staffing Solutions          | CGSS
+      phone            (missing)                                    | 596-467-3168
+      postal_code      97262                                        | 97262
+      state            OR                                           | OR
+      website          www.crescentgranite.com                      | crescentgranite.com
+  R4d8fbffd48 | R77ceb93d54   decision different, p 0.433, route c_different, tags po_box+truncation+typo_address
+      address_line     1583 Industrial Lane                         | P Box 13822
+      city             Minneapolis                                  | Minneapolis
+      company_name     Carter & Nguyen                              | Carter & Nguyen Energy Solutions
+      phone            978.677.2492                                 | (missing)
+      postal_code      55461                                        | 55461
+      state            MN                                           | MN
+      website          (missing)                                    | www.carternguyen.com
+  R6460b5edcc | R796572e66e   decision different, p 0.301, route c_different, tags po_box+truncation
+      address_line     Post Office Box 27622                        | 5283 Highland Way
+      city             Richmond                                     | Richmond
+      company_name     Highland Redstone Construction, Ltd          | Highland Redstone Constr
+      phone            (missing)                                    | 5579992818
+      postal_code      23296                                        | 23296-0426
+      state            VA                                           | VA
+      website          highlandredstone.com                         | (missing)
+  R867c38b590 | Rdcd8394894   decision different, p 0.433, route c_different, tags acronym+missing_phone+truncation+typo_address
+      address_line     3381 ill Avenue                              | 3381 Mill Ave
+      city             Atlanta                                      | Atlanta
+      company_name     Ironwood Westfie                             | I.W.E.R. LLC
+      phone            964.271.5100                                 | (missing)
+      postal_code      30386-2462                                   | 30386-1127
+      state            GA                                           | GA
+      website          (missing)                                    | www.ironwoodwestfield.com
+  R97e02da0b0 | Rb1df66d41e   decision different, p 0.301, route c_different, tags acronym+missing_phone+po_box
+      address_line     PO Box 34658                                 | 3532 Jefferson St.
+      city             Boston                                       | Boston
+      company_name     Bluewater Harbor Data Systems                | BHDS
+      phone            294.928.4066                                 | (missing)
+      postal_code      02118                                        | 02118
+      state            MA                                           | MA
+      website          (missing)                                    | www.bluewaterharbor.com
+  Rc059a3b909 | Rd0fd93329c   decision different, p 0.301, route c_different, tags po_box+truncation
+      address_line     P.O. Box 93929                               | 9203 Main Blvd
+      city             Omaha                                        | Omaha
+      company_name     Eastwood Frontier Environmental Services Llc | Eastwood Frontier Envir
+      phone            (missing)                                    | 204.552.6676
+      postal_code      68136-7934                                   | 68136
+      state            NE                                           | NE
+      website          (missing)                                    | eastwoodfrontier.com
+
+Sample-based estimate (5,000-pair sample, compare_d_vs_b.txt) against the exact full-band numbers
+                   sample estimate  sample 95% interval      exact   inside?
+  band F1                   0.9817  [0.9701, 0.9908]        0.9727   yes
+  band precision            1.0000  [1.0000, 1.0000]        0.9817   NO: the interval is degenerate [1.0000, 1.0000] (0 false matches sampled); the zero-error bound (worst-case precision >= 0.9208) contains the exact value
+  band recall               0.9640  [0.9420, 0.9818]        0.9640   yes
+  overall precision: sample 1.0000, exact 0.9981; overall recall: sample 0.5791, exact 0.5751; ECE: sample 0.0002, exact 0.0002
+  why the sample missed the false matches: the 6 exact false matches are 6 sure-same pairs from C (p = 1.0) and 0 the LLM answered same; each non-match has a 1-in-9.56 chance of being sampled, so a handful of false matches can all be missed (the sample's 95% bound allowed up to 29)
+
+Where D and C differ: 0 of 44,985 band pairs (D differs from C only on the LLM-routed pairs)
+  of those 0: {}
+
+Where D and B differ: B has an answer for 448 band pairs (the 5,000 sampled, 64 decoy-check and routed pairs); they differ on 14 of them; {'D wrong, B right': 12, 'D right, B wrong': 2}. On the 44,537 band pairs B never saw, the comparison is not possible
+  R056ae34b28 R33c04b4826   D different (route c_different, p 0.301)  B same (p_same 0.89)   truth same   po_box+truncation
+  R0e1241e40a R77b89d7310   D different (route c_different, p 0.301)  B same (p_same 0.97)   truth same   acronym+missing_phone+po_box
+  R1e07b5777a Rf8c5ecdda6   D different (route c_different, p 0.433)  B same (p_same 0.88)   truth same   acronym+po_box
+  R21400a4280 Ra96e227283   D different (route c_different, p 0.000)  B same (p_same 0.90)   truth same   acronym+po_box+typo_address
+  R3e2d47b3d5 Rb73e644279   D different (route c_different, p 0.002)  B same (p_same 0.86)   truth same   missing_phone+po_box+truncation
+  R4d3b8a5632 R67743925b9   D different (route c_different, p 0.433)  B same (p_same 0.95)   truth same   po_box+truncation
+  R4d3b8a5632 Rbdc5ccfe29   D different (route c_different, p 0.433)  B same (p_same 0.93)   truth same   acronym+po_box
+  R4d8fbffd48 R77ceb93d54   D different (route c_different, p 0.433)  B same (p_same 0.90)   truth same   po_box+truncation+typo_address
+  R6460b5edcc R796572e66e   D different (route c_different, p 0.301)  B same (p_same 0.94)   truth same   po_box+truncation
+  R6aac5649b9 Ra268f399ac   D same (route c_same, p 1.000)  B different (p_same 0.28)   truth same   missing_phone+standard+typo_address
+  R71e540a0d0 Rcb07f8a5ed   D same (route c_same, p 1.000)  B different (p_same 0.68)   truth same   missing_phone+po_box+truncation+typo
+  R867c38b590 Rdcd8394894   D different (route c_different, p 0.433)  B same (p_same 0.91)   truth same   acronym+missing_phone+truncation+typo_address
+  R97e02da0b0 Rb1df66d41e   D different (route c_different, p 0.301)  B same (p_same 0.68)   truth same   acronym+missing_phone+po_box
+  Rc059a3b909 Rd0fd93329c   D different (route c_different, p 0.301)  B same (p_same 0.88)   truth same   po_box+truncation
+
+D's decision on each of the 55 decoy pairs (different organizations that share a decoy group)
+  pair                      route        D decision      C p  B p_same
+  R03510d3323 Rac1c3b020b   c_different  different     0.000         -
+  R05d7b764a3 R0ae4e45efe   c_different  different     0.000         -
+  R05d7b764a3 R0cd2a9ced6   c_different  different     0.000         -
+  R05d7b764a3 R3a9d196aa8   c_different  different     0.000         -
+  R05d7b764a3 R3da0f0c304   c_different  different     0.000         -
+  R05d7b764a3 R76961ea73b   c_different  different     0.000         -
+  R0af2e38d30 Raae293eeea   c_different  different     0.000         -
+  R0d3be753e2 Rccf4052d3d   c_different  different     0.000         -
+  R0fa1cfdd04 Rc467bc910b   c_different  different     0.000         -
+  R12bf32e46b R927d2089a5   c_different  different     0.000         -
+  R12bf32e46b Rbecc4c5d5c   c_different  different     0.000         -
+  R139bcdafca R2511c604de   c_different  different     0.000         -
+  R1af349e856 Rc15c99d9f7   c_different  different     0.000         -
+  R23d5c95f20 R9d085c52de   c_different  different     0.000         -
+  R24a5a76a5c Rb525d5a711   c_different  different     0.000         -
+  R2511c604de R27411bf458   c_different  different     0.000         -
+  R2511c604de R30979ab104   c_different  different     0.000         -
+  R287b0f7e71 Rd140265d1f   c_different  different     0.000         -
+  R29292bfc91 R9d085c52de   c_different  different     0.000         -
+  R305f139423 Raa49f731d1   c_different  different     0.000         -
+  R3b5a8fe06f Rcdd7ff2846   c_different  different     0.000         -
+  R3d490ae949 Rcdd7ff2846   c_different  different     0.000         -
+  R461c971c89 Rb2695178f1   c_different  different     0.000         -
+  R46dc17828a R8602644a86   c_different  different     0.000         -
+  R494c3455fd Rcdd7ff2846   c_different  different     0.000         -
+  R4cacd7c5ae R55aa598bc4   c_different  different     0.000         -
+  R534143a256 R756bc435c7   c_different  different     0.000         -
+  R55aa598bc4 Rba2ac56543   c_different  different     0.000         -
+  R5702f9f4e8 Rdcccba099f   c_different  different     0.000         -
+  R5702f9f4e8 Rf262d9ac43   c_different  different     0.000         -
+  R60458da583 Rb63c57d2c2   c_different  different     0.000         -
+  R61fa96cedd Rcdd7ff2846   c_different  different     0.000         -
+  R6c1c50bf4e Reb4fdf48c6   c_different  different     0.000         -
+  R756bc435c7 Rdfff0452c3   c_different  different     0.000         -
+  R756bc435c7 Recd0c62d58   c_different  different     0.000         -
+  R7d67a47480 Rb2695178f1   c_different  different     0.000         -
+  R832138231b R8cde95a736   c_different  different     0.000         -
+  R832138231b Rabac73ca2b   c_different  different     0.000         -
+  R8471958eac R86bac899ef   c_different  different     0.000         -
+  R860e323e12 Rdddb8fb3c7   c_different  different     0.000         -
+  R86bac899ef Rbb0e7a12f6   c_different  different     0.000         -
+  R8a9ba7dadf Rc0f085429f   c_different  different     0.000         -
+  R8b381746ec Rac1c3b020b   c_different  different     0.000         -
+  R8c047bfb08 R9d085c52de   c_different  different     0.000         -
+  R941ff14d75 Rd4f88b613c   c_different  different     0.000         -
+  R94715273b0 Re4c053d7e8   c_different  different     0.000         -
+  R9523205ddf Rcdd7ff2846   c_different  different     0.000         -
+  R9edb11ee22 Rbadeaf7224   c_different  different     0.000         -
+  R9edb11ee22 Rc7745fa366   c_different  different     0.000         -
+  R9ffd93ede1 Rb525d5a711   c_different  different     0.000         -
+  Raf7214b43d Rbae660efe1   c_different  different     0.000         -
+  Rbf133a5cf5 Rc00ef9150b   c_different  different     0.000         -
+  Rc00ef9150b Rdfb8c3f5d8   c_different  different     0.000         -
+  Rcdd7ff2846 Rd2f1e1b463   c_different  different     0.000         -
+  Re4edd820ee Refa2be78b0   c_different  different     0.000         -
+  summary: {('c_different', 'different'): 55}; wrongly matched 0 of 55 (B alone: 1 of 68)

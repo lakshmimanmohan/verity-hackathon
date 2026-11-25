@@ -1,0 +1,43 @@
+{
+ "stage": 10,
+ "name": "scoring",
+ "mode": "rehearsal",
+ "seed": 42,
+ "ended_utc": "2026-11-25T02:53:07Z",
+ "seconds": 17.7,
+ "ledger_cost_usd": 0.0,
+ "exit": 0,
+ "reads_truth": [
+  "score B. frontier LLM (frozen prompt) (sample)",
+  "compare B (frontier LLM) vs A (threshold only)",
+  "compare B (frontier LLM) vs C v1 LightGBM",
+  "compare C v1 LightGBM vs B (frontier LLM)",
+  "compare D (hybrid) vs B (frontier LLM)",
+  "compare D (hybrid) vs C v1 LightGBM",
+  "b_sample_report",
+  "d_report",
+  "d_full_report"
+ ],
+ "guards": [
+  {
+   "time": "2026-11-25T02:52:50Z",
+   "stage": 10,
+   "guard": "frozen files unchanged since the manifest",
+   "fired": false,
+   "detail": "all match"
+  }
+ ],
+ "notes": [],
+ "outputs": {
+  "results/rehearsal_42/options/b_llm/openai/sample5000/score_report_sample5000.txt": "d3e30b6e30f2271f024ee215a7fc275c85b0a132303713c9cae9c319b2f32e05",
+  "results/rehearsal_42/options/compare/b_vs_a.txt": "9b4409ad99fa7e85c7295bd41bfd9f52dd10cb92fba1855fe55faa0593184216",
+  "results/rehearsal_42/options/compare/b_vs_c_v1_lgbm.txt": "ac2e75ca41bac4b7b5e87006112abb98b64c8409f791d1915e8dc55dbcfc0e66",
+  "results/rehearsal_42/options/compare/c_v1_lgbm_vs_b.txt": "e4d00010024e67927e94582ae09f20e1d3380744d0b4a0e07c7b59b90e17de57",
+  "results/rehearsal_42/options/d_hybrid/compare_d_vs_b.txt": "be52aeb2a832793519b912f68197a8975b95e93dc4b4635f37ef33135e99432d",
+  "results/rehearsal_42/options/d_hybrid/compare_d_vs_c.txt": "d6ccc90589f3f6bfc5168d18978802af9106dc356155e605375856a4f90a5c09",
+  "results/rehearsal_42/options/b_llm/openai/sample5000/sample_report.txt": "385848aca0ee151789216c783b791acfc984e523d500824fee225f01f302667c",
+  "results/rehearsal_42/options/d_hybrid/d_report.txt": "e7490afaa5310feee95e5f4504a5bcea601cf7e3c942335d7eacf02c0b3d4dee",
+  "results/rehearsal_42/options/d_hybrid/d_fullband_report.txt": "40804afe93c53ede60c1a56c152db719ae2578b1fe3a68b3889edb92ac31cddc"
+ },
+ "manifest_sha256": "3da152e8394c55905211d1bb218cdbc63ea2a7e3a3f181fa85d28041938c28fe"
+}

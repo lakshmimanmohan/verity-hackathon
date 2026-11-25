@@ -1,0 +1,6 @@
+option,basis,band_f1,band_f1_ci_lo,band_f1_ci_hi,band_precision,band_recall,f1_diff_vs_B,f1_diff_lo,f1_diff_hi,f1_bar,overall_precision,precision_bar,overall_recall,recall_bar,ece,ece_bar,latency_p95_ms,latency_bar,llm_share,llm_share_bar,meets_every_bar
+A,full band; F1 difference on the sample,0.1133,0.0691,0.1593,1.0,0.0601,-0.8837,-0.9285,-0.841,fail,1.0,pass,0.5201,reference (A is the baseline),,n/a (bar is for C and D),,n/a (bar is for C),,n/a (bar is for D),no
+B,sample estimate (weighted); B is the baseline of the F1 bar,0.997,0.9923,1.0,1.0,0.994,,,,reference (B is the baseline),1.0,pass,0.5769,pass,0.0142,n/a (bar is for C and D),,n/a (bar is for C),,n/a (bar is for D),yes
+C,full band; F1 difference on the sample,0.9727,0.9597,0.9848,0.9817,0.964,-0.0153,-0.0274,-0.0059,inconclusive,0.9981,pass,0.5751,pass,0.0002,pass,0.0863,pass,,n/a (bar is for D),not shown (inconclusive)
+D,exact full band; F1 difference on the sample,0.9727,0.9597,0.9848,0.9817,0.964,-0.0153,-0.0274,-0.0059,inconclusive,0.9981,pass,0.5751,pass,0.0002,pass,0.0866,n/a (bar is for C),0.0,pass,not shown (inconclusive)
+E,not run,,,,,,,,,,,,,,,,,,,,not run

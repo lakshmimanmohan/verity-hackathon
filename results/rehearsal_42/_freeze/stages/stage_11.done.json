@@ -1,0 +1,33 @@
+{
+ "stage": 11,
+ "name": "bars table",
+ "mode": "rehearsal",
+ "seed": 42,
+ "ended_utc": "2026-11-25T02:53:08Z",
+ "seconds": 0.2,
+ "ledger_cost_usd": 0.0,
+ "exit": 0,
+ "reads_truth": [],
+ "guards": [
+  {
+   "time": "2026-11-25T02:53:07Z",
+   "stage": 11,
+   "guard": "frozen files unchanged since the manifest",
+   "fired": false,
+   "detail": "all match"
+  }
+ ],
+ "notes": [
+  "  option band F1 [95% CI]          F1 vs B [95% CI]              F1 bar           prec bar    recall bar        ECE bar     p95 ms bar    LLM share bar    every bar?",
+  "  A      0.1133 [0.0691, 0.1593]   -0.8837 [-0.9285, -0.8410]    fail           1.0000 pass   0.5201 reference        n/a            n/a              n/a    no",
+  "  B      0.9970 [0.9923, 1.0000]   baseline                      reference      1.0000 pass   0.5769 pass    0.0142 n/a            n/a              n/a    yes",
+  "  C      0.9727 [0.9597, 0.9848]   -0.0153 [-0.0274, -0.0059]    inconclusive   0.9981 pass   0.5751 pass    0.0002 pass     0.086 pass             n/a    not shown (inconclusive)",
+  "  D      0.9727 [0.9597, 0.9848]   -0.0153 [-0.0274, -0.0059]    inconclusive   0.9981 pass   0.5751 pass    0.0002 pass     0.087 n/a      0.00000 pass   not shown (inconclusive)",
+  "  E      not run"
+ ],
+ "outputs": {
+  "results/rehearsal_42/bars_table.csv": "46b469c4fb5d4c3468d1af0eb1e44a1d7f5163fc0d12c8a614bc4ba13d612f52",
+  "results/rehearsal_42/bars_table.txt": "aecbe10a5c9923d7f9289899d18b74081ee872cda1c9889f48a3409602317a48"
+ },
+ "manifest_sha256": "3da152e8394c55905211d1bb218cdbc63ea2a7e3a3f181fa85d28041938c28fe"
+}

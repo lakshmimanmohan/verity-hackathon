@@ -1,0 +1,29 @@
+{
+ "date": "2026-11-24",
+ "rule_file": "selection_rule.txt",
+ "rule_file_sha256_lf": "74964ba785815b63cbde4e15f9b8c555545d8853a385ccaeba0cd53fa5e9b3f8",
+ "selected": true,
+ "lo": 0.5,
+ "hi": 0.9,
+ "b_band_f1": 0.9970501474926253,
+ "f1_floor": 0.9870501474926253,
+ "share_max": 0.2,
+ "qualifying_settings": 32,
+ "chosen_metrics": {
+  "sampled_llm_calls": 25,
+  "weighted_llm_share": 0.0011290741838459544,
+  "projected_calls": 50.675107000000004,
+  "band_f1": 0.9895988112927191,
+  "band_f1_ci": [
+   0.981294964028777,
+   0.9969327498545993
+  ],
+  "band_precision": 1.0,
+  "band_recall": 0.9794117647058823,
+  "overall_precision": 1.0,
+  "overall_recall": 0.5791373398303555,
+  "ece": 0.0001968111892378944
+ },
+ "applies_to": "seed 7919 unchanged, with C retrained on that seed's train split; B's frozen prompt for the LLM route",
+ "dev_run": "dev_2026_run11"
+}

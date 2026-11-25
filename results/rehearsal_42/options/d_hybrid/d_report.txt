@@ -1,0 +1,151 @@
+Option D (hybrid) on the 5,000-pair test band sample, run rehearsal_42: lo 0.5, hi 0.9 (chosen by selection_rule.txt, frozen_settings.json)
+
+Routes (C's calibrated p: p >= hi decided same, lo <= p < hi the LLM, p < lo decided different)
+  route         sampled  weighted (test band)    share
+  c_different        72              44,664.0   0.9929
+  llm                 0                   0.0   0.0000
+  c_same            321                 321.0   0.0071
+  LLM calls: 0 sampled; weighted LLM share of the band 0.0000 = about 0 calls on the 44,985 band pairs
+  projected cost: $0.0000 per 1,000 band pairs ($0.001527 per call, B's measured cost), about $0.000 for the band; B alone costs $1.527 per 1,000 band pairs
+
+Errors among the sampled pairs: 12 false non-matches, 0 false matches (333 same, 60 different sampled)
+  zero-error bounds (exact one-sided 95% Clopper-Pearson; the bootstrap interval is degenerate when an error count is 0):
+    false matches: 0 of 60 false pairs; false-match rate <= 0.04870 (up to 2175 false matches on 44,652 false pairs)
+    implied worst case on a band of 333 true and 44,652 false pairs: precision >= 0.1286, recall = 0.9640, F1 >= 0.2270
+
+False negatives (same organization, decided different): 12, all shown
+  R056ae34b28 | R33c04b4826   decision different, p 0.301, route c_different, weight 1.0000, tags po_box+truncation
+      address_line     2569 Mill Parkway                            | Post Office Box 35945
+      city             Omaha                                        | Omaha
+      company_name     Granite Northgat                             | Granite Northgate Staffing Solutions, Compan
+      phone            279-881-7924                                 | (missing)
+      postal_code      68130                                        | 68130
+      state            NE                                           | NE
+      website          granitenorthgate.com                         | (missing)
+  R0e1241e40a | R77b89d7310   decision different, p 0.301, route c_different, weight 1.0000, tags acronym+missing_phone+po_box
+      address_line     8797 Industrial Boulevard                    | P.O. Box 62066
+      city             Sacramento                                   | Sacramento
+      company_name     L.H.P. Corporation                           | Lakeshore Health Partners Corporation
+      phone            +1 700 438 5189                              | (missing)
+      postal_code      95816-7394                                   | 95816-8201
+      state            CA                                           | CA
+      website          lakeshorehealth.com                          | lakeshorehealth.com
+  R1e07b5777a | Rf8c5ecdda6   decision different, p 0.433, route c_different, weight 1.0000, tags acronym+po_box
+      address_line     7642 Park Drive                              | P.O. Box 66104
+      city             Omaha                                        | Omaha
+      company_name     O.C.S.S.                                     | Okafor & Carter Staffing Solutions
+      phone            +1 772 935 7559                              | (missing)
+      postal_code      68150                                        | 68150
+      state            NE                                           | NE
+      website          (missing)                                    | (missing)
+  R21400a4280 | Ra96e227283   decision different, p 0.000, route c_different, weight 1.0000, tags acronym+po_box+typo_address
+      address_line     7101 Jefferson Drive                         | Pots Office Box 47552
+      city             Tampa                                        | Tampa
+      company_name     M.R.F.L. Corp.                               | Morgan and Reed Freight Lines Corp
+      phone            (492) 906-0118                               | (missing)
+      postal_code      33684-7908                                   | 33684
+      state            FL                                           | FL
+      website          morganreed.com                               | (missing)
+  R3e2d47b3d5 | Rb73e644279   decision different, p 0.002, route c_different, weight 1.0000, tags missing_phone+po_box+truncation
+      address_line     8209 Market Avenue                           | Post Office Box 13283
+      city             Tampa                                        | TAMPA
+      company_name     Ironwood Evergreen                           | Ironwood Evergreen Realty Co
+      phone            (missing)                                    | (missing)
+      postal_code      33618                                        | 33618-7920
+      state            FL                                           | FL
+      website          (missing)                                    | ironwoodevergreen.com
+  R4d3b8a5632 | R67743925b9   decision different, p 0.433, route c_different, weight 1.0000, tags po_box+truncation
+      address_line     PO Box 14298                                 | 2405 Industrial Ln
+      city             Portland                                     | Portland
+      company_name     Crescent Granite Staffing Solutions          | Crescent Granite Staffi
+      phone            (missing)                                    | 596-467-3168
+      postal_code      97262                                        | 97262-8743
+      state            OR                                           | OR
+      website          www.crescentgranite.com                      | crescentgranite.com
+  R4d3b8a5632 | Rbdc5ccfe29   decision different, p 0.433, route c_different, weight 1.0000, tags acronym+po_box
+      address_line     PO Box 14298                                 | 2405 Industrial Ln.
+      city             Portland                                     | Portland
+      company_name     Crescent Granite Staffing Solutions          | CGSS
+      phone            (missing)                                    | 596-467-3168
+      postal_code      97262                                        | 97262
+      state            OR                                           | OR
+      website          www.crescentgranite.com                      | crescentgranite.com
+  R4d8fbffd48 | R77ceb93d54   decision different, p 0.433, route c_different, weight 1.0000, tags po_box+truncation+typo_address
+      address_line     1583 Industrial Lane                         | P Box 13822
+      city             Minneapolis                                  | Minneapolis
+      company_name     Carter & Nguyen                              | Carter & Nguyen Energy Solutions
+      phone            978.677.2492                                 | (missing)
+      postal_code      55461                                        | 55461
+      state            MN                                           | MN
+      website          (missing)                                    | www.carternguyen.com
+  R6460b5edcc | R796572e66e   decision different, p 0.301, route c_different, weight 1.0000, tags po_box+truncation
+      address_line     Post Office Box 27622                        | 5283 Highland Way
+      city             Richmond                                     | Richmond
+      company_name     Highland Redstone Construction, Ltd          | Highland Redstone Constr
+      phone            (missing)                                    | 5579992818
+      postal_code      23296                                        | 23296-0426
+      state            VA                                           | VA
+      website          highlandredstone.com                         | (missing)
+  R867c38b590 | Rdcd8394894   decision different, p 0.433, route c_different, weight 1.0000, tags acronym+missing_phone+truncation+typo_address
+      address_line     3381 ill Avenue                              | 3381 Mill Ave
+      city             Atlanta                                      | Atlanta
+      company_name     Ironwood Westfie                             | I.W.E.R. LLC
+      phone            964.271.5100                                 | (missing)
+      postal_code      30386-2462                                   | 30386-1127
+      state            GA                                           | GA
+      website          (missing)                                    | www.ironwoodwestfield.com
+  R97e02da0b0 | Rb1df66d41e   decision different, p 0.301, route c_different, weight 1.0000, tags acronym+missing_phone+po_box
+      address_line     PO Box 34658                                 | 3532 Jefferson St.
+      city             Boston                                       | Boston
+      company_name     Bluewater Harbor Data Systems                | BHDS
+      phone            294.928.4066                                 | (missing)
+      postal_code      02118                                        | 02118
+      state            MA                                           | MA
+      website          (missing)                                    | www.bluewaterharbor.com
+  Rc059a3b909 | Rd0fd93329c   decision different, p 0.301, route c_different, weight 1.0000, tags po_box+truncation
+      address_line     P.O. Box 93929                               | 9203 Main Blvd
+      city             Omaha                                        | Omaha
+      company_name     Eastwood Frontier Environmental Services Llc | Eastwood Frontier Envir
+      phone            (missing)                                    | 204.552.6676
+      postal_code      68136-7934                                   | 68136
+      state            NE                                           | NE
+      website          (missing)                                    | eastwoodfrontier.com
+
+False positives (different organizations, decided same): 0, all shown
+
+Errors by tag (sample counts; recall and false-match rate weighted to the test band)
+  tag         pairs  same  diff   FN   FP   recall (w)   false-match rate (w)   FP-rate bound
+  acronym       144   136     8    6    0       0.9559                0.00000   <= 0.3123
+  truncation     80    70    10    7    0       0.9000                0.00000   <= 0.2589
+  po_box        217   211     6   11    0       0.9479                0.00000   <= 0.3930
+  decoy           0     0     0    0    0            -                      -   
+  easy            9     6     3    0    0       1.0000                0.00000   <= 0.6316
+  no tag         34     0    34    0    0            -                0.00000   <= 0.0843
+
+C v1 LightGBM's errors on the full test band: 6 false matches and 12 missed true pairs; where the chosen rule (lo 0.5, hi 0.9) sends each pair
+
+  C false matches: 6; routed to the LLM 0, c_same 6, c_different 0
+    pair                         C p  route       in sample B answer (recorded)       D decision   tags
+    R2fd4b0c2e8 R3034da5a8e    1.000  c_same      no        not in sample (no B answer)(not sampled)standard
+    R3034da5a8e R436f4d7510    1.000  c_same      no        not in sample (no B answer)(not sampled)acronym+standard+typo_address
+    R328fe4a992 Re0cd72f297    1.000  c_same      no        not in sample (no B answer)(not sampled)clean+missing_phone+truncation
+    R436f4d7510 R544898bcd8    1.000  c_same      no        not in sample (no B answer)(not sampled)acronym+typo_address
+    Ra42aae9298 Rad9d1046db    1.000  c_same      no        not in sample (no B answer)(not sampled)clean+missing_phone+typo
+    Rad125d0ae6 Rf8c5ecdda6    1.000  c_same      no        not in sample (no B answer)(not sampled)case+po_box
+
+  C missed true pairs: 12; routed to the LLM 0, c_same 0, c_different 12
+    pair                         C p  route       in sample B answer (recorded)       D decision   tags
+    R056ae34b28 R33c04b4826    0.301  c_different yes       same 0.89                  different    po_box+truncation
+    R0e1241e40a R77b89d7310    0.301  c_different yes       same 0.97                  different    acronym+missing_phone+po_box
+    R1e07b5777a Rf8c5ecdda6    0.433  c_different yes       same 0.88                  different    acronym+po_box
+    R21400a4280 Ra96e227283    0.000  c_different yes       same 0.90                  different    acronym+po_box+typo_address
+    R3e2d47b3d5 Rb73e644279    0.002  c_different yes       same 0.86                  different    missing_phone+po_box+truncation
+    R4d3b8a5632 R67743925b9    0.433  c_different yes       same 0.95                  different    po_box+truncation
+    R4d3b8a5632 Rbdc5ccfe29    0.433  c_different yes       same 0.93                  different    acronym+po_box
+    R4d8fbffd48 R77ceb93d54    0.433  c_different yes       same 0.90                  different    po_box+truncation+typo_address
+    R6460b5edcc R796572e66e    0.301  c_different yes       same 0.94                  different    po_box+truncation
+    R867c38b590 Rdcd8394894    0.433  c_different yes       same 0.91                  different    acronym+missing_phone+truncation+typo_address
+    R97e02da0b0 Rb1df66d41e    0.301  c_different yes       same 0.68                  different    acronym+missing_phone+po_box
+    Rc059a3b909 Rd0fd93329c    0.301  c_different yes       same 0.88                  different    po_box+truncation
+
+  0 of C's 18 full-band errors are routed to the LLM; the other 18 keep C's decision.

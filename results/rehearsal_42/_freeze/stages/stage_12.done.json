@@ -1,0 +1,32 @@
+{
+ "stage": 12,
+ "name": "cost model",
+ "mode": "rehearsal",
+ "seed": 42,
+ "ended_utc": "2026-11-25T02:53:10Z",
+ "seconds": 2.9,
+ "ledger_cost_usd": 0.0,
+ "exit": 0,
+ "reads_truth": [],
+ "guards": [
+  {
+   "time": "2026-11-25T02:53:08Z",
+   "stage": 12,
+   "guard": "frozen files unchanged since the manifest",
+   "fired": false,
+   "detail": "all match"
+  }
+ ],
+ "notes": [
+  "effort log read as it is (not frozen): sha256 97de2d7ce59bcad1e3811a302fcd9eda414d568d6ed18865ac9195571ba64181",
+  "Verity pipeline time: the cost model uses the dev repeats (flagged); spot check only: this run's verity.total 100.004099 s, dev median 101.89 s (all threads, 3 repeats)"
+ ],
+ "outputs": {
+  "results/rehearsal_42/cost/summary.txt": "e1a0df7007efe8d8083d5683e01b869e296c2ac46e8a2531d28ab15bcb7ee098",
+  "results/rehearsal_42/cost/assumptions.csv": "1a8efadda2d185abc4e1bca30817e323ba2ee461639fcba37310dbc4589d8831",
+  "results/rehearsal_42/cost/cost_model.csv": "9a7a1c129ac1bbdcc1c5c19599dabd07838ad5b70aef21af91eb6e4e97a3610b",
+  "results/rehearsal_42/cost/options_vs_bars.csv": "ddb53b5c32e4b47cf027c6b84f9e3cabb8e818021834c2d389acfcca3050894f",
+  "results/rehearsal_42/cost/one_time_cost.csv": "a5e88dd6da4aeacea24f54eae3fb3d101003e74e5e4fac6c2340eded48428873"
+ },
+ "manifest_sha256": "3da152e8394c55905211d1bb218cdbc63ea2a7e3a3f181fa85d28041938c28fe"
+}

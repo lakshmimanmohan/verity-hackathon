@@ -1,0 +1,51 @@
+Option B final run sample5000 on test_sample5000.csv: 393 sampled test band pairs (333 same, 60 different; weights sum to 44,985.0 = 333 same + 44,652 different in the test band)
+errors among the sampled pairs: 2 false non-matches, 0 false matches
+  zero-error bounds (exact one-sided 95% Clopper-Pearson; the bootstrap interval is degenerate when an error count is 0):
+    false matches: 0 of 60 false pairs; false-match rate <= 0.04870 (up to 2175 false matches on 44,652 false pairs)
+    implied worst case on a band of 333 true and 44,652 false pairs: precision >= 0.1321, recall = 0.9940, F1 >= 0.2332
+
+False negatives (same organization, decided different): 2, all shown
+  R6aac5649b9 | Ra268f399ac   decision different, p_same 0.28, weight 1.0000, tags missing_phone+standard+typo_address
+      address_line     9700 Para Blvd.                              | 9700 Park Boulevard Suite 100
+      city             Houston                                      | Houston
+      company_name     Valley Packaging Corp.                       | Valley Packaging Corp
+      phone            (missing)                                    | +1 615 495 3954
+      postal_code      77068-7333                                   | 77068
+      state            TX                                           | TX
+      website          valleypackaging.com                          | (missing)
+  R71e540a0d0 | Rcb07f8a5ed   decision different, p_same 0.68, weight 1.0000, tags missing_phone+po_box+truncation+typo
+      address_line     PO Box 39089                                 | 855 Maple Lane
+      city             Atlanta                                      | Atlanta
+      company_name     Sterling Meridian hParmacy Co.               | Sterling Meridian P
+      phone            (332) 851-6396                               | (missing)
+      postal_code      30354                                        | 30354
+      state            GA                                           | GA
+      website          (missing)                                    | sterlingmeridian.com
+
+False positives (different organizations, decided same): 0, all shown
+
+Errors by tag (a pair counts under every hard tag either record carries); weighted = estimate for the test band
+  tag           pairs  same  diff   FN   FP   recall (w)   false-match rate (w)   FP-rate bound
+  acronym         144   136     8    0    0       1.0000                0.00000   <= 0.3123
+  truncation       80    70    10    1    0       0.9857                0.00000   <= 0.2589
+  po_box          217   211     6    1    0       0.9953                0.00000   <= 0.3930
+  decoy             0     0     0    0    0            -                      -   
+  easy              9     6     3    1    0       0.8333                0.00000   <= 0.6316
+  no tag           34     0    34    0    0            -                0.00000   <= 0.0843
+
+p_same in 5 bins against truth (sample counts; weighted counts estimate the test band)
+  bin           pairs  same  decided same  weighted pairs  weighted frac same
+  [0.0, 0.2)       60     0             0        44,652.0              0.0000
+  [0.2, 0.4)        1     1             0             1.0              1.0000
+  [0.4, 0.6)        0     0             0             0.0              0.0000
+  [0.6, 0.8)        4     4             3             4.0              1.0000
+  [0.8, 1.0]      328   328           328           328.0              1.0000
+  inconsistent answers (decision against p_same at 0.5): 1 of 393
+
+Run (calls.jsonl, run_meta.json)
+  calls 391 (log lines), cache hits 0, pairs 393, distinct prompts 391; models reported {'gpt-5.4-2026-03-05': 391}
+  tokens: input 821,645, cached 684,544, output 7,429; hit ratio overall 0.833, excluding each key's first call 0.846 (8 keys)
+  cost: total $0.6253, per call $0.001599
+  latency per call: p50 0.87 s, p95 1.15 s, max 3.27 s
+  refusals 0, parse failures 0, API errors 0 (error lines 0), stopped None
+  run time 4.17 minutes (2026-11-25T02:47:07Z to 2026-11-25T02:51:18Z)

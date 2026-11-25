@@ -1,0 +1,7 @@
+# DRAFT: effort log incomplete, one-time costs for B and D undercounted
+option,basis,band_f1,f1_diff_vs_B,f1_diff_lo,f1_diff_hi,f1_bar,overall_precision,precision_bar,overall_recall,recall_bar,ece,ece_bar,latency_p95_ms,latency_bar,llm_share,llm_share_bar,meets_every_bar,total_usd_month_at_1M_per_day,total_usd_12_months_at_1M_per_day,labels
+A,full band; F1 difference on the sample,0.1133,-0.8837,-0.9285,-0.8410,fail,1.0,pass,0.5201,reference (A is the baseline),,n/a (bar is for C and D),,n/a (bar is for C),,n/a (bar is for D),no,1655.79,19869.52,0
+B,sample estimate (weighted); B is the baseline of the F1 bar,0.997,,,,reference (B is the baseline),1.0,pass,0.5769,pass,0.0142,n/a (bar is for C and D),,n/a (bar is for C),,n/a (bar is for D),yes,976941.79,11723301.52,0
+C,full band; F1 difference on the sample,0.9727,-0.0153,-0.0274,-0.0059,inconclusive,0.9981,pass,0.5751,pass,0.0002,pass,0.0863,pass,,n/a (bar is for D),not shown (inconclusive),4729.04,56748.47,61830
+D,exact full band; F1 difference on the sample,0.9727,-0.0153,-0.0274,-0.0059,inconclusive,0.9981,pass,0.5751,pass,0.0002,pass,0.0866,n/a (bar is for C),0.0,pass,not shown (inconclusive),5146.02,61752.23,61830
+E,not run,,,,,,,,,,,,,,,,,,,

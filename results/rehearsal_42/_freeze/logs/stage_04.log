@@ -1,0 +1,103 @@
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe eval/check_scored_pairs.py C:\verity-hackathon\results\rehearsal_42   [truth sealed; 2026-11-25T02:46:19Z]
+Run: C:\verity-hackathon\results\rehearsal_42
+
+PASS  one row per unordered pair  (215731 rows, 0 duplicates)
+PASS  record_a < record_b in every row
+PASS  run_info.json has the scored-pair and skip counts  (skipped_missing_store_context=0, skipped_missing_embeddings=0, skipped_no_semantic_field=0, skipped_single_token_semantic_fields=0)
+PASS  row count equals run_info scored_pairs_rows  (215731 vs 215731)
+PASS  row count equals scored_neighbor_pairs + exact_only_pairs  (215731 vs 215731 + 0)
+PASS  written-type rows equal match_candidates.csv (pairs, score, match_type)  (6414 vs 6414 rows; pairs in only one: 0; value mismatches: 0)
+PASS  rebuilt score_uncapped within 1e-05  (215731 rows, max abs error 1.22e-06)
+PASS  min(rebuilt, 1) equals score within 1e-05 (pair_source neighbor)  (max abs error 1.22e-06)
+
+Information
+  rows by pair_source: {'both': 667, 'neighbor': 215064}
+  rows by match_type:  {'below_threshold': 32876, 'full_signal': 4725, 'insufficient_evidence': 176441, 'weak_signal': 1689}
+  rows with score_uncapped > 1 (score capped): 0 of 215731
+
+RESULT: all checks passed
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe eval/band.py C:\verity-hackathon\results\rehearsal_42 --truth C:\verity-hackathon\results\rehearsal_42\orgs_raw_truth.csv   [reads truth; 2026-11-25T02:46:22Z]
+Run: C:\verity-hackathon\results\rehearsal_42
+Band: effective_threshold +/- 0.05 per row, inclusive
+Wrote 200496 band rows to C:\verity-hackathon\results\rehearsal_42\band_pairs.csv
+
+Pairs by region, match_type and truth (true = same entity)
+  region match_type                true    false    total
+  below  below_threshold              3      851      854
+  below  insufficient_evidence        0     1513     1513
+  below  ALL                          3     2364     2367
+  in     below_threshold             52    31970    32022
+  in     full_signal                 14        0       14
+  in     insufficient_evidence      694   167733   168427
+  in     weak_signal                 33        0       33
+  in     ALL                        793   199703   200496
+  above  full_signal               4711        0     4711
+  above  insufficient_evidence     4845     1656     6501
+  above  weak_signal               1656        0     1656
+  above  ALL                      11212     1656    12868
+
+Missed true pairs (6075 of 12489) by region: below 3, in 746, above 4845, not scored 481
+
+Verity: recall 0.5136, TP 6414, FP 0
+Oracle ceiling (band decided perfectly, outside kept): recall 0.5733 (+5.97 points), TP 7160, FP 0, precision 1.0000
+
+decision_status by region
+  region    match  non_match   review
+  below         0       2367        0
+  in            0          0   200496
+  above      6367       6501        0
+  total  match 6367, non_match 8868, review 200496
+CHECK decision_status == review selects exactly the band pairs: PASS
+CHECK outside the band, decision_status equals Verity's decision: PASS
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe eval/evaluate_matches.py --truth C:\verity-hackathon\results\rehearsal_42\orgs_raw_truth.csv --matches C:\verity-hackathon\results\rehearsal_42\verity_data\match_candidates.csv   [reads truth; 2026-11-25T02:46:25Z]
+True pairs: 12489   Matched pairs: 6414
+TP 6414  FP 0  FN 6075
+Precision 1.0000  Recall 0.5136  F1 0.6786
+
+Recall by hard-case slice (pairs where either record carries the tag):
+  acronym         788 / 1865   recall 0.4225
+  truncation     1373 / 2521   recall 0.5446
+  po_box          354 / 1698   recall 0.2085
+  easy           4039 / 6890   recall 0.5862
+
+Decoy pairs (same name, different entity): 468
+  wrongly matched 0  (0.00%)
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe eval/split.py C:\verity-hackathon\results\rehearsal_42   [truth sealed; 2026-11-25T02:46:25Z]
+Split of rehearsal_42 (protocol.md, Amendments, Nov 24, 2026). No ground-truth labels used.
+
+Method
+  Groups: connected components over all records of the input CSV; edges are Verity's
+  matched pairs plus all pairs scoring above the band (score > effective_threshold + 0.05).
+  Components ordered by smallest record id, shuffled with seed 0, assigned to train
+  until train holds 55% of records. A pair is kept only if both records are on the
+  same side; crossing pairs are excluded from training and scoring.
+
+Inputs (sha256)
+  orgs_raw.csv           c209dd09e9806d6411721864f9ea0aabcf721cf1cf8065723dc80b8b7044ff34
+  match_candidates.csv   d7206716e87e2a8eeb94c503430dbb6635cd8f0a1e75fc716e1298df186bc941
+  scored_pairs.csv       a9c425c310fb93c94bb1de9e0ad64214e1dc133062e054ecb64dea5224ab4a7d
+
+Graph: 10000 records, 12915 edges (6414 matched, 12868 above-band),
+  3215 components, largest 603 records
+
+Records:    train 5500, test 4500 (55.00% train)
+Components: train 1893, test 1322
+
+Pairs by side (crossing = records on different sides; excluded)
+                            train     test  crossing
+  band pairs                61830    44985     93681
+  all scored pairs          69552    51351     94828
+  matched pairs              3567     2847         0
+  train share of kept band pairs: 57.9%
+
+Records appearing in kept pairs on both sides: 0
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe eval/make_sample.py C:\verity-hackathon\results\rehearsal_42 --out C:\verity-hackathon\results\rehearsal_42\options\b_llm\test_sample5000.csv --n-nonmatches 60   [reads truth; 2026-11-25T02:46:27Z]
+test band pairs 44,985: 333 same-entity, 44,652 non-matches
+sample (seed 0): 393 pairs = 333 same-entity (weight 1) + 60 non-matches (weight 744.200000 each)
+weights sum to 44,985.0000; test band has 44,985 pairs
+written: C:\verity-hackathon\results\rehearsal_42\options\b_llm\test_sample5000.csv

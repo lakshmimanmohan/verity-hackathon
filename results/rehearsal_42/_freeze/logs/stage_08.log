@@ -1,0 +1,153 @@
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe options/d_hybrid.py list-routed C:\verity-hackathon\results\rehearsal_42   [truth sealed; 2026-11-25T02:51:20Z]
+frozen setting lo 0.5, hi 0.9: 0 of 44,985 test band pairs are routed to the LLM (none routed); 0 already have a recorded B answer in the sample / decoy-check / earlier D runs; 0 do not (the local cache is checked by the B run itself)
+written: C:\verity-hackathon\results\rehearsal_42\options\d_hybrid\routed_fullband_pairs.csv
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe options/d_hybrid.py full C:\verity-hackathon\results\rehearsal_42   [truth sealed; 2026-11-25T02:51:20Z]
+exact D decisions for all 44,985 test band pairs (lo 0.5, hi 0.9): {'c_different': 44658, 'llm': 0, 'c_same': 327}; LLM share 0.00000 -> C:\verity-hackathon\results\rehearsal_42\options\d_hybrid\decisions_fullband.csv
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe options/d_hybrid.py full C:\verity-hackathon\results\rehearsal_42 --fallback off   [truth sealed; 2026-11-25T02:51:20Z]
+D with the LLM fallback off, 44,985 test band pairs: 0 LLM-routed pairs take C's own decision; 0 pairs differ from C v1 LightGBM's decisions (identical) -> C:\verity-hackathon\results\rehearsal_42\options\d_hybrid\decisions_fullband_fallback_off.csv
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe eval/score_option.py C:\verity-hackathon\results\rehearsal_42 --decisions C:\verity-hackathon\results\rehearsal_42\options\d_hybrid\decisions_fullband_fallback_off.csv --name D, LLM fallback off (full band) --json-out C:\verity-hackathon\results\rehearsal_42\options\d_hybrid\score_fallback_off.json   [reads truth; 2026-11-25T02:51:21Z]
+Option: D, LLM fallback off (full band)
+Run: C:\verity-hackathon\results\rehearsal_42
+Decisions: C:\verity-hackathon\results\rehearsal_42\options\d_hybrid\decisions_fullband_fallback_off.csv  (44985 test band pairs; confidence given for 44985)
+Test group: 4500 records, 51351 scored pairs, 5474 true pairs
+
+Band (test band pairs, same-entity = positive)
+  pairs 44985  (true 333, 0.74%)
+  F1 0.9727  95% CI [0.9597, 0.9848]  (bootstrap, 1000 resamples, seed 0)
+  accuracy 0.9996  precision 0.9817  recall 0.9640
+  TP 321  FP 6  FN 12  TN 44646
+
+Overall (test group; outside the band Verity's decision_status)
+  precision 0.9981  recall 0.5751  F1 0.7297
+  TP 3148  FP 6  FN 2326
+
+Recall by hard-case slice (test group; pairs where either record carries the tag)
+  acronym           437 / 729      recall 0.5995
+  truncation        683 / 1134     recall 0.6023
+  po_box            380 / 772      recall 0.4922
+  easy             1788 / 3056     recall 0.5851
+
+Decoy pairs in the test group: 89, wrongly matched 0 (0.00%)
+
+Band average precision (cutoff-free, ranked by confidence): 0.9762
+
+Calibration (test band, 10 equal-width bins)
+  ECE 0.0002   (bar: <= 0.05)
+  ECE among pairs with confidence >= 0.05: 0.0228  (367 pairs)
+  bin           pairs     mean conf   frac true
+  [0.0, 0.1)      44618   0.0000      0.0000
+  [0.1, 0.2)          9   0.1254      0.0000
+  [0.3, 0.4)         20   0.3007      0.2500
+  [0.4, 0.5)         11   0.4332      0.4545
+  [0.9, 1.0]        327   1.0000      0.9817
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe options/d_hybrid.py route C:\verity-hackathon\results\rehearsal_42 --lo 0.5 --hi 0.9 --out C:\verity-hackathon\results\rehearsal_42\options\d_hybrid\decisions.csv   [truth sealed; 2026-11-25T02:51:25Z]
+lo 0.5, hi 0.9: 393 sampled pairs; routes {'c_different': 72, 'llm': 0, 'c_same': 321}; LLM calls 0, weighted LLM share 0.0000 -> C:\verity-hackathon\results\rehearsal_42\options\d_hybrid\decisions.csv
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe eval/score_option.py C:\verity-hackathon\results\rehearsal_42 --decisions C:\verity-hackathon\results\rehearsal_42\options\d_hybrid\decisions_fullband.csv --name D. hybrid, exact full test band --json-out C:\verity-hackathon\results\rehearsal_42\options\d_hybrid\score_fullband.json   [reads truth; 2026-11-25T02:51:25Z]
+Option: D. hybrid, exact full test band
+Run: C:\verity-hackathon\results\rehearsal_42
+Decisions: C:\verity-hackathon\results\rehearsal_42\options\d_hybrid\decisions_fullband.csv  (44985 test band pairs; confidence given for 44985)
+Test group: 4500 records, 51351 scored pairs, 5474 true pairs
+
+Band (test band pairs, same-entity = positive)
+  pairs 44985  (true 333, 0.74%)
+  F1 0.9727  95% CI [0.9597, 0.9848]  (bootstrap, 1000 resamples, seed 0)
+  accuracy 0.9996  precision 0.9817  recall 0.9640
+  TP 321  FP 6  FN 12  TN 44646
+
+Overall (test group; outside the band Verity's decision_status)
+  precision 0.9981  recall 0.5751  F1 0.7297
+  TP 3148  FP 6  FN 2326
+
+Recall by hard-case slice (test group; pairs where either record carries the tag)
+  acronym           437 / 729      recall 0.5995
+  truncation        683 / 1134     recall 0.6023
+  po_box            380 / 772      recall 0.4922
+  easy             1788 / 3056     recall 0.5851
+
+Decoy pairs in the test group: 89, wrongly matched 0 (0.00%)
+
+Band average precision (cutoff-free, ranked by confidence): 0.9762
+
+Calibration (test band, 10 equal-width bins)
+  ECE 0.0002   (bar: <= 0.05)
+  ECE among pairs with confidence >= 0.05: 0.0228  (367 pairs)
+  bin           pairs     mean conf   frac true
+  [0.0, 0.1)      44618   0.0000      0.0000
+  [0.1, 0.2)          9   0.1254      0.0000
+  [0.3, 0.4)         20   0.3007      0.2500
+  [0.4, 0.5)         11   0.4332      0.4545
+  [0.9, 1.0]        327   1.0000      0.9817
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe eval/score_option.py C:\verity-hackathon\results\rehearsal_42 --decisions C:\verity-hackathon\results\rehearsal_42\options\d_hybrid\decisions.csv --name D. hybrid (C + LLM) --sample C:\verity-hackathon\results\rehearsal_42\options\b_llm\test_sample5000.csv   [reads truth; 2026-11-25T02:51:28Z]
+Option: D. hybrid (C + LLM)
+Run: C:\verity-hackathon\results\rehearsal_42
+Decisions: C:\verity-hackathon\results\rehearsal_42\options\d_hybrid\decisions.csv  (393 test band pairs sampled of 44985, weights sum 44985.0 [--sample test_sample5000.csv; 0 other decisions ignored]; confidence given for 393)
+Test group: 4500 records, 51351 scored pairs, 5474 true pairs
+
+Band (test band pairs, same-entity = positive) (weighted estimate)
+  pairs 44985.0  (true 333.0, 0.74%)
+  F1 0.9817  95% CI [0.9701, 0.9908]  (bootstrap, 1000 resamples, seed 0)
+  zero-error bounds (exact one-sided 95% Clopper-Pearson; the bootstrap interval is degenerate when an error count is 0):
+    false matches: 0 of 60 false pairs; false-match rate <= 0.04870 (up to 2175 false matches on 44,652 false pairs)
+    implied worst case on a band of 333 true and 44,652 false pairs: precision >= 0.1286, recall = 0.9640, F1 >= 0.2270
+  accuracy 0.9997  precision 1.0000  recall 0.9640
+  TP 321.0  FP 0.0  FN 12.0  TN 44652.0
+
+Overall (test group; outside the band Verity's decision_status) (weighted estimate)
+  precision 1.0000  recall 0.5751  F1 0.7302
+  TP 3148.0  FP 0.0  FN 2326.0
+
+Recall by hard-case slice (test group; pairs where either record carries the tag) (weighted estimate)
+  acronym         437.0 / 729.0    recall 0.5995
+  truncation      683.0 / 1134.0   recall 0.6023
+  po_box          380.0 / 772.0    recall 0.4922
+  easy           1788.0 / 3056.0   recall 0.5851
+
+Decoy pairs in the test group: 34.0, wrongly matched 0.0 (0.00%) (weighted estimate)
+
+Band average precision (cutoff-free, ranked by confidence) (weighted estimate): 0.9970
+
+Calibration (test band, 10 equal-width bins) (weighted estimate)
+  ECE 0.0002   (bar: <= 0.05)
+  ECE among pairs with confidence >= 0.05: 0.0191  (331.0 pairs)
+  bin           pairs     mean conf   frac true
+  [0.0, 0.1)    44654.0   0.0000      0.0000
+  [0.3, 0.4)        5.0   0.3007      1.0000
+  [0.4, 0.5)        5.0   0.4332      1.0000
+  [0.9, 1.0]      321.0   1.0000      1.0000
+
+$ C:\verity-hackathon\.venv\Scripts\python.exe options/latency_bench.py C:\verity-hackathon\results\rehearsal_42   [truth sealed; 2026-11-25T02:51:31Z]
+44,985 test band pairs; OMP_NUM_THREADS=1; lo 0.5, hi 0.9; 2026-11-24 20:51:33
+repeat 1: C p50 0.0502 ms, p95 0.0799 ms, max 41.8296 ms, mean 0.0562 ms | D p50 0.0505, p95 0.0802, max 41.8314, mean 0.0564 | routing step mean 0.0003 ms | pass 2.6 s
+repeat 2: C p50 0.0569 ms, p95 0.1345 ms, max 4.3487 ms, mean 0.0771 ms | D p50 0.0572, p95 0.1351, max 4.3511, mean 0.0775 | routing step mean 0.0004 ms | pass 3.5 s
+repeat 3: C p50 0.0503 ms, p95 0.0863 ms, max 1.6701 ms, mean 0.0572 ms | D p50 0.0506, p95 0.0866, max 1.6715, mean 0.0574 | routing step mean 0.0003 ms | pass 2.6 s
+parallel pass 1: 74457.3 pairs per second, wall 0.604 s, C p95 0.1354 ms
+parallel pass 2: 73512.3 pairs per second, wall 0.612 s, C p95 0.1345 ms
+parallel pass 3: 76337.6 pairs per second, wall 0.589 s, C p95 0.1291 ms
+Per-pair latency on 44,985 test band pairs, features included, one pair at a time (OMP_NUM_THREADS=1), 3 repeats
+               p50 ms   p95 ms   max ms  mean ms
+  C r1         0.0502   0.0799  41.8296   0.0562
+  C r2         0.0569   0.1345   4.3487   0.0771
+  C r3         0.0503   0.0863   1.6701   0.0572
+  C median     0.0503   0.0863   4.3487   0.0572
+  D r1         0.0505   0.0802  41.8314   0.0564
+  D r2         0.0572   0.1351   4.3511   0.0775
+  D r3         0.0506   0.0866   1.6715   0.0574
+  D median     0.0506   0.0866   4.3511   0.0574
+  routing r1   0.0003   0.0004   0.0313   0.0003
+  routing r2   0.0003   0.0006   0.0579   0.0004
+  routing r3   0.0003   0.0004   0.0087   0.0003
+  routing median   0.0003   0.0004   0.0313   0.0003
+  single core: 17482.5 pairs per second (C), 17421.6 (D)
+  decision mismatches: C vs decisions.csv 0; D vs decisions_fullband.csv 0
+
+Parallel: 10 processes, one thread each, disjoint slices of 4,498 pairs; wall 0.604 s; 74457.3 pairs per second in total (4.26x one core)
+  per-pair under load, pooled: C p50 0.1116 ms, p95 0.1354 ms, max 71.8909 ms; D p50 0.1122, p95 0.136, max 71.893
+  per-process p95 (C), sorted: [0.1272, 0.1281, 0.1349, 0.1353, 0.1356, 0.1362, 0.1367, 0.1374, 0.1383, 0.1401]; decision mismatches 0
+

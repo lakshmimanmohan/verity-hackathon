@@ -1,0 +1,6 @@
+{
+ "decisions_sha256": "2b69fd28ad3153d84c48a7a4e56ea0f0b0f66215aa8740609be3153924a0b4be",
+ "calls_gz_bytes": 24659,
+ "commit_calls_gz": true,
+ "rule": "commit the gzipped calls.jsonl if it is under 1 MB"
+}

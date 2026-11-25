@@ -1,0 +1,26 @@
+{
+ "option": "D. hybrid, exact full test band",
+ "weighted": false,
+ "band_pairs": 44985.0,
+ "band_true": 333.0,
+ "band_f1": 0.9727272727272728,
+ "band_f1_ci": [
+  0.9597299101100522,
+  0.9848051417397359
+ ],
+ "band_precision": 0.981651376146789,
+ "band_recall": 0.963963963963964,
+ "band_accuracy": 0.9995998666222075,
+ "band_tp": 321.0,
+ "band_fp": 6.0,
+ "band_fn": 12.0,
+ "band_tn": 44646.0,
+ "overall_precision": 0.9980976537729866,
+ "overall_recall": 0.5750822067957618,
+ "overall_f1": 0.7297171998145573,
+ "overall_tp": 3148.0,
+ "overall_fp": 6.0,
+ "overall_fn": 2326.0,
+ "ece": 0.00021591519395354006,
+ "band_average_precision": 0.9761808158879738
+}

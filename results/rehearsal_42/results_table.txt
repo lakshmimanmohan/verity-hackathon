@@ -1,0 +1,7 @@
+Results, run rehearsal_42
+  option band F1 [95% CI]            band P  band R  overall P  overall R     ECE   F1 vs B  F1 bar          p95 ms  LLM share  LLM $/1,000 pairs  $/month at 1M/day  every bar?
+  A      0.1133 [0.0691, 0.1593]    1.0000  0.0601     1.0000     0.5201           -0.8837  fail                                          0.0000              1,656  no
+  B      0.9970 [0.9923, 1.0000]    1.0000  0.9940     1.0000     0.5769  0.0142  baseline  reference                                     1.5993            976,942  yes
+  C      0.9727 [0.9597, 0.9848]    0.9817  0.9640     0.9981     0.5751  0.0002   -0.0153  inconclusive     0.086                        0.0000              4,729  not shown (inconclusive)
+  D      0.9727 [0.9597, 0.9848]    0.9817  0.9640     0.9981     0.5751  0.0002   -0.0153  inconclusive     0.087    0.00000             0.0000              5,146  not shown (inconclusive)
+  E      not run
