@@ -2,6 +2,7 @@
 
 Experiment: can Verity (schema-agnostic entity matching) resolve borderline record pairs
 as well as a frontier LLM, at lower cost and latency? Demo is Dec 7, numbers freeze Dec 4.
+The comparison covers options A to D; option E is out of scope per the Nov 25 amendment in protocol.md.
 
 See @README.md for layout and run steps, and @protocol.md for the quality bars,
 borderline definition and volume assumptions. The protocol is fixed: never edit it

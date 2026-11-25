@@ -16,6 +16,8 @@ Every option judges the same candidate pairs, produced by Verity's nearest-neigh
 | D. Hybrid | C, with low-confidence pairs sent to the LLM | `options/d_hybrid.py` |
 | E. SLM / cross-encoder | Small open-weight model, self-hosted | `options/e_slm.py` |
 
+The comparison covers options A to D. Option E is out of scope per the Nov 25 amendment in `protocol.md` and is not tested.
+
 Quality bars, the borderline definition and volume assumptions are fixed in [`protocol.md`](protocol.md). That file was committed before any option was run.
 
 ## Layout
