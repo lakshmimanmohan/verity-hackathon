@@ -1,0 +1,13 @@
+Per-pair latency of D including the LLM fallback: a SIMULATION from measured distributions (not a direct measurement)
+  C: 134,646 measured per-pair latencies (3 repeats x 44,882 test band pairs), one core, features included
+  B: 6,170 measured live call latencies at one thread level (2 workers): sample5000 4,993, tune2 1,000, decoycheck 64, dfull 13, concurrency, 2 workers 100
+  fallback: probability 38 / 44,882 = 0.000847 per pair (the exact routed share); 1,000,000 draws, seed 0; 835 draws took a B call
+
+                               p50       p95       p99     p99.9    p99.95    p99.99         max      mean   (ms)
+  C alone (measured)         0.059     0.132     0.221     0.426     0.473     0.663        50.3     0.075
+  B call (measured)        956.442 1,212.606 1,493.736 3,132.787 3,991.020 7,320.009    11,899.5   980.604
+  D, simulated               0.059     0.132     0.227     0.567   921.265 1,102.358     4,028.0     0.888
+
+  The fallback is 0.085% of pairs, so p50, p95 and p99 are C's latency; p99.9 falls inside the fallback share (0.085% of draws take a call, 0.1% is the top 1,000 draws), so it is C's extreme tail (the slowest of the non-fallback draws), not an LLM latency; p99.95 and above show the LLM call (about 1 second).
+  Per record: a record has about 20.1 band pairs. B makes about 20 LLM calls per record: at 10 workers (measured p50 1.041 s per call) that is about 2.09 s per record (20.1 calls / 10 workers x 1.041 s), or 3.12 s counting whole rounds of 10 calls; queueing is not included.
+  D makes 0.017 LLM calls per record on average; 1.69% of records need any LLM call, and those take about one call (about 1 s) on top of C's 20 x 0.075 ms.

@@ -1,0 +1,69 @@
+{
+ "kind": "simulation from measured distributions (not a direct measurement)",
+ "draws": 1000000,
+ "seed": 0,
+ "fallback_share": 0.0008466645871396105,
+ "fallback_share_text": "38 / 44,882",
+ "fallback_draws": 835,
+ "c_pairs_pooled": 134646,
+ "c_repeats": 3,
+ "c_pooled": {
+  "p50_ms": 0.0592,
+  "p95_ms": 0.1317,
+  "p99_ms": 0.2208,
+  "p99.9_ms": 0.4257,
+  "p99.95_ms": 0.4733,
+  "p99.99_ms": 0.6629,
+  "max_ms": 50.3178,
+  "mean_ms": 0.0752
+ },
+ "b_calls_pooled": 6170,
+ "b_calls_by_source": {
+  "sample5000": 4993,
+  "tune2": 1000,
+  "decoycheck": 64,
+  "dfull": 13,
+  "concurrency, 2 workers": 100
+ },
+ "b_pooled": {
+  "p50_ms": 956.4425,
+  "p95_ms": 1212.6061,
+  "p99_ms": 1493.7365,
+  "p99.9_ms": 3132.7875,
+  "p99.95_ms": 3991.0198,
+  "p99.99_ms": 7320.0088,
+  "max_ms": 11899.5227,
+  "mean_ms": 980.6035
+ },
+ "d": {
+  "p50_ms": 0.0592,
+  "p95_ms": 0.1323,
+  "p99_ms": 0.2271,
+  "p99.9_ms": 0.5671,
+  "p99.95_ms": 921.2648,
+  "p99.99_ms": 1102.3578,
+  "max_ms": 4028.0308,
+  "mean_ms": 0.8882
+ },
+ "c_only_draws": {
+  "p50_ms": 0.0592,
+  "p95_ms": 0.1318,
+  "p99_ms": 0.2216,
+  "p99.9_ms": 0.4262,
+  "p99.95_ms": 0.4801,
+  "p99.99_ms": 0.659,
+  "max_ms": 50.3178,
+  "mean_ms": 0.0751
+ },
+ "per_record": {
+  "band_pairs_per_record": 20.0854,
+  "b_calls_per_record": 20.0854,
+  "d_expected_llm_calls_per_record": 0.017,
+  "d_records_with_any_llm_call_pct": 1.69,
+  "b_seconds_per_record_at_10_workers_mean": 2.09,
+  "b_seconds_per_record_at_10_workers_whole_rounds": 3.12,
+  "b_p50_s_at_10_workers": 1.041
+ },
+ "omp_num_threads": "1",
+ "when": "2026-11-24 20:11:49"
+}

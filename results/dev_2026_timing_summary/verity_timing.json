@@ -17,8 +17,8 @@
      "median": 7.138,
      "min": 7.095,
      "max": 17.014,
-     "cold": 17.014,
-     "warm": 7.116
+     "first_of_3_after_other_runs": 17.014,
+     "median_of_other_2": 7.116
     },
     "verity.rule_learning": {
      "values": [
@@ -29,8 +29,8 @@
      "median": 9.709,
      "min": 9.403,
      "max": 10.525,
-     "cold": 10.525,
-     "warm": 9.556
+     "first_of_3_after_other_runs": 10.525,
+     "median_of_other_2": 9.556
     },
     "verity.build_graph": {
      "values": [
@@ -41,8 +41,8 @@
      "median": 0.959,
      "min": 0.95,
      "max": 0.978,
-     "cold": 0.959,
-     "warm": 0.964
+     "first_of_3_after_other_runs": 0.959,
+     "median_of_other_2": 0.964
     },
     "verity.embed.model_load": {
      "values": [
@@ -53,8 +53,8 @@
      "median": 0.592,
      "min": 0.537,
      "max": 0.785,
-     "cold": 0.785,
-     "warm": 0.564
+     "first_of_3_after_other_runs": 0.785,
+     "median_of_other_2": 0.564
     },
     "verity.embed.encode": {
      "values": [
@@ -65,8 +65,8 @@
      "median": 33.652,
      "min": 33.511,
      "max": 33.776,
-     "cold": 33.776,
-     "warm": 33.581
+     "first_of_3_after_other_runs": 33.776,
+     "median_of_other_2": 33.581
     },
     "verity.embed": {
      "values": [
@@ -77,8 +77,8 @@
      "median": 35.315,
      "min": 35.15,
      "max": 35.665,
-     "cold": 35.665,
-     "warm": 35.232
+     "first_of_3_after_other_runs": 35.665,
+     "median_of_other_2": 35.232
     },
     "verity.embed.other": {
      "values": [
@@ -89,8 +89,8 @@
      "median": 1.105,
      "min": 1.047,
      "max": 1.126,
-     "cold": 1.105,
-     "warm": 1.087
+     "first_of_3_after_other_runs": 1.105,
+     "median_of_other_2": 1.087
     },
     "verity.neighbors.build": {
      "values": [
@@ -101,8 +101,8 @@
      "median": 0.018,
      "min": 0.017,
      "max": 0.018,
-     "cold": 0.018,
-     "warm": 0.017
+     "first_of_3_after_other_runs": 0.018,
+     "median_of_other_2": 0.017
     },
     "verity.neighbors.query": {
      "values": [
@@ -113,8 +113,8 @@
      "median": 1.509,
      "min": 1.482,
      "max": 1.676,
-     "cold": 1.676,
-     "warm": 1.495
+     "first_of_3_after_other_runs": 1.676,
+     "median_of_other_2": 1.495
     },
     "verity.score": {
      "values": [
@@ -125,8 +125,8 @@
      "median": 34.892,
      "min": 34.368,
      "max": 36.458,
-     "cold": 34.892,
-     "warm": 35.413
+     "first_of_3_after_other_runs": 34.892,
+     "median_of_other_2": 35.413
     },
     "verity.write_outputs": {
      "values": [
@@ -137,8 +137,8 @@
      "median": 7.619,
      "min": 7.438,
      "max": 8.071,
-     "cold": 7.619,
-     "warm": 7.755
+     "first_of_3_after_other_runs": 7.619,
+     "median_of_other_2": 7.755
     },
     "verity.match": {
      "values": [
@@ -149,8 +149,8 @@
      "median": 45.827,
      "min": 45.718,
      "max": 47.205,
-     "cold": 45.827,
-     "warm": 46.461
+     "first_of_3_after_other_runs": 45.827,
+     "median_of_other_2": 46.461
     },
     "verity.match.other": {
      "values": [
@@ -161,8 +161,8 @@
      "median": 1.778,
      "min": 1.623,
      "max": 1.784,
-     "cold": 1.623,
-     "warm": 1.781
+     "first_of_3_after_other_runs": 1.623,
+     "median_of_other_2": 1.781
     },
     "verity.merge": {
      "values": [
@@ -173,8 +173,8 @@
      "median": 1.301,
      "min": 1.219,
      "max": 1.306,
-     "cold": 1.219,
-     "warm": 1.303
+     "first_of_3_after_other_runs": 1.219,
+     "median_of_other_2": 1.303
     },
     "verity.explore": {
      "values": [
@@ -185,8 +185,8 @@
      "median": 0.284,
      "min": 0.271,
      "max": 0.303,
-     "cold": 0.303,
-     "warm": 0.277
+     "first_of_3_after_other_runs": 0.303,
+     "median_of_other_2": 0.277
     },
     "verity.total": {
      "values": [
@@ -197,8 +197,8 @@
      "median": 101.89,
      "min": 99.967,
      "max": 111.532,
-     "cold": 111.532,
-     "warm": 100.928
+     "first_of_3_after_other_runs": 111.532,
+     "median_of_other_2": 100.928
     }
    },
    "total_spread_pct": 11.35,
@@ -212,8 +212,8 @@
     "median": 0.592,
     "min": 0.537,
     "max": 0.785,
-    "cold": 0.785,
-    "warm": 0.564
+    "first_of_3_after_other_runs": 0.785,
+    "median_of_other_2": 0.564
    },
    "model_cache_hit": [
     true,
@@ -264,8 +264,8 @@
      "median": 7.507,
      "min": 7.222,
      "max": 7.604,
-     "cold": 7.507,
-     "warm": 7.413
+     "first_of_3_after_other_runs": 7.507,
+     "median_of_other_2": 7.413
     },
     "verity.rule_learning": {
      "values": [
@@ -276,8 +276,8 @@
      "median": 9.349,
      "min": 9.297,
      "max": 9.596,
-     "cold": 9.349,
-     "warm": 9.447
+     "first_of_3_after_other_runs": 9.349,
+     "median_of_other_2": 9.447
     },
     "verity.build_graph": {
      "values": [
@@ -288,8 +288,8 @@
      "median": 0.974,
      "min": 0.962,
      "max": 1.043,
-     "cold": 1.043,
-     "warm": 0.968
+     "first_of_3_after_other_runs": 1.043,
+     "median_of_other_2": 0.968
     },
     "verity.embed.model_load": {
      "values": [
@@ -300,8 +300,8 @@
      "median": 0.527,
      "min": 0.521,
      "max": 0.559,
-     "cold": 0.527,
-     "warm": 0.54
+     "first_of_3_after_other_runs": 0.527,
+     "median_of_other_2": 0.54
     },
     "verity.embed.encode": {
      "values": [
@@ -312,8 +312,8 @@
      "median": 112.267,
      "min": 111.091,
      "max": 116.925,
-     "cold": 116.925,
-     "warm": 111.679
+     "first_of_3_after_other_runs": 116.925,
+     "median_of_other_2": 111.679
     },
     "verity.embed": {
      "values": [
@@ -324,8 +324,8 @@
      "median": 113.725,
      "min": 112.599,
      "max": 118.453,
-     "cold": 118.453,
-     "warm": 113.162
+     "first_of_3_after_other_runs": 118.453,
+     "median_of_other_2": 113.162
     },
     "verity.embed.other": {
      "values": [
@@ -336,8 +336,8 @@
      "median": 0.948,
      "min": 0.937,
      "max": 1.001,
-     "cold": 1.001,
-     "warm": 0.942
+     "first_of_3_after_other_runs": 1.001,
+     "median_of_other_2": 0.942
     },
     "verity.neighbors.build": {
      "values": [
@@ -348,8 +348,8 @@
      "median": 0.017,
      "min": 0.017,
      "max": 0.022,
-     "cold": 0.022,
-     "warm": 0.017
+     "first_of_3_after_other_runs": 0.022,
+     "median_of_other_2": 0.017
     },
     "verity.neighbors.query": {
      "values": [
@@ -360,8 +360,8 @@
      "median": 2.081,
      "min": 1.976,
      "max": 2.174,
-     "cold": 2.081,
-     "warm": 2.075
+     "first_of_3_after_other_runs": 2.081,
+     "median_of_other_2": 2.075
     },
     "verity.score": {
      "values": [
@@ -372,8 +372,8 @@
      "median": 35.818,
      "min": 35.03,
      "max": 38.222,
-     "cold": 38.222,
-     "warm": 35.424
+     "first_of_3_after_other_runs": 38.222,
+     "median_of_other_2": 35.424
     },
     "verity.write_outputs": {
      "values": [
@@ -384,8 +384,8 @@
      "median": 7.958,
      "min": 7.581,
      "max": 8.03,
-     "cold": 7.958,
-     "warm": 7.806
+     "first_of_3_after_other_runs": 7.958,
+     "median_of_other_2": 7.806
     },
     "verity.match": {
      "values": [
@@ -396,8 +396,8 @@
      "median": 47.703,
      "min": 46.598,
      "max": 49.982,
-     "cold": 49.982,
-     "warm": 47.151
+     "first_of_3_after_other_runs": 49.982,
+     "median_of_other_2": 47.151
     },
     "verity.match.other": {
      "values": [
@@ -408,8 +408,8 @@
      "median": 1.797,
      "min": 1.699,
      "max": 1.863,
-     "cold": 1.699,
-     "warm": 1.83
+     "first_of_3_after_other_runs": 1.699,
+     "median_of_other_2": 1.83
     },
     "verity.merge": {
      "values": [
@@ -420,8 +420,8 @@
      "median": 1.226,
      "min": 1.224,
      "max": 1.291,
-     "cold": 1.224,
-     "warm": 1.258
+     "first_of_3_after_other_runs": 1.224,
+     "median_of_other_2": 1.258
     },
     "verity.explore": {
      "values": [
@@ -432,8 +432,8 @@
      "median": 0.295,
      "min": 0.27,
      "max": 0.299,
-     "cold": 0.27,
-     "warm": 0.297
+     "first_of_3_after_other_runs": 0.27,
+     "median_of_other_2": 0.297
     },
     "verity.total": {
      "values": [
@@ -444,8 +444,8 @@
      "median": 180.526,
      "min": 178.9,
      "max": 187.848,
-     "cold": 187.848,
-     "warm": 179.713
+     "first_of_3_after_other_runs": 187.848,
+     "median_of_other_2": 179.713
     }
    },
    "total_spread_pct": 4.96,
@@ -459,8 +459,8 @@
     "median": 0.527,
     "min": 0.521,
     "max": 0.559,
-    "cold": 0.527,
-    "warm": 0.54
+    "first_of_3_after_other_runs": 0.527,
+    "median_of_other_2": 0.54
    },
    "model_cache_hit": [
     true,
@@ -495,5 +495,8 @@
     "2026-11-25T01:37:53Z"
    ]
   }
- }
+ },
+ "notes": [
+  "r1 = first of 3 repeats after other runs on the same machine; a cold start after a reboot was not measured"
+ ]
 }

@@ -1,0 +1,11 @@
+ANN timing: NOT MEASURED
+
+Date: 2026-11-24 (US Central time)
+Attempt (the only one): pip install -r verity/requirements-ann.txt  with annoy==1.17.3 (released 2023-06-14; PyPI has a source
+distribution but no Windows wheel for it), Python 3.13.16 on Windows 11.
+Result: failed to build the wheel.
+Error class: build error, "Microsoft Visual C++ 14.0 or greater is required" (the Microsoft C++ Build Tools are not installed on this machine).
+No retry was made and no C++ build tools were installed, so no approximate-search run (index build time, query time, candidate pairs,
+neighbor recall against the exact run) exists. Exact search (--nn-mode exact) is the only mode measured; the cost model's neighbor-search
+cost for approximate search is therefore not measured either.
+verity/requirements-ann.txt now pins annoy==1.17.3 (it listed "annoy" unpinned before).

@@ -1,7 +1,7 @@
 == allthreads: dev_2026_timing_allthreads_r1, dev_2026_timing_allthreads_r2, dev_2026_timing_allthreads_r3
    host: Intel(R) Core(TM) Ultra 7 265U, 14 logical cores, torch_threads 12, omp_num_threads None; commit ['c90091f526d2ac0ef9d7dfda083e2af9b32c847c']; model_cache_hit [True, True, True]
    byte comparison with run 11: ['match_candidates.csv: identical; input csv: identical', 'match_candidates.csv: identical; input csv: identical', 'match_candidates.csv: identical; input csv: identical']
-   stage                             r1 (cold)       r2       r3   median      min      max     warm
+   stage                                   r1*       r2       r3   median      min      max  other 2
    verity.startup                        17.01     7.14     7.09     7.14     7.09    17.01     7.12
    verity.rule_learning                  10.53     9.40     9.71     9.71     9.40    10.53     9.56
    verity.build_graph                     0.96     0.95     0.98     0.96     0.95     0.98     0.96
@@ -18,13 +18,13 @@
    verity.merge                           1.22     1.31     1.30     1.30     1.22     1.31     1.30
    verity.explore                         0.30     0.28     0.27     0.28     0.27     0.30     0.28
    verity.total                         111.53    99.97   101.89   101.89    99.97   111.53   100.93
-   model load (verity.embed.model_load), reported separately: cold 0.79 s, warm 0.56 s, median 0.59 s
-   total: median 101.9 s, min 100.0, max 111.5, cold 111.5, warm 100.9; spread (max - min) / median 11.4% -> DO NOT agree within 10%
+   model load (verity.embed.model_load), reported separately: first of 3 after other runs 0.79 s, median of the other 2 0.56 s, median 0.59 s
+   total: median 101.9 s, min 100.0, max 111.5, first of 3 after other runs 111.5, median of the other 2 100.9; spread (max - min) / median 11.4% -> DO NOT agree within 10%
 
 == 1thread: dev_2026_timing_1thread_r1, dev_2026_timing_1thread_r2, dev_2026_timing_1thread_r3
    host: Intel(R) Core(TM) Ultra 7 265U, 14 logical cores, torch_threads 1, omp_num_threads 1; commit ['c90091f526d2ac0ef9d7dfda083e2af9b32c847c']; model_cache_hit [True, True, True]
    byte comparison with run 11: ['match_candidates.csv: identical; input csv: identical', 'match_candidates.csv: identical; input csv: identical', 'match_candidates.csv: identical; input csv: identical']
-   stage                             r1 (cold)       r2       r3   median      min      max     warm
+   stage                                   r1*       r2       r3   median      min      max  other 2
    verity.startup                         7.51     7.22     7.60     7.51     7.22     7.60     7.41
    verity.rule_learning                   9.35     9.30     9.60     9.35     9.30     9.60     9.45
    verity.build_graph                     1.04     0.97     0.96     0.97     0.96     1.04     0.97
@@ -41,6 +41,7 @@
    verity.merge                           1.22     1.29     1.23     1.23     1.22     1.29     1.26
    verity.explore                         0.27     0.29     0.30     0.29     0.27     0.30     0.30
    verity.total                         187.85   180.53   178.90   180.53   178.90   187.85   179.71
-   model load (verity.embed.model_load), reported separately: cold 0.53 s, warm 0.54 s, median 0.53 s
-   total: median 180.5 s, min 178.9, max 187.8, cold 187.8, warm 179.7; spread (max - min) / median 5.0% -> agree within 10%
+   model load (verity.embed.model_load), reported separately: first of 3 after other runs 0.53 s, median of the other 2 0.54 s, median 0.53 s
+   total: median 180.5 s, min 178.9, max 187.8, first of 3 after other runs 187.8, median of the other 2 179.7; spread (max - min) / median 5.0% -> agree within 10%
 
+* r1 = the first of 3 repeats after other runs (the machine had been running other work); a cold start after a reboot was not measured.
