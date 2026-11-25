@@ -43,3 +43,7 @@ results/dstudy_*/verity_data/match_candidates.csv
 results/rehearsal_*/options/c_model/*/model.txt
 results/dstudy_*/options/c_model/*/model.txt
 results/**/d_lo/decisions_fullband_*.csv
+
+# second-schema run (exploratory): local outputs, never committed
+results/second_schema/verity_data/
+results/second_schema/input/
