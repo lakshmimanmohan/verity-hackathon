@@ -25,3 +25,6 @@ date,hours,activity,bucket,production_needed
 11/24/2026,0.5,"Paired comparison script, zero-error bounds, per-option scoring",eval,no
 11/24/2026,0.5,Decoy check on the 68 pairs,eval,no
 11/24/2026,1,Cost research on OpenAI caching and rates,B,no
+11/25/2026,0.25,"Cost model: design, scenarios, review",eval,no
+11/25/2026,0.5,"Controlled timing, latency and concurrency tests",eval,no
+11/25/2026,0.5,Option D full-band exact check and latency simulation,eval,no
