@@ -47,3 +47,5 @@ results/**/d_lo/decisions_fullband_*.csv
 # second-schema run (exploratory): local outputs, never committed
 results/second_schema/verity_data/
 results/second_schema/input/
+results/postfix_check/verity_data/
+results/second_schema_v2/verity_data/
