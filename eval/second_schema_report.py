@@ -158,7 +158,41 @@ def explanation_card(first) -> tuple[list[list], dict]:
                   "evidence_passes": r["evidence_passes"]}
 
 
-def finding(F: dict) -> list[str]:
+def key_lists(V: Path, cl: dict) -> dict:
+    """Names and counts only: the semantic-type keys match.py builds (col_key form), the stored attribute types, and how many records have a space in a NAME/DESCRIPTIVE/STREET_ADDRESS value."""
+    import sqlite3
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "verity" / "src"))
+    from column_classification import col_key
+    sem = {col_key(k): str(v).upper() for k, v in cl["semantic_types"].items()}
+    out = {"sem_keys": sorted(sem), "sem_guard_keys": sorted(k for k, v in sem.items() if v in ("NAME", "DESCRIPTIVE", "STREET_ADDRESS")), "store_keys": [], "records": None, "with_space": None, "with_value": None}
+    for db in sorted(V.glob("*.sqlite")):
+        c = sqlite3.connect(f"file:{db.as_posix()}?mode=ro", uri=True)
+        out["store_keys"] = sorted(r[0].lower() for r in c.execute("select distinct attr_type from attrs"))
+        g = tuple(k.upper() for k in out["sem_guard_keys"])
+        q = ",".join("?" * len(g))
+        out["records"] = c.execute("select count(distinct id) from records").fetchone()[0]
+        out["with_value"] = c.execute(f"select count(distinct id) from attrs where upper(attr_type) in ({q})", g).fetchone()[0]
+        out["with_space"] = c.execute(f"select count(distinct id) from attrs where upper(attr_type) in ({q}) and instr(value, ' ') > 0", g).fetchone()[0]
+        c.close()
+    return out
+
+
+def finding_single_token(F: dict) -> list[str]:
+    ri, K = F["ri"], F.get("keys") or {}
+    return ["### Finding: no neighbor pair was scored", "",
+            f"Of {ri['neighbor_pairs']:,} neighbor pairs, {ri['skipped_single_token_semantic_fields']:,} were skipped before scoring by the single-token guard (`verity/src/match.py` lines 2036-2040: "
+            "`has_a = any(\" \" in str(aa.get(k, \"\")) for k in sem_fields) ...`: both records need a space in at least one NAME, DESCRIPTIVE or STREET_ADDRESS value), "
+            f"{ri.get('skipped_no_semantic_field', 0):,} by the no-semantic-field guard, and 0 were scored. The only pairs in the output are the exact duplicates ({ri['exact_duplicate_pairs']:,}), "
+            "which Verity scores 1.0 by rule. So this run did no similarity scoring: there is no review band, no non-match row and no per-field evidence.", "",
+            "Key lists (names only; the two forms agree, so the column-key mismatch of the second-schema run is not the cause here):", "",
+            md_table(["list", "keys"], [["semantic-type keys as match.py builds them (`col_key` form)", ", ".join(f"`{k}`" for k in K.get("sem_keys", []))],
+                                         ["of those, the keys the guard looks up (NAME, DESCRIPTIVE, STREET_ADDRESS)", ", ".join(f"`{k}`" for k in K.get("sem_guard_keys", []))],
+                                         ["attribute types in the record store (lower-cased)", ", ".join(f"`{k}`" for k in K.get("store_keys", []))]]), "",
+            f"Counts: {K.get('records')} records in the store; {K.get('with_value')} have a value in at least one guard field; {K.get('with_space')} have a space in at least one such value. "
+            "Likely cause (a reading of the counters, not tested by a fix): the guard fields hold no multi-word values, so every pair fails the space test. The identifier and quasi-identifier columns are not guard fields. No change was made to Verity.", ""]
+
+
+def finding(F: dict, earlier_run_note: bool = True) -> list[str]:
     """A plain statement when the neighbor search scored nothing: every neighbor pair was skipped before scoring. When pairs were scored, a short note on what was scored and skipped."""
     ri = F["ri"]
     if ri.get("scored_neighbor_pairs", 0) != 0:
@@ -166,10 +200,13 @@ def finding(F: dict) -> list[str]:
         return ["### Neighbor pairs scored", "",
                 f"Of {ri['neighbor_pairs']:,} neighbor pairs, **{ri['scored_neighbor_pairs']:,} were scored** and {sum(sk.values()):,} were skipped before scoring "
                 f"({', '.join(f'{k.replace(chr(95), chr(32))}: {v:,}' for k, v in sk.items())}). The exact-duplicate pairs ({ri['exact_duplicate_pairs']:,}) are scored 1.0 by rule. "
-                "The first run of this file (`results/second_schema/summary`) scored none of the neighbor pairs, because column names with a space did not match the record store's snake_case keys; "
-                "this run follows the key fix (`col_key`). No labels exist, so nothing here says whether a pair is right.", ""]
+                + ("The first run of this file (`results/second_schema/summary`) scored none of the neighbor pairs, because column names with a space did not match the record store's snake_case keys; "
+                   "this run follows the key fix (`col_key`). " if earlier_run_note else "")
+                + "No labels exist, so nothing here says whether a pair is right.", ""]
     if not ri.get("neighbor_pairs"):
         return []
+    if ri.get("skipped_single_token_semantic_fields", 0) == ri["neighbor_pairs"]:
+        return finding_single_token(F)
     return ["### Finding: no neighbor pair was scored", "",
             f"Of {ri['neighbor_pairs']:,} neighbor pairs, {ri['skipped_no_semantic_field']:,} were skipped before scoring by the guard \"a record has no NAME/DESCRIPTIVE/STREET_ADDRESS value\" "
             "(`verity/src/match.py` lines 2028-2035: `if not any(k in aa for k in sem_fields) ...`), and 0 were scored. The only pairs in the output are the exact duplicates "
@@ -180,11 +217,12 @@ def finding(F: dict) -> list[str]:
             "are unaffected. No change was made to Verity.", ""]
 
 
-def render(F: dict, input_facts: dict, command: str) -> str:
+def render(F: dict, input_facts: dict, command: str, title: str = "Second-schema run (exploratory)", what: str = "a second, unlabeled input file with a different schema",
+           compare_earlier: bool = True) -> str:
     cl, aw, th, sc, ri = F["cl"], F["aw"], F["th"], F["sc"], F["ri"]
     cols = aw["columns"]
-    L = [HEADER_LINE, "", "# Second-schema run (exploratory)", "",
-         "A Verity run on a second, unlabeled input file with a different schema. The report holds column names, counts, hashes, similarities and weights only; no record value is printed. "
+    L = [HEADER_LINE, "", f"# {title}", "",
+         f"A Verity run on {what}. The report holds column names, counts, hashes, similarities and weights only; no record value is printed. "
          "Nothing about accuracy can be said: no labels exist for this file.", "",
          "## a. Input facts", "",
          md_table(["item", "value"], [["rows (data rows, header excluded)", f"{input_facts['rows']:,}"], ["columns", f"{len(input_facts['columns'])}: " + ", ".join(f"`{c}`" for c in input_facts["columns"])],
@@ -201,8 +239,8 @@ def render(F: dict, input_facts: dict, command: str) -> str:
          md_table(["column", "semantic type", "uniqueness ratio", "null rate", "discriminative score", "normalized weight"],
                   [[c, cols[c]["semantic_type"], f"{cols[c]['uniqueness_ratio']:.4f}", f"{cols[c]['null_rate']:.4f}", f"{cols[c]['discriminative_score']:.4f}",
                     f"{cols[c]['normalized_discriminative_weight']:.6f}"] for c in sorted(cols, key=lambda k: -cols[k]["normalized_discriminative_weight"])]), "",
-         "Against the normalized weights of an earlier run of the same file (values given in the request):", "",
-         md_table(["column", "this run", "earlier run", "difference", "differs"], weight_comparison(cols, EARLIER_WEIGHTS)), "",
+         *(["Against the normalized weights of an earlier run of the same file (values given in the request):", "",
+            md_table(["column", "this run", "earlier run", "difference", "differs"], weight_comparison(cols, EARLIER_WEIGHTS)), ""] if compare_earlier else []),
          "## d. Threshold", "",
          md_table(["item", "value"], [["learned threshold", f"{th['threshold']:.6f}"], ["effective threshold", f"{sc['effective_threshold']}"], ["review margin", f"{sc['review_margin']}"],
                                       ["rule", "effective threshold = the larger of the learned threshold and the fixed floor 0.82"]]), "",
@@ -221,7 +259,7 @@ def render(F: dict, input_facts: dict, command: str) -> str:
          "",
          md_table(["group size", "multi-record groups (match_summary)", "golden records (member_count)"],
                   [[s, f"{F['matched_groups'].get(s, 0):,}", f"{F['golden'].get(s, 0):,}"] for s in sorted(set(F["matched_groups"]) | set(F["golden"]))]), "",
-         *finding(F),
+         *finding(F, compare_earlier),
          "## f. Timing (run_info.json)", "",
          md_table(["stage", "parent", "seconds", "items"], [[t["stage"], t.get("parent") or "", f"{t['seconds']:.3f}", t.get("items") if t.get("items") is not None else ""] for t in ri["timings"]]), "",
          f"Total (`verity.total`): {[t['seconds'] for t in ri['timings'] if t['stage'] == 'verity.total'][0]:.1f} s. Host: {ri['host']['cpu_model']}, {ri['host']['logical_cores']} logical cores.", ""]
@@ -244,6 +282,10 @@ def main() -> int:
     ap.add_argument("--input-csv", type=Path, required=True)
     ap.add_argument("--summary-dir", type=Path, required=True)
     ap.add_argument("--vocabulary-dir", type=Path, default=None, help="Verity outputs of an unrelated dataset (json and md files): words found there are vocabulary, not values")
+    ap.add_argument("--report-name", default="second_schema_report.md", help="file name of the report in --summary-dir")
+    ap.add_argument("--title", default="Second-schema run (exploratory)")
+    ap.add_argument("--what", default="a second, unlabeled input file with a different schema")
+    ap.add_argument("--no-earlier-comparison", action="store_true", help="leave out the comparison with the earlier second-schema weights and run")
     ap.add_argument("--command", default=None, help="the command line to print (default: reconstructed from the input name)")
     args = ap.parse_args()
     V, src, out = args.verity_data.resolve(), args.input_csv.resolve(), args.summary_dir
@@ -262,13 +304,14 @@ def main() -> int:
         text = redact_text(text, paths)
         (out / name).write_text(text, encoding="utf-8")
     F = facts(V)
+    F["keys"] = key_lists(V, F["cl"])
     try:
         rel_data = V.relative_to(Path.cwd().resolve()).as_posix()
     except ValueError:
         rel_data = "(data folder)"
     command = args.command or f'python verity/src/main.py --nn-mode exact --input "{PATH_REMOVED}\\{src.name}"   [VERITY_DATA_DIR={rel_data}]'
-    (out / "second_schema_report.md").write_text(render(F, inp, command), encoding="utf-8")
-    left = [n for n in list(COPIES) + ["second_schema_report.md"] if local_path_left((out / n).read_text(encoding="utf-8"))]
+    (out / args.report_name).write_text(render(F, inp, command, args.title, args.what, not args.no_earlier_comparison), encoding="utf-8")
+    left = [n for n in list(COPIES) + [args.report_name] if local_path_left((out / n).read_text(encoding="utf-8"))]
     words, nums = input_cells(src)
     stated = {str(inp["rows"]), str(F["rows"]), str(sum(F["golden"].values())), str(F["n_records_in_summary"])}
     stated |= {str(v) for c in (F["status"], F["mtype"], F["golden"], F["matched_groups"]) for v in c.values()} | {str(v) for v in F["cross"].values()}

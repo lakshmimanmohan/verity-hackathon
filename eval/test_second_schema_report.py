@@ -96,6 +96,16 @@ class CardAndFindingTests(unittest.TestCase):
         self.assertNotIn("no neighbor pair was scored", note)
         self.assertEqual(SS.finding({"ri": {"neighbor_pairs": 0, "scored_neighbor_pairs": 0}}), [])
 
+    def test_single_token_finding_prints_counters_and_key_lists_only(self):
+        F = {"ri": {"neighbor_pairs": 10, "scored_neighbor_pairs": 0, "skipped_single_token_semantic_fields": 10, "skipped_no_semantic_field": 0, "exact_duplicate_pairs": 2},
+             "keys": {"sem_keys": ["a_b", "c"], "sem_guard_keys": ["c"], "store_keys": ["a_b", "c"], "records": 5, "with_value": 5, "with_space": 0}}
+        text = "
+".join(SS.finding(F, False))
+        self.assertIn("10 were skipped before scoring by the single-token guard", text)
+        self.assertIn("`a_b`, `c`", text)
+        self.assertIn("0 have a space", text)
+        self.assertNotIn("alias", text)
+
     def test_the_header_line(self):
         self.assertEqual(SS.HEADER_LINE, "EXPLORATORY: not a protocol result; no labels exist for this file, so no accuracy is claimed.")
 
