@@ -121,7 +121,7 @@ def facts(V: Path) -> dict:
         status[r["decision_status"]] += 1
         mtype[r["match_type"]] += 1
         cross[(r["decision_status"], r["match_type"])] += 1
-        if r["decision_status"] == "match":
+        if r["decision_status"] == "match" and r.get("pair_source") != "exact":                 # the first matched pair that is not an exact duplicate
             k = tuple(sorted((r["record_a"], r["record_b"])))
             if first is None or k < first[0]:
                 first = (k, r)
@@ -159,9 +159,16 @@ def explanation_card(first) -> tuple[list[list], dict]:
 
 
 def finding(F: dict) -> list[str]:
-    """A plain statement when the neighbor search scored nothing: every neighbor pair was skipped before scoring."""
+    """A plain statement when the neighbor search scored nothing: every neighbor pair was skipped before scoring. When pairs were scored, a short note on what was scored and skipped."""
     ri = F["ri"]
-    if ri.get("scored_neighbor_pairs", 0) != 0 or not ri.get("neighbor_pairs"):
+    if ri.get("scored_neighbor_pairs", 0) != 0:
+        sk = {k: ri.get(k, 0) for k in ("skipped_missing_store_context", "skipped_missing_embeddings", "skipped_no_semantic_field", "skipped_single_token_semantic_fields")}
+        return ["### Neighbor pairs scored", "",
+                f"Of {ri['neighbor_pairs']:,} neighbor pairs, **{ri['scored_neighbor_pairs']:,} were scored** and {sum(sk.values()):,} were skipped before scoring "
+                f"({', '.join(f'{k.replace(chr(95), chr(32))}: {v:,}' for k, v in sk.items())}). The exact-duplicate pairs ({ri['exact_duplicate_pairs']:,}) are scored 1.0 by rule. "
+                "The first run of this file (`results/second_schema/summary`) scored none of the neighbor pairs, because column names with a space did not match the record store's snake_case keys; "
+                "this run follows the key fix (`col_key`). No labels exist, so nothing here says whether a pair is right.", ""]
+    if not ri.get("neighbor_pairs"):
         return []
     return ["### Finding: no neighbor pair was scored", "",
             f"Of {ri['neighbor_pairs']:,} neighbor pairs, {ri['skipped_no_semantic_field']:,} were skipped before scoring by the guard \"a record has no NAME/DESCRIPTIVE/STREET_ADDRESS value\" "
@@ -209,7 +216,7 @@ def render(F: dict, input_facts: dict, command: str) -> str:
          md_table(["decision status", "match type", "pairs"], [[a, b, f"{v:,}"] for (a, b), v in sorted(F["cross"].items())]), "",
          f"Merge groups: **{sum(F['golden'].values()):,} golden records** (`golden_records.csv`). `match_summary.csv` has {F['n_records_in_summary']:,} distinct group ids: "
          f"{sum(F['matched_groups'].values()):,} multi-record groups and {F['singletons']:,} unmatched single records. "
-         f"The two files give the same number of groups at the sizes {', '.join(str(s) for s in sorted(set(F['matched_groups']) | set(F['golden'])) if s > 1 and F['matched_groups'].get(s, 0) == F['golden'].get(s, 0))} "
+         f"The two files give the same number of groups at the sizes {', '.join(str(s) for s in sorted(set(F['matched_groups']) | set(F['golden'])) if s > 1 and F['matched_groups'].get(s, 0) == F['golden'].get(s, 0)) or '(none)'} "
          f"and differ at the sizes {', '.join(str(s) for s in sorted(set(F['matched_groups']) | set(F['golden'])) if F['matched_groups'].get(s, 0) != F['golden'].get(s, 0))} (not investigated).",
          "",
          md_table(["group size", "multi-record groups (match_summary)", "golden records (member_count)"],
@@ -218,12 +225,11 @@ def render(F: dict, input_facts: dict, command: str) -> str:
          "## f. Timing (run_info.json)", "",
          md_table(["stage", "parent", "seconds", "items"], [[t["stage"], t.get("parent") or "", f"{t['seconds']:.3f}", t.get("items") if t.get("items") is not None else ""] for t in ri["timings"]]), "",
          f"Total (`verity.total`): {[t['seconds'] for t in ri['timings'] if t['stage'] == 'verity.total'][0]:.1f} s. Host: {ri['host']['cpu_model']}, {ri['host']['logical_cores']} logical cores.", ""]
-    rows, extra = explanation_card(F["first"])
-    L += ["## g. Explanation card: the first matched pair by sorted record ids", "",
+    rows, extra = explanation_card(F["first"]) if F["first"] else ([], {"result": "no matched pair that is not an exact duplicate"})
+    L += ["## g. Explanation card: the first matched pair that is not an exact duplicate, by sorted record ids", "",
           "Field names, similarities, weights and evidence similarities only; no values.", "",
           md_table(["field", "similarity", "weight", "evidence similarity"], rows) if rows else
-          "The first matched pair by sorted record ids is an exact-duplicate pair (`pair_source` exact). Exact duplicates are scored 1.0 by rule and carry no per-field similarity, weight or "
-          "evidence, so there is nothing to list per field. Every one of the scored pairs in this run is of this kind (section e).", "",
+          "No matched pair that is not an exact duplicate exists in this run, so there is no card to show. Exact duplicates are scored 1.0 by rule and carry no per-field data (section e).", "",
           md_table(["item", "value"], [[k, v] for k, v in extra.items()]), "",
           "## Copies in this folder", "",
           "Small copies of `column_classification.json`, `attribute_weights.json`, `learned_threshold.json`, `learned_rules.md` and `run_info.json`. In `attribute_weights.json` the values of "
@@ -256,7 +262,11 @@ def main() -> int:
         text = redact_text(text, paths)
         (out / name).write_text(text, encoding="utf-8")
     F = facts(V)
-    command = args.command or f'python verity/src/main.py --nn-mode exact --input "{PATH_REMOVED}\\{src.name}"   [VERITY_DATA_DIR=results/second_schema/verity_data]'
+    try:
+        rel_data = V.relative_to(Path.cwd().resolve()).as_posix()
+    except ValueError:
+        rel_data = "(data folder)"
+    command = args.command or f'python verity/src/main.py --nn-mode exact --input "{PATH_REMOVED}\\{src.name}"   [VERITY_DATA_DIR={rel_data}]'
     (out / "second_schema_report.md").write_text(render(F, inp, command), encoding="utf-8")
     left = [n for n in list(COPIES) + ["second_schema_report.md"] if local_path_left((out / n).read_text(encoding="utf-8"))]
     words, nums = input_cells(src)

@@ -91,7 +91,9 @@ class CardAndFindingTests(unittest.TestCase):
         text = "\n".join(SS.finding(F))
         self.assertIn("Of 100 neighbor pairs, 100 were skipped", text)
         self.assertIn("0 were scored", text)
-        self.assertEqual(SS.finding({"ri": {"neighbor_pairs": 100, "scored_neighbor_pairs": 5}}), [])
+        note = "\n".join(SS.finding({"ri": {"neighbor_pairs": 100, "scored_neighbor_pairs": 5, "skipped_single_token_semantic_fields": 3, "exact_duplicate_pairs": 7}}))
+        self.assertIn("**5 were scored** and 3 were skipped", note)                         # a note on what was scored, not the no-scoring finding
+        self.assertNotIn("no neighbor pair was scored", note)
         self.assertEqual(SS.finding({"ri": {"neighbor_pairs": 0, "scored_neighbor_pairs": 0}}), [])
 
     def test_the_header_line(self):
