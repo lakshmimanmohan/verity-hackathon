@@ -99,8 +99,7 @@ class CardAndFindingTests(unittest.TestCase):
     def test_single_token_finding_prints_counters_and_key_lists_only(self):
         F = {"ri": {"neighbor_pairs": 10, "scored_neighbor_pairs": 0, "skipped_single_token_semantic_fields": 10, "skipped_no_semantic_field": 0, "exact_duplicate_pairs": 2},
              "keys": {"sem_keys": ["a_b", "c"], "sem_guard_keys": ["c"], "store_keys": ["a_b", "c"], "records": 5, "with_value": 5, "with_space": 0}}
-        text = "
-".join(SS.finding(F, False))
+        text = "\n".join(SS.finding(F, False))
         self.assertIn("10 were skipped before scoring by the single-token guard", text)
         self.assertIn("`a_b`, `c`", text)
         self.assertIn("0 have a space", text)
