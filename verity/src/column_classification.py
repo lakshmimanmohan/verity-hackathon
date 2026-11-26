@@ -507,5 +507,12 @@ def column_to_attr_type(col: str) -> str:
     return s or "ATTRIBUTE"
 
 
+def col_key(col: str) -> str:
+    """Lookup key for a column name: lowercase snake, the same form the record store keeps
+    attributes under (``column_to_attr_type`` lowercased). Idempotent. Every dict or set keyed
+    by column name in matching goes through this, so ``Street Name`` and ``street_name`` meet."""
+    return re.sub(r"[^0-9a-zA-Z]+", "_", str(col).strip()).strip("_").lower()
+
+
 def neo_property_key(col: str) -> str:
     return re.sub(r"[^0-9a-zA-Z]+", "_", str(col).strip()).strip("_").lower()

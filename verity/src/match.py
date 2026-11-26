@@ -34,7 +34,7 @@ except ImportError:
     AnnoyIndex = None  # type: ignore[misc, assignment]
     _ANNOY_AVAILABLE = False
 
-from column_classification import apply_global_content_overlay
+from column_classification import apply_global_content_overlay, col_key
 from config import data_dir, nn_mode, record_timing, update_run_info
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -202,7 +202,7 @@ def drop_metadata_csv_columns(
     metadata_columns_lower: frozenset[str],
 ) -> list[str]:
     """Remove column names listed as metadata (defensive; csv fallback uses content_columns)."""
-    return [c for c in cols if str(c).strip().lower() not in metadata_columns_lower]
+    return [c for c in cols if col_key(c) not in metadata_columns_lower]
 
 
 def shared_content_attribute_keys_graph(labels: list[str]) -> frozenset[str]:
@@ -212,7 +212,7 @@ def shared_content_attribute_keys_graph(labels: list[str]) -> frozenset[str]:
 
 def shared_content_attribute_keys_csv(columns: list[str]) -> frozenset[str]:
     """Distinct CSV column names, lowercased (metadata already dropped)."""
-    return frozenset(str(c).strip().lower() for c in columns)
+    return frozenset(col_key(c) for c in columns)
 
 
 def load_column_semantic_types(
@@ -229,7 +229,7 @@ def load_column_semantic_types(
     raw = classification.get("semantic_types")
     if isinstance(raw, dict):
         for k, v in raw.items():
-            lk = str(k).strip().lower()
+            lk = col_key(k)
             if lk:
                 out[lk] = str(v).strip().upper()
     if out:
@@ -238,7 +238,7 @@ def load_column_semantic_types(
         with weights_path.open(encoding="utf-8") as f:
             wj: dict[str, Any] = json.load(f)
         for col_name, meta in (wj.get("columns") or {}).items():
-            lk = str(col_name).strip().lower()
+            lk = col_key(col_name)
             if lk:
                 out[lk] = str(meta.get("semantic_type", "DESCRIPTIVE")).strip().upper()
     return out
@@ -329,10 +329,9 @@ def evaluate_schema_agnostic_evidence(
         # in column_classification.py which replaces non-alphanumerics with "_").
         # semantic_by_col_lower and discriminative_by_col are keyed by the plain
         # lowercased CSV column name which may contain spaces (e.g. "addr line1").
-        # Normalize k from underscore back to the space form so lookups hit correctly;
-        # single-word column names (city, busname, etc.) are unaffected since
-        # they look identical in both normalizations.
-        k_lookup = k.replace("_", " ")
+        # Every column-keyed dict and set is built with col_key (lowercase snake), so k
+        # is looked up as it is; no space/underscore conversion is needed.
+        k_lookup = k
         sem = str(semantic_by_col_lower.get(k_lookup, semantic_by_col_lower.get(k, "DESCRIPTIVE"))).strip().upper()
         weight_share = max(0.0, discriminative_by_col.get(k_lookup, discriminative_by_col.get(k, 0.0))) / total_weight
         sim = float(field_similarities.get(k, 1.0))
@@ -467,7 +466,7 @@ def load_match_weights(weights_path: Path, threshold_path: Path) -> MatchWeights
     columns_meta: dict[str, dict[str, Any]] = weights_json.get("columns") or {}
     discriminative_by_col: dict[str, float] = {}
     for col_name, meta in columns_meta.items():
-        key = str(col_name).strip().lower()
+        key = col_key(col_name)
         if not key:
             continue
         raw = float(meta.get("discriminative_score", 0.0) or 0.0)
@@ -532,7 +531,7 @@ def evidence_profile_from_semantic_map(
     discriminative_by_col: dict[str, float],
 ) -> EvidenceProfile:
     """Build schema-agnostic evidence groups from semantic type and learned weights."""
-    rid = str(record_id_column_lower).strip().lower()
+    rid = col_key(record_id_column_lower)
 
     identity: list[str] = []
     descriptive: list[str] = []
@@ -541,7 +540,7 @@ def evidence_profile_from_semantic_map(
     has_street_address_field = False
 
     for key, sem_raw in semantic_by_col_lower.items():
-        key = str(key).strip().lower()
+        key = col_key(key)
         if not key or key == rid or key not in allowed_cols_lower:
             continue
 
@@ -796,13 +795,13 @@ def load_customer_rows_by_id(
     out: dict[str, dict[str, str]] = {}
     if not path.is_file():
         return out
-    rid_key = str(record_id_column_lower).strip().lower()
+    rid_key = col_key(record_id_column_lower)
     with path.open(newline="", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         if not reader.fieldnames:
             return out
         keys = list(reader.fieldnames)
-        key_map = {k: str(k).strip().lower() for k in keys}
+        key_map = {k: col_key(k) for k in keys}
         for row in reader:
             norm_row: dict[str, str] = {}
             for k in keys:
@@ -827,7 +826,7 @@ def load_customer_rows_union_sources(
     primary CSV with any paths listed under ``files`` in ``embeddings_file_registry.json``
     (values resolved under the data folder when relative).
     """
-    rid_key = str(record_id_column_lower).strip().lower()
+    rid_key = col_key(record_id_column_lower)
     if MERGED_INPUT_CSV.is_file():
         merged = load_customer_rows_by_id(MERGED_INPUT_CSV, rid_key)
         return merged, (MERGED_INPUT_CSV,)
@@ -1842,13 +1841,13 @@ def main(
     classification = apply_global_content_overlay(load_column_classification(cls_path))
     content_raw = classification.get("content_columns") or []
     content_cols_lower = frozenset(
-        str(c).strip().lower()
+        col_key(c)
         for c in content_raw
         if str(c).strip()
     )
     meta_raw = classification.get("metadata_columns") or []
     metadata_cols_lower = frozenset(
-        str(c).strip().lower() for c in meta_raw if str(c).strip()
+        col_key(c) for c in meta_raw if str(c).strip()
     )
     if not content_cols_lower:
         raise SystemExit(
@@ -1857,7 +1856,7 @@ def main(
     csv_compare_cols_lower = frozenset(
         c for c in content_cols_lower if c not in metadata_cols_lower
     )
-    rid_col_l = str(classification.get("record_id_column") or "").strip().lower()
+    rid_col_l = col_key(classification.get("record_id_column") or "")
     if not rid_col_l:
         raise SystemExit(f"{cls_path} is missing record_id_column.")
     rows_by_id, row_sources = load_customer_rows_union_sources(
