@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import inspect
 import json
 import os
 import subprocess
@@ -48,7 +49,7 @@ class UnitTests(unittest.TestCase):
         content = frozenset({"id1", "id2", "cat"})
         a = {"id1": "AB-12", "id2": "xy9", "cat": "Acme", "other": "zzz"}
         b = {"id1": "ab_12", "id2": "xy8", "cat": "ACME"}
-        r = M.code_path_pair(a, b, code, content, disc)
+        r = M.code_path_pair(a, b, code, content, disc, frozenset({"id1", "id2"}))
         self.assertAlmostEqual(r["weights"]["id1"], 0.6)
         self.assertAlmostEqual(r["evidence_mass"], 0.7)                    # id1 and cat equal after normalizing: 0.6 + 0.1
         self.assertAlmostEqual(r["conflict_mass"], 0.3)                    # id2 is code-like, present in both, and differs
@@ -56,12 +57,15 @@ class UnitTests(unittest.TestCase):
         self.assertAlmostEqual(r["sims"]["id2"], 2 * 2 / 6)                # SequenceMatcher: "xy" matches, 4 of 6 characters
         self.assertAlmostEqual(r["score_uncapped"], 0.6 + 0.3 * (2 * 2 / 6) + 0.1)
         self.assertTrue(r["passes"])                                       # evidence 0.7 >= MIN_EVIDENCE_MASS; the conflict is a separate rule
+        r2 = M.code_path_pair(a, b, code, content, disc, frozenset({"id1"}))                      # id2 differs but is not identifying: no conflict
+        self.assertFalse(r2["conflict"])
+        self.assertAlmostEqual(r2["conflict_mass"], 0.0)
         self.assertIsNone(M.code_path_pair({"id1": "x"}, {"id2": "x"}, code, content, disc))      # no shared code-like value
         self.assertIsNone(M.code_path_pair({"id1": "--"}, {"id1": "--"}, code, content, disc))    # empty after normalizing
         self.assertIsNone(M.code_path_pair({"cat": "x"}, {"cat": "x"}, code, content, disc))      # shared, but not in a code-like column
 
     def test_order_aware_similarity_is_not_a_character_set(self):
-        r = M.code_path_pair({"c": "AB1234"}, {"c": "AB4321"}, frozenset({"c"}), frozenset({"c"}), {"c": 1.0})
+        r = M.code_path_pair({"c": "AB1234"}, {"c": "AB4321"}, frozenset({"c"}), frozenset({"c"}), {"c": 1.0}, frozenset({"c"}))
         self.assertAlmostEqual(r["sims"]["c"], 0.5)                        # same characters, different order: not 1.0
         self.assertTrue(r["conflict"])
 
@@ -71,6 +75,30 @@ class UnitTests(unittest.TestCase):
         self.assertAlmostEqual(r["conflict_mass"], 0.0)
         self.assertAlmostEqual(r["evidence_mass"], 0.5)
         self.assertTrue(r["passes"])
+
+    def test_identifying_columns_cut_is_one_over_two_n(self):
+        w = {"a": 0.5, "b": 0.1, "c": 0.0999, "d": 0.3001}
+        self.assertEqual(M.identifying_columns(frozenset({"a", "b", "c"}), w, 5), frozenset({"a", "b"}))     # cut 1/10: 0.1 counts, 0.0999 does not
+        self.assertEqual(M.identifying_columns(frozenset({"a", "b", "c", "d"}), w, 2), frozenset({"a", "d"}))  # cut 1/4
+        self.assertEqual(M.identifying_columns(frozenset({"a"}), w, 0), frozenset())
+
+    def test_labels_conflict_only_when_it_blocks_a_pass_or_the_band(self):
+        L = M.code_path_label
+        self.assertEqual(L(0.95, 0.82, True, False), ("code_signal", True))
+        self.assertEqual(L(0.95, 0.82, True, True), ("code_conflict", True))           # would have matched: conflict, evidence_passes marks it
+        self.assertEqual(L(0.80, 0.82, False, True), ("code_conflict", False))         # in the band, below the threshold: conflict, review by band
+        self.assertEqual(L(0.90, 0.82, False, True), ("insufficient_evidence", False))  # above the band, evidence fails: ordinary label
+        self.assertEqual(L(0.50, 0.82, True, True), ("below_threshold", True))         # far below the band: ordinary label
+        self.assertEqual(L(0.50, 0.82, False, False), ("below_threshold", False))
+
+    def test_threshold_exact_score_does_not_match_on_either_path(self):
+        self.assertEqual(M.code_path_label(0.82, 0.82, True, False)[0], "below_threshold")        # code path: strictly greater
+        self.assertEqual(M.code_path_label(0.82, 0.82, True, True)[0], "code_conflict")           # a conflict in the band is still not a match
+        self.assertNotEqual(M.code_path_label(0.82, 0.82, True, False)[0], "code_signal")
+        self.assertEqual(M.code_path_label(0.820001, 0.82, True, False)[0], "code_signal")
+        src = inspect.getsource(M.main)                                                           # text path: the unchanged comparison is also strict
+        self.assertIn("elif score <= effective_score_threshold:", src)
+        self.assertIn("score, effective_score_threshold, evidence_passes", src)                  # the code path passes the same threshold variable
 
     def test_equal_weights_when_all_learned_weights_are_zero(self):
         r = M.code_path_pair({"a": "x", "b": "y"}, {"a": "x", "b": "z"}, frozenset({"a", "b"}), frozenset({"a", "b"}), {})
@@ -138,24 +166,21 @@ class EndToEnd(unittest.TestCase):
             self.assertEqual(set(fs), set(efs))
             self.assertAlmostEqual(sum(fw.values()), 1.0, places=5)
             self.assertAlmostEqual(float(p["score"]), min(1.0, sum(fw[k] * fs[k] for k in fs)), places=5)   # field-only score, no cosine
-            q = sp.get(("Q1", "Q2"))                                                    # same vendor, different unique codes: no match
+            self.assertEqual(ri["identifying_columns"], ["gtin", "item_code"])         # vendor has a low learned weight: not identifying
+            t = sp[("T1", "T2")]                                                        # same codes, conflicting low-weight vendor: still a match
+            self.assertEqual((t["match_type"], t["decision_status"]), ("code_signal", "match"))
+            self.assertIn(("T1", "T2"), mc)
+            self.assertAlmostEqual(float(t["conflict_mass"]), 0.0)
+            q = sp[("Q1", "Q2")]                                                        # same vendor, different unique codes, far below the band: ordinary label
             self.assertNotIn(("Q1", "Q2"), mc)
-            if q:
-                self.assertNotEqual(q["match_type"], "code_signal")
-                self.assertNotEqual(q["decision_status"], "match")
-            for pair in (("U1", "U2"), ("T1", "T2")):                                     # would have matched but for a conflicting code-like field: review, not match
+            self.assertEqual((q["match_type"], q["decision_status"]), ("below_threshold", "non_match"))
+            u = sp[("U1", "U2")]                                                        # one character off in a high-weight code: blocks a match, review
+            self.assertEqual((u["match_type"], u["decision_status"], u["evidence_passes"]), ("code_conflict", "review", "true"))
+            self.assertGreater(float(u["score"]), 0.87)
+            self.assertNotIn(("U1", "U2"), mc)
+            for pair in (("R1", "R2"), ("V1", "V2")):                                     # the unique code differs a lot: score in the band, never a match
                 r = sp[pair]
-                self.assertEqual(r["match_type"], "code_conflict", pair)
-                self.assertEqual(r["decision_status"], "review", pair)
-                self.assertEqual(r["evidence_passes"], "true", pair)                      # for code_conflict: the pair would otherwise have passed
-                self.assertGreaterEqual(float(r["score"]), 0.82, pair)
-                self.assertGreater(float(r["conflict_mass"]), 0.0, pair)
-                self.assertNotIn(pair, mc)
-            for pair in (("R1", "R2"), ("V1", "V2")):                                     # the unique code differs a lot: score below the threshold, still never a match
-                r = sp[pair]
-                self.assertEqual(r["match_type"], "code_conflict", pair)
-                self.assertNotEqual(r["decision_status"], "match", pair)
-                self.assertEqual(r["evidence_passes"], "false", pair)
+                self.assertEqual((r["match_type"], r["decision_status"], r["evidence_passes"]), ("code_conflict", "review", "false"), pair)
                 self.assertLess(float(r["score"]), 0.82, pair)
                 self.assertNotIn(pair, mc)
             v = json.loads(sp[("V1", "V2")]["field_similarities"])

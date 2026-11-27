@@ -1362,12 +1362,44 @@ def code_like_columns(
     return frozenset(out)
 
 
+def identifying_columns(
+    code_cols: frozenset[str], normalized_weight: dict[str, float], n_content_cols: int
+) -> frozenset[str]:
+    """Identifying fields: code-like columns whose learned normalized weight is at least 1/(2n), n = content columns used for scoring."""
+    if n_content_cols <= 0:
+        return frozenset()
+    cut = 1.0 / (2 * n_content_cols)
+    return frozenset(c for c in code_cols if float(normalized_weight.get(c, 0.0)) >= cut - 1e-12)
+
+
+def code_path_label(
+    score: float, threshold: float, evidence_ok: bool, conflict: bool
+) -> tuple[str, bool]:
+    """
+    match_type and evidence_passes for a code-path pair. A pair passes when its score is strictly
+    greater than the threshold (as on the text path) and its evidence mass is enough. A conflict
+    (an identifying field differs) gives code_conflict only when it blocks a pair that would
+    otherwise have passed or fallen in the review band; for those rows evidence_passes is true
+    exactly when the pair would otherwise have passed. Any other pair keeps its ordinary label.
+    """
+    would_pass = score > threshold and evidence_ok
+    in_band = abs(_micro(score) - _micro(threshold)) <= _micro(REVIEW_MARGIN)
+    if conflict and (would_pass or in_band):
+        return "code_conflict", would_pass
+    if would_pass:
+        return "code_signal", True
+    if score <= threshold:
+        return "below_threshold", evidence_ok
+    return "insufficient_evidence", False
+
+
 def code_path_pair(
     attrs_a: dict[str, str],
     attrs_b: dict[str, str],
     code_cols: frozenset[str],
     content_cols: frozenset[str],
     disc: dict[str, float],
+    identifying: frozenset[str] = frozenset(),
 ) -> dict[str, Any] | None:
     """
     Field-only score for a pair, over every content column both records have a value in
@@ -1375,9 +1407,10 @@ def code_path_pair(
     (casefold, no spaces or punctuation); equal values score 1.0, otherwise the order-aware
     ratio of difflib.SequenceMatcher on the normalized values. Weights are the learned
     discriminative weights renormalized over the shared fields (equal weights when all are
-    zero). Evidence mass: weight share of fields equal after normalization. Conflict: any
-    code-like field present in both records that differs after normalization; conflict_mass
-    is the weight share of those fields.
+    zero). Evidence mass: weight share of fields equal after normalization. Conflict rule: any
+    identifying field (a code-like column of high learned weight, see identifying_columns)
+    present in both records that differs after normalization; conflict_mass is the weight
+    share of those fields.
     """
     fields = []
     for c in sorted(content_cols | code_cols):
@@ -1402,7 +1435,7 @@ def code_path_pair(
         if equal:
             evidence_mass += weights[c]
             equal_values[c] = na
-        elif c in code_cols:
+        elif c in identifying and c in code_cols:
             conflict = True
             conflict_mass += weights[c]
     return {
@@ -2138,7 +2171,8 @@ def main(
                 skipped_single_token_semantic_fields += 1
                 if not code_ctx:
                     code_ctx["cols"] = code_like_columns(sem_by_lower, rows_by_id, csv_compare_cols_lower)
-                cp = code_path_pair(aa, ab, code_ctx["cols"], csv_compare_cols_lower, disc)
+                    code_ctx["ident"] = identifying_columns(code_ctx["cols"], mw.discriminative_share, len(csv_compare_cols_lower))
+                cp = code_path_pair(aa, ab, code_ctx["cols"], csv_compare_cols_lower, disc, code_ctx["ident"])
                 if cp is None:
                     skipped_no_code_field += 1
                     continue
@@ -2309,18 +2343,12 @@ def main(
         )
 
         if item.get("code_path"):
-            # Code path: score >= threshold and evidence mass >= MIN_EVIDENCE_MASS is a match,
-            # unless a code-like field present in both records differs (code_conflict).
-            would_pass = score >= effective_score_threshold and evidence_passes
-            if item["code_conflict"]:
-                match_type = "code_conflict"
-                evidence_passes = would_pass       # for code_conflict rows: the pair would otherwise have passed
-            elif would_pass:
-                match_type = "code_signal"
-            elif score < effective_score_threshold:
-                match_type = "below_threshold"
-            else:
-                match_type = "insufficient_evidence"
+            # Code path: same strict comparison as the text path; an identifying-field conflict
+            # that blocks a pair which would otherwise pass or sit in the band is code_conflict.
+            match_type, evidence_passes = code_path_label(
+                score, effective_score_threshold, evidence_passes, item["code_conflict"]
+            )
+            if match_type == "insufficient_evidence":
                 dropped_no_minimum_evidence += 1
         elif score <= effective_score_threshold:
             match_type = "below_threshold"
@@ -2513,6 +2541,7 @@ def main(
         code_path_pairs=code_path_pairs,
         skipped_no_code_field=skipped_no_code_field,
         code_like_columns=sorted(code_ctx["cols"]) if code_ctx else [],
+        identifying_columns=sorted(code_ctx["ident"]) if code_ctx else [],
         embedding_only_blocked_same_file=embedding_only_blocked_same_file,
         scored_neighbor_pairs=len(rows_out),
         exact_duplicate_pairs=len(exact_pairs),

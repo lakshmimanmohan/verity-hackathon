@@ -13,7 +13,8 @@ Writes into --out-dir:
   review_key.csv    pair_id, the sampling group, Verity's decision (match_type, decision_status, score, verity_match). Do not open it before labeling.
 
 Sample (seed 0 unless changed), filled in this order until --total pairs are chosen: every code_signal match, up to --max-match; then code-path pairs whose
-decision_status is review; then other code-path pairs, at random. A code-path pair is a neighbor-scored pair for which the multi-word test fails (the two records
+decision_status is review; then other code-path pairs, at random. With --max-conflict N the second step takes up to N code_conflict pairs in review instead, and
+every remaining place is filled with random code-path pairs. A code-path pair is a neighbor-scored pair for which the multi-word test fails (the two records
 do not each have a space in some NAME, DESCRIPTIVE or STREET_ADDRESS value), the same test match.py applies. The folder is gitignored; never commit it.
 
 --score reads review_pairs.csv (your_label: 1/yes/same or 0/no/different; blank or anything else is skipped) and review_key.csv, and prints agreement with
@@ -35,7 +36,7 @@ sys.path.insert(0, str(REPO / "verity" / "src"))
 from column_classification import col_key  # noqa: E402
 
 WRITE_TYPES = {"full_signal", "weak_signal", "embedding_only", "code_signal"}
-GROUP_NAMES = ("code_signal_match", "in_review", "random_code_path")
+GROUP_NAMES = ("code_signal_match", "in_review", "random_code_path", "code_conflict_review")
 YES, NO = {"1", "y", "yes", "same", "true", "match"}, {"0", "n", "no", "different", "false", "non_match", "nonmatch"}
 csv.field_size_limit(10**9)
 
@@ -85,7 +86,7 @@ def code_path_pairs(run: Path, input_csv: Path | None) -> tuple[list[dict], list
     return out, show_cols, guard_cols
 
 
-def sample(pairs: list[dict], seed: int, total: int, max_match: int):
+def sample(pairs: list[dict], seed: int, total: int, max_match: int, max_conflict: int | None = None):
     pairs = sorted(pairs, key=lambda r: (r["run"], r["record_a"], r["record_b"]))
     rng = random.Random(seed)
     chosen: list[tuple[str, dict]] = []
@@ -98,20 +99,23 @@ def sample(pairs: list[dict], seed: int, total: int, max_match: int):
             chosen.append((group, r))
 
     take(GROUP_NAMES[0], [r for r in pairs if r["match_type"] == "code_signal" and r["decision_status"] == "match"], min(max_match, total))
-    take(GROUP_NAMES[1], [r for r in pairs if r["decision_status"] == "review"], total - len(chosen))
+    if max_conflict is None:
+        take(GROUP_NAMES[1], [r for r in pairs if r["decision_status"] == "review"], total - len(chosen))
+    else:                                                                       # up to max_conflict code_conflict review pairs, then random code-path pairs
+        take(GROUP_NAMES[3], [r for r in pairs if r["match_type"] == "code_conflict" and r["decision_status"] == "review"], min(max_conflict, total - len(chosen)))
     take(GROUP_NAMES[2], pairs, total - len(chosen))
     rng.shuffle(chosen)
     return chosen
 
 
-def write_review(runs: list[Path], input_csvs: list[Path | None], out_dir: Path, seed: int, total: int, max_match: int) -> dict:
+def write_review(runs: list[Path], input_csvs: list[Path | None], out_dir: Path, seed: int, total: int, max_match: int, max_conflict: int | None = None) -> dict:
     pairs: list[dict] = []
     show_cols: list[str] = []
     for run, inp in zip(runs, input_csvs):
         p, cols, _ = code_path_pairs(run, inp)
         pairs += p
         show_cols += [c for c in cols if c not in show_cols]
-    chosen = sample(pairs, seed, total, max_match)
+    chosen = sample(pairs, seed, total, max_match, max_conflict)
     out_dir.mkdir(parents=True, exist_ok=True)
     rid_cols = [f"{c}_{s}" for c in show_cols for s in ("a", "b")]
     with (out_dir / "review_pairs.csv").open("w", newline="", encoding="utf-8") as f, (out_dir / "review_key.csv").open("w", newline="", encoding="utf-8") as g:
@@ -166,6 +170,7 @@ def main() -> int:
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--total", type=int, default=40)
     ap.add_argument("--max-match", type=int, default=20)
+    ap.add_argument("--max-conflict", type=int, default=None, help="take up to this many code_conflict review pairs instead of any review pairs; the rest are random code-path pairs")
     ap.add_argument("--score", action="store_true", help="report agreement from the filled review_pairs.csv and review_key.csv")
     args = ap.parse_args()
     if args.score:
@@ -176,7 +181,7 @@ def main() -> int:
     inputs = args.input_csv or [None] * len(args.runs)
     if len(inputs) != len(args.runs):
         ap.error("--input-csv must be given once per run folder, or not at all")
-    print(json.dumps(write_review(args.runs, inputs, args.out_dir, args.seed, args.total, args.max_match), indent=2))
+    print(json.dumps(write_review(args.runs, inputs, args.out_dir, args.seed, args.total, args.max_match, args.max_conflict), indent=2))
     return 0
 
 

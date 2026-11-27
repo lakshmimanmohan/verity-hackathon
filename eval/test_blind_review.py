@@ -73,6 +73,21 @@ class Tests(unittest.TestCase):
             info = BR.write_review([run], [src], run / "review3", 0, 30, 20)
             self.assertEqual(info["written"], 15)                                                                       # never more than the code-path pairs available
 
+    def test_conflict_cap_then_random(self):
+        with tempfile.TemporaryDirectory() as d:
+            run, src = build(Path(d))
+            kr = BR.read_rows(run / "verity_data" / "scored_pairs.csv")
+            for r in kr[6:10]:                                                      # make the four review pairs code_conflict pairs
+                r["match_type"] = "code_conflict"
+            with (run / "verity_data" / "scored_pairs.csv").open("w", newline="", encoding="utf-8") as f:
+                w = csv.DictWriter(f, fieldnames=list(kr[0]))
+                w.writeheader()
+                w.writerows(kr)
+            info = BR.write_review([run], [src], run / "o", 0, 12, 3, 2)
+            self.assertEqual(info["by_group"], {"code_signal_match": 3, "code_conflict_review": 2, "random_code_path": 7})
+            info = BR.write_review([run], [src], run / "o2", 0, 12, 3, 10)
+            self.assertEqual(info["by_group"], {"code_signal_match": 3, "code_conflict_review": 4, "random_code_path": 5})
+
     def test_no_decision_in_the_review_file_and_two_runs_pool(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
@@ -87,7 +102,7 @@ class Tests(unittest.TestCase):
             self.assertIn("Item Ref_a", pairs[0])
             self.assertTrue(all(r["your_label"] == "" for r in pairs))
             text = (root / "out" / "review_pairs.csv").read_text(encoding="utf-8")
-            for word in ("code_signal", "review", "match_type", "decision", "score", "verity", "in_review", "random_code_path"):
+            for word in ("code_signal", "review", "match_type", "decision", "score", "verity", "in_review", "code_conflict", "random_code_path"):
                 self.assertNotIn(word, text)
             self.assertFalse(any(r["record_a"] in ("R6", "R7") for r in pairs))      # text-path and exact rows are never sampled
             key = BR.read_rows(root / "out" / "review_key.csv")

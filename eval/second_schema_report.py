@@ -145,6 +145,20 @@ def facts(V: Path) -> dict:
             "matched_groups": matched_groups, "singletons": singles, "n_records_in_summary": len(groups)}
 
 
+def code_counts(V: Path) -> dict:
+    """Counts from a run's scored_pairs.csv for the version comparison: code_signal matches, code_conflict pairs by decision status, total matches."""
+    c = Counter()
+    for r in read_rows(V / "scored_pairs.csv"):
+        if r["decision_status"] == "match":
+            c["matches"] += 1
+        if r["match_type"] == "code_signal" and r["decision_status"] == "match":
+            c["code_signal_matches"] += 1
+        if r["match_type"] == "code_conflict":
+            c["conflict_" + r["decision_status"]] += 1
+            c["conflict_total"] += 1
+    return dict(c)
+
+
 def weight_comparison(columns: dict, earlier: dict) -> list[list]:
     rows = []
     for c, old in earlier.items():
@@ -239,7 +253,7 @@ def finding(F: dict, earlier_run_note: bool = True) -> list[str]:
 
 
 def render(F: dict, input_facts: dict, command: str, title: str = "Second-schema run (exploratory)", what: str = "a second, unlabeled input file with a different schema",
-           compare_earlier: bool = True) -> str:
+           compare_earlier: bool = True, versions: tuple | None = None) -> str:
     cl, aw, th, sc, ri = F["cl"], F["aw"], F["th"], F["sc"], F["ri"]
     cols = aw["columns"]
     L = [HEADER_LINE, "", f"# {title}", "",
@@ -289,10 +303,24 @@ def render(F: dict, input_facts: dict, command: str, title: str = "Second-schema
     if code_card:
         n_conf = F["mtype"].get("code_conflict", 0)
         L += ["## e2. Code conflicts", "",
-              f"`code_conflict` pairs: **{n_conf:,}** (a code-like field present in both records differs after normalization, so the pair cannot be a match). "
-              "Decision status: review when the pair would otherwise have passed (score at or above the effective threshold and evidence mass at or above the minimum) or when its score is inside the review band; otherwise non_match. "
-              "For these rows `evidence_passes` is true exactly when the pair would otherwise have passed.", "",
+              f"`code_conflict` pairs: **{n_conf:,}** (the conflict rule: an identifying field present in both records differs after normalization, and the conflict blocks a pair that would otherwise have matched or fallen in the review band). "
+              "Decision status: review (the pair is in the band, or would otherwise have passed: score strictly above the effective threshold and evidence mass at or above the minimum). "
+              "For these rows `evidence_passes` is true exactly when the pair would otherwise have passed. A pair with a conflict that would not have passed keeps its ordinary label.", "",
               md_table(["decision status", "code_conflict pairs"], [[st, f"{v:,}"] for (st, mt), v in sorted(F["cross"].items()) if mt == "code_conflict"]) if n_conf else "No code_conflict pair in this run.", ""]
+    if code_card and versions:
+        (old_name, old), (new_name, new) = versions
+        rows_v = [["code_signal matches", f"{old.get('code_signal_matches', 0):,}", f"{new.get('code_signal_matches', 0):,}"],
+                  ["code_conflict pairs, total", f"{old.get('conflict_total', 0):,}", f"{new.get('conflict_total', 0):,}"],
+                  ["code_conflict pairs, match", f"{old.get('conflict_match', 0):,}", f"{new.get('conflict_match', 0):,}"],
+                  ["code_conflict pairs, review", f"{old.get('conflict_review', 0):,}", f"{new.get('conflict_review', 0):,}"],
+                  ["code_conflict pairs, non_match", f"{old.get('conflict_non_match', 0):,}", f"{new.get('conflict_non_match', 0):,}"],
+                  ["total matches (decision_status match)", f"{old.get('matches', 0):,}", f"{new.get('matches', 0):,}"]]
+        ident = ri.get("identifying_columns")
+        L += [f"## e3. {old_name} against {new_name}", "",
+              f"{new_name} limits the conflict rule to identifying fields: code-like columns whose learned normalized weight is at least 1/(2n), n being the number of content columns used for scoring ({len(cols)} here, cut {1 / (2 * len(cols)):.6f}). "
+              f"A conflict is labeled code_conflict only when it blocks a pair that would otherwise have matched or fallen in the review band. "
+              f"Identifying fields in this run: {', '.join(f'`{c}`' for c in ident) if ident else '(none)'}. Code-like columns: {', '.join(f'`{c}`' for c in ri.get('code_like_columns', [])) or '(none)'}.", "",
+              md_table(["count", old_name, new_name], rows_v), ""]
     cards = ([("the first code_signal match", F.get("first_code"), "no code_signal match"), ("the first code_conflict pair", F.get("first_conflict"), "no code_conflict pair")]
              if code_card else [("the first matched pair that is not an exact duplicate", F["first"], "no matched pair that is not an exact duplicate")])
     for n_card, (what_card, card_pair, none_msg) in enumerate(cards):
@@ -320,6 +348,8 @@ def main() -> int:
     ap.add_argument("--title", default="Second-schema run (exploratory)")
     ap.add_argument("--what", default="a second, unlabeled input file with a different schema")
     ap.add_argument("--no-earlier-comparison", action="store_true", help="leave out the comparison with the earlier second-schema weights and run")
+    ap.add_argument("--compare-to", type=Path, default=None, help="verity_data folder of the earlier version, for the version comparison table")
+    ap.add_argument("--compare-names", default="v4,v5", help="old,new names used in the comparison table")
     ap.add_argument("--command", default=None, help="the command line to print (default: reconstructed from the input name)")
     args = ap.parse_args()
     V, src, out = args.verity_data.resolve(), args.input_csv.resolve(), args.summary_dir
@@ -344,7 +374,8 @@ def main() -> int:
     except ValueError:
         rel_data = "(data folder)"
     command = args.command or f'python verity/src/main.py --nn-mode exact --input "{PATH_REMOVED}\\{src.name}"   [VERITY_DATA_DIR={rel_data}]'
-    (out / args.report_name).write_text(render(F, inp, command, args.title, args.what, not args.no_earlier_comparison), encoding="utf-8")
+    (out / args.report_name).write_text(render(F, inp, command, args.title, args.what, not args.no_earlier_comparison,
+                                                      ((args.compare_names.split(",")[0], code_counts(args.compare_to.resolve())), (args.compare_names.split(",")[1], code_counts(V))) if args.compare_to else None), encoding="utf-8")
     left = [n for n in list(COPIES) + [args.report_name] if local_path_left((out / n).read_text(encoding="utf-8"))]
     words, nums = input_cells(src)
     stated = {str(inp["rows"]), str(F["rows"]), str(sum(F["golden"].values())), str(F["n_records_in_summary"])}

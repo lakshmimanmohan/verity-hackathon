@@ -61,3 +61,8 @@ results/product_v4_raw/verity_data/
 results/product_v4_semantic/verity_data/
 results/second_schema_v4/verity_data/
 results/product_v4_review/
+results/postfix_check4/verity_data/
+results/product_v5_raw/verity_data/
+results/product_v5_semantic/verity_data/
+results/second_schema_v5/verity_data/
+results/product_v5_review/
