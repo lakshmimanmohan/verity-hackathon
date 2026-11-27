@@ -1,0 +1,24 @@
+{
+  "content_columns": [
+    "description",
+    "manufacturer_part_number",
+    "upc_ean"
+  ],
+  "metadata_columns": [
+    "product_id",
+    "source_system"
+  ],
+  "record_id_column": "product_id",
+  "reasoning": {
+    "description": "included: 91.3% unique, 464 distinct; human-readable text signal",
+    "manufacturer_part_number": "included: 38.4% unique, 195 distinct; no metadata rule matched (entity-describing field)",
+    "product_id": "excluded: [primary_key] primary key (uniqueness ratio 100.00% ≥ 99%) | [system_process_field] system process field (name contains: id; only flagged because values are 100% unique)",
+    "source_system": "excluded: [near_constant_field] near-constant field, 3 distinct values (<5) — system label / category regardless of dataset size",
+    "upc_ean": "included: 42.3% unique, 215 distinct; no metadata rule matched (entity-describing field)"
+  },
+  "semantic_types": {
+    "manufacturer_part_number": "DESCRIPTIVE",
+    "upc_ean": "DESCRIPTIVE",
+    "description": "DESCRIPTIVE"
+  }
+}

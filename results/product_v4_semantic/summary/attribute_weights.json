@@ -1,0 +1,43 @@
+{
+  "source_csv": "(local path removed)",
+  "n_rows": 508,
+  "column_classification_path": "(local path removed)",
+  "columns_excluded_from_learning": [
+    "product_id",
+    "source_system"
+  ],
+  "n_pairs_sampled": 1000,
+  "columns": {
+    "manufacturer_part_number": {
+      "semantic_type": "DESCRIPTIVE",
+      "physical_kind": "STRING",
+      "uniqueness_ratio": 0.383858,
+      "null_rate": 0.011811,
+      "discriminative_score": 0.379325,
+      "normalized_discriminative_weight": 0.239886,
+      "reliability_score": 1.0,
+      "composite_weight": 0.552022
+    },
+    "upc_ean": {
+      "semantic_type": "DESCRIPTIVE",
+      "physical_kind": "STRING",
+      "uniqueness_ratio": 0.423228,
+      "null_rate": 0.139764,
+      "discriminative_score": 0.364076,
+      "normalized_discriminative_weight": 0.230243,
+      "reliability_score": 0.615375,
+      "composite_weight": 0.326045
+    },
+    "description": {
+      "semantic_type": "DESCRIPTIVE",
+      "physical_kind": "STRING",
+      "uniqueness_ratio": 0.913386,
+      "null_rate": 0.082677,
+      "discriminative_score": 0.83787,
+      "normalized_discriminative_weight": 0.529871,
+      "reliability_score": 0.1,
+      "composite_weight": 0.121933
+    }
+  },
+  "notes": "discriminative_score = uniqueness_ratio * (1 - null_rate); normalized_discriminative_weight sums to 1. composite_weight merges discriminative weight with empirical cross-field reliability."
+}
