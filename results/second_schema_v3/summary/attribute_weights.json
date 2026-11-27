@@ -1,0 +1,72 @@
+{
+  "source_csv": "(local path removed)",
+  "n_rows": 14570,
+  "column_classification_path": "(local path removed)",
+  "columns_excluded_from_learning": [
+    "Id"
+  ],
+  "n_pairs_sampled": 1000,
+  "columns": {
+    "Alias Account": {
+      "semantic_type": "NAME",
+      "physical_kind": "STRING",
+      "uniqueness_ratio": 0.625601,
+      "null_rate": 0.0,
+      "discriminative_score": 0.625601,
+      "normalized_discriminative_weight": 0.362878,
+      "reliability_score": 0.1,
+      "composite_weight": 0.088779
+    },
+    "Street Name": {
+      "semantic_type": "DESCRIPTIVE",
+      "physical_kind": "STRING",
+      "uniqueness_ratio": 0.240082,
+      "null_rate": 0.003638,
+      "discriminative_score": 0.239209,
+      "normalized_discriminative_weight": 0.138752,
+      "reliability_score": 1.0,
+      "composite_weight": 0.339463
+    },
+    "House Number1": {
+      "semantic_type": "DESCRIPTIVE",
+      "physical_kind": "NUMBER",
+      "uniqueness_ratio": 0.202265,
+      "null_rate": 0.021826,
+      "discriminative_score": 0.19785,
+      "normalized_discriminative_weight": 0.114763,
+      "reliability_score": 0.577896,
+      "composite_weight": 0.162256
+    },
+    "Box1 Number": {
+      "semantic_type": "DESCRIPTIVE",
+      "physical_kind": "NUMBER",
+      "uniqueness_ratio": 0.032944,
+      "null_rate": 0.913795,
+      "discriminative_score": 0.00284,
+      "normalized_discriminative_weight": 0.001647,
+      "reliability_score": 0.1,
+      "composite_weight": 0.000403
+    },
+    "Postal Code": {
+      "semantic_type": "DESCRIPTIVE",
+      "physical_kind": "STRING",
+      "uniqueness_ratio": 0.446534,
+      "null_rate": 0.000412,
+      "discriminative_score": 0.44635,
+      "normalized_discriminative_weight": 0.258904,
+      "reliability_score": 0.369514,
+      "composite_weight": 0.234057
+    },
+    "City Name": {
+      "semantic_type": "DESCRIPTIVE",
+      "physical_kind": "STRING",
+      "uniqueness_ratio": 0.212148,
+      "null_rate": 0.0,
+      "discriminative_score": 0.212148,
+      "normalized_discriminative_weight": 0.123056,
+      "reliability_score": 0.581414,
+      "composite_weight": 0.175041
+    }
+  },
+  "notes": "discriminative_score = uniqueness_ratio * (1 - null_rate); normalized_discriminative_weight sums to 1. composite_weight merges discriminative weight with empirical cross-field reliability."
+}

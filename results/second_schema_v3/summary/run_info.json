@@ -1,0 +1,198 @@
+{
+  "runs": [
+    {
+      "started_utc": "2026-11-27T17:41:41Z",
+      "run_mode": "full",
+      "input_csv": "(local path removed)",
+      "nn_mode_requested": "exact",
+      "nn_mode_source": "--nn-mode",
+      "annoy_installed": false,
+      "nn_mode_resolved": "exact",
+      "n_records_in_index": 14570,
+      "git_commit": "1a4a89ac648add189a26fb76aab7df61cd2769f0",
+      "git_src_uncommitted_changes": true,
+      "python_version": "3.13.16",
+      "sentence_transformers_version": "6.3.0",
+      "embedding_model": "all-MiniLM-L6-v2",
+      "pythonhashseed": "0",
+      "model_cache_hit": true,
+      "embedding_model_revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+      "embedding_weights": "model.safetensors",
+      "neighbor_pairs": 363550,
+      "skipped_missing_store_context": 0,
+      "skipped_missing_embeddings": 0,
+      "skipped_no_semantic_field": 0,
+      "skipped_single_token_semantic_fields": 40581,
+      "text_path_pairs": 322969,
+      "code_path_pairs": 40578,
+      "skipped_no_code_field": 3,
+      "code_like_columns": [
+        "box1_number",
+        "house_number1",
+        "postal_code"
+      ],
+      "embedding_only_blocked_same_file": 1409,
+      "scored_neighbor_pairs": 363547,
+      "exact_duplicate_pairs": 6387,
+      "exact_only_pairs": 36,
+      "scored_pairs_rows": 363583,
+      "match_candidates_rows": 23310,
+      "review_margin": 0.05,
+      "decision_status_counts": {
+        "match": 16988,
+        "non_match": 54447,
+        "review": 292148
+      },
+      "host": {
+        "cpu_model": "Intel(R) Core(TM) Ultra 7 265U",
+        "logical_cores": 14,
+        "ram_gb": 31.5,
+        "os": "Windows-11-10.0.26300-SP0",
+        "python": "3.13.16",
+        "torch_threads": 12,
+        "omp_num_threads": null
+      },
+      "timings": [
+        {
+          "stage": "verity.startup",
+          "parent": null,
+          "seconds": 7.899923,
+          "items": null,
+          "item": null,
+          "note": "main.py imports, argument parsing, data folder, store check"
+        },
+        {
+          "stage": "verity.rule_learning",
+          "parent": null,
+          "seconds": 10.581697,
+          "items": null,
+          "item": null,
+          "note": "rule_learner subprocess, including its Python start-up"
+        },
+        {
+          "stage": "verity.build_graph",
+          "parent": null,
+          "seconds": 1.32226,
+          "items": null,
+          "item": null,
+          "note": ""
+        },
+        {
+          "stage": "verity.embed.model_load",
+          "parent": "verity.embed",
+          "seconds": 0.478776,
+          "items": null,
+          "item": null,
+          "note": "model all-MiniLM-L6-v2; model_cache_hit=True"
+        },
+        {
+          "stage": "verity.embed.encode",
+          "parent": "verity.embed",
+          "seconds": 45.568538,
+          "items": 41023,
+          "item": "segment",
+          "note": "sentence-transformers encode only, 14570 record(s) embedded"
+        },
+        {
+          "stage": "verity.embed",
+          "parent": null,
+          "seconds": 47.381687,
+          "items": null,
+          "item": null,
+          "note": ""
+        },
+        {
+          "stage": "verity.embed.other",
+          "parent": "verity.embed",
+          "seconds": 1.334373,
+          "items": null,
+          "item": null,
+          "note": "untimed remainder of the parent stage"
+        },
+        {
+          "stage": "verity.neighbors.build",
+          "parent": "verity.match",
+          "seconds": 0.020106,
+          "items": 14570,
+          "item": "record",
+          "note": "sklearn NearestNeighbors fit (cosine, brute)"
+        },
+        {
+          "stage": "verity.neighbors.query",
+          "parent": "verity.match",
+          "seconds": 3.657525,
+          "items": 14570,
+          "item": "record",
+          "note": "kneighbors top-30 + pair set"
+        },
+        {
+          "stage": "verity.score",
+          "parent": "verity.match",
+          "seconds": 36.038754,
+          "items": 363547,
+          "item": "pair",
+          "note": "per pair: field similarity, score, shared keys, evidence; plus the decision pass",
+          "per_item_ms": {
+            "p50": 0.0899,
+            "p95": 0.1486,
+            "max": 353.8707
+          }
+        },
+        {
+          "stage": "verity.write_outputs",
+          "parent": "verity.match",
+          "seconds": 11.035495,
+          "items": 386893,
+          "item": "row",
+          "note": "match_candidates.csv, scored_pairs.csv, scored_pairs_columns.json"
+        },
+        {
+          "stage": "verity.match",
+          "parent": null,
+          "seconds": 53.620092,
+          "items": null,
+          "item": null,
+          "note": ""
+        },
+        {
+          "stage": "verity.match.other",
+          "parent": "verity.match",
+          "seconds": 2.868212,
+          "items": null,
+          "item": null,
+          "note": "untimed remainder of the parent stage"
+        },
+        {
+          "stage": "verity.merge",
+          "parent": null,
+          "seconds": 2.7284,
+          "items": null,
+          "item": null,
+          "note": ""
+        },
+        {
+          "stage": "verity.explore",
+          "parent": null,
+          "seconds": 0.445637,
+          "items": null,
+          "item": null,
+          "note": "match_explorer.html and match_summary.csv"
+        },
+        {
+          "stage": "verity.total",
+          "parent": null,
+          "seconds": 124.004142,
+          "items": null,
+          "item": null,
+          "note": "from main.py import to the end of the run (interpreter start-up excluded)"
+        }
+      ],
+      "timing_summary": {
+        "cold_total_s": 124.004,
+        "warm_total_s": 123.525,
+        "model_load_s": 0.479,
+        "definition": "cold = total; warm = total minus model load"
+      }
+    }
+  ]
+}
