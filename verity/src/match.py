@@ -123,7 +123,6 @@ CSV_FALLBACK_JACCARD_MIN = 0.8
 # Code path: pairs whose text fields hold no multi-word value (part numbers, codes, ids) are
 # compared on code-like columns only. Chosen per run from the data, never by column name.
 CODE_NOSPACE_SHARE_MIN = 0.90          # a content column is code-like when this share of its non-empty values has no space
-CODE_CONFLICT_UNIQUENESS_MIN = 0.50    # a differing field counts as conflict only when its uniqueness ratio is at least this
 _CODE_DROP = re.compile(r"[\W_]+")
 
 # Internal delimiter for attribute fingerprint (av.type + sep + av.value)
@@ -1367,24 +1366,25 @@ def code_path_pair(
     attrs_a: dict[str, str],
     attrs_b: dict[str, str],
     code_cols: frozenset[str],
+    content_cols: frozenset[str],
     disc: dict[str, float],
-    uniqueness: dict[str, float],
 ) -> dict[str, Any] | None:
     """
-    Field-only score for a pair on the code-like columns both records have a value in
-    (None when there is no such column). Values are normalized (casefold, no spaces or
-    punctuation); equal values score 1.0, otherwise char_jaccard of the normalized values.
-    Weights are the learned discriminative weights renormalized over the shared fields (equal
-    weights when all are zero). Evidence mass: weight share of fields equal after
-    normalization. Conflict mass: weight share of fields with uniqueness ratio at least
-    CODE_CONFLICT_UNIQUENESS_MIN present in both that differ after normalization.
+    Field-only score for a pair, over every content column both records have a value in
+    (None when the two records share no value in a code-like column). Values are normalized
+    (casefold, no spaces or punctuation); equal values score 1.0, otherwise the order-aware
+    ratio of difflib.SequenceMatcher on the normalized values. Weights are the learned
+    discriminative weights renormalized over the shared fields (equal weights when all are
+    zero). Evidence mass: weight share of fields equal after normalization. Conflict: any
+    code-like field present in both records that differs after normalization; conflict_mass
+    is the weight share of those fields.
     """
     fields = []
-    for c in sorted(code_cols):
+    for c in sorted(content_cols | code_cols):
         na, nb = code_normalize(attrs_a.get(c, "")), code_normalize(attrs_b.get(c, ""))
         if na and nb:
             fields.append((c, na, nb))
-    if not fields:
+    if not any(c in code_cols for c, _, _ in fields):
         return None
     raw = {c: max(0.0, float(disc.get(c, 0.0))) for c, _, _ in fields}
     total = sum(raw.values())
@@ -1393,17 +1393,18 @@ def code_path_pair(
     contributions: dict[str, float] = {}
     equal_values: dict[str, str] = {}
     evidence_mass = conflict_mass = 0.0
+    conflict = False
     for c, na, nb in fields:
         equal = na == nb
-        sim = 1.0 if equal else char_jaccard(na, nb)
+        sim = 1.0 if equal else difflib.SequenceMatcher(None, na, nb).ratio()
         sims[c] = sim
         contributions[c] = weights[c] * sim
         if equal:
             evidence_mass += weights[c]
             equal_values[c] = na
-        elif float(uniqueness.get(c, 0.0)) >= CODE_CONFLICT_UNIQUENESS_MIN:
+        elif c in code_cols:
+            conflict = True
             conflict_mass += weights[c]
-    passes = evidence_mass >= MIN_EVIDENCE_MASS and conflict_mass <= MAX_CONFLICT_MASS
     return {
         "score_uncapped": sum(contributions.values()),
         "sims": sims,
@@ -1412,7 +1413,8 @@ def code_path_pair(
         "equal_values": equal_values,
         "evidence_mass": evidence_mass,
         "conflict_mass": conflict_mass,
-        "passes": passes,
+        "conflict": conflict,
+        "passes": evidence_mass >= MIN_EVIDENCE_MASS,
     }
 
 
@@ -1747,6 +1749,8 @@ def write_scored_pairs(
         for r in rows:
             nb = r["nb"]
             status = decision_status_for(r["score"], r["match_type"], effective_threshold)
+            if r["match_type"] == "code_conflict" and nb and nb["evidence_passes"]:
+                status = "review"                  # would have matched but for a conflicting code-like field
             status_counts[status] += 1
             w.writerow(
                 {
@@ -2134,12 +2138,7 @@ def main(
                 skipped_single_token_semantic_fields += 1
                 if not code_ctx:
                     code_ctx["cols"] = code_like_columns(sem_by_lower, rows_by_id, csv_compare_cols_lower)
-                    with weights_path.open(encoding="utf-8") as _wf:
-                        _wcols = (json.load(_wf).get("columns") or {})
-                    code_ctx["uniq"] = {
-                        col_key(k): float((m or {}).get("uniqueness_ratio", 0.0) or 0.0) for k, m in _wcols.items()
-                    }
-                cp = code_path_pair(aa, ab, code_ctx["cols"], disc, code_ctx["uniq"])
+                cp = code_path_pair(aa, ab, code_ctx["cols"], csv_compare_cols_lower, disc)
                 if cp is None:
                     skipped_no_code_field += 1
                     continue
@@ -2153,11 +2152,13 @@ def main(
                         "rid_b": str(cb["record_id"]),
                         "shared_attributes": eq_labels or "code_path",
                         "resolved_type": "code_signal",
+                        "code_path": True,
+                        "code_conflict": cp["conflict"],
                         "has_shared_keys": True,
                         "evidence_passes": cp["passes"],
                         "evidence_mass": cp["evidence_mass"],
                         "conflict_mass": cp["conflict_mass"],
-                        "evidence_detail": "code path: " + ("evidence pass" if cp["passes"] else "insufficient evidence"),
+                        "evidence_detail": "code path: " + ("code conflict" if cp["conflict"] else "evidence pass" if cp["passes"] else "insufficient evidence"),
                         "field_contributions": cp["contributions"],
                         "field_similarities": cp["sims"],
                         "score_uncapped": cp["score_uncapped"],
@@ -2307,7 +2308,21 @@ def main(
             embedding_only_threshold if not has_shared else threshold
         )
 
-        if score <= effective_score_threshold:
+        if item.get("code_path"):
+            # Code path: score >= threshold and evidence mass >= MIN_EVIDENCE_MASS is a match,
+            # unless a code-like field present in both records differs (code_conflict).
+            would_pass = score >= effective_score_threshold and evidence_passes
+            if item["code_conflict"]:
+                match_type = "code_conflict"
+                evidence_passes = would_pass       # for code_conflict rows: the pair would otherwise have passed
+            elif would_pass:
+                match_type = "code_signal"
+            elif score < effective_score_threshold:
+                match_type = "below_threshold"
+            else:
+                match_type = "insufficient_evidence"
+                dropped_no_minimum_evidence += 1
+        elif score <= effective_score_threshold:
             match_type = "below_threshold"
         elif not evidence_passes:
             dropped_no_minimum_evidence += 1

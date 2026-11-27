@@ -116,6 +116,7 @@ def facts(V: Path) -> dict:
     status, mtype, cross = Counter(), Counter(), Counter()
     first = None
     first_code = None
+    first_conflict = None
     n = 0
     for r in read_rows(V / "scored_pairs.csv"):
         n += 1
@@ -130,13 +131,17 @@ def facts(V: Path) -> dict:
             k = tuple(sorted((r["record_a"], r["record_b"])))
             if first_code is None or k < first_code[0]:
                 first_code = (k, r)
+        if r["match_type"] == "code_conflict":                                                    # the first code_conflict pair by sorted record ids, whatever its status
+            k = tuple(sorted((r["record_a"], r["record_b"])))
+            if first_conflict is None or k < first_conflict[0]:
+                first_conflict = (k, r)
     golden = Counter(int(r["member_count"]) for r in read_rows(V / "golden_records.csv"))
     groups: dict[str, int] = {}
     for r in read_rows(V / "match_summary.csv"):
         groups[r["match_id"]] = int(r["group_size"])
     matched_groups = Counter(s for m, s in groups.items() if not m.startswith("U"))
     singles = sum(1 for m in groups if m.startswith("U"))
-    return {"cl": cl, "aw": aw, "th": th, "sc": sc, "ri": ri, "rows": n, "status": status, "mtype": mtype, "cross": cross, "first": first, "first_code": first_code, "golden": golden,
+    return {"cl": cl, "aw": aw, "th": th, "sc": sc, "ri": ri, "rows": n, "status": status, "mtype": mtype, "cross": cross, "first": first, "first_code": first_code, "first_conflict": first_conflict, "golden": golden,
             "matched_groups": matched_groups, "singletons": singles, "n_records_in_summary": len(groups)}
 
 
@@ -281,14 +286,23 @@ def render(F: dict, input_facts: dict, command: str, title: str = "Second-schema
          md_table(["stage", "parent", "seconds", "items"], [[t["stage"], t.get("parent") or "", f"{t['seconds']:.3f}", t.get("items") if t.get("items") is not None else ""] for t in ri["timings"]]), "",
          f"Total (`verity.total`): {[t['seconds'] for t in ri['timings'] if t['stage'] == 'verity.total'][0]:.1f} s. Host: {ri['host']['cpu_model']}, {ri['host']['logical_cores']} logical cores.", ""]
     code_card = "code_path_pairs" in ri
-    card_pair = F.get("first_code") if code_card else F["first"]
-    rows, extra = explanation_card(card_pair) if card_pair else ([], {"result": "no code_signal match" if code_card else "no matched pair that is not an exact duplicate"})
-    L += ["## g. Explanation card: the first code_signal match, by sorted record ids" if code_card else
-          "## g. Explanation card: the first matched pair that is not an exact duplicate, by sorted record ids", "",
-          "Field names, similarities, weights and evidence similarities only; no values.", "",
-          md_table(["field", "similarity", "weight", "evidence similarity"], rows) if rows else
-          ("No code_signal match exists in this run, so there is no card to show. " if code_card else "No matched pair that is not an exact duplicate exists in this run, so there is no card to show. ") + " Exact duplicates are scored 1.0 by rule and carry no per-field data (section e).", "",
-          md_table(["item", "value"], [[k, v] for k, v in extra.items()]), "",
+    if code_card:
+        n_conf = F["mtype"].get("code_conflict", 0)
+        L += ["## e2. Code conflicts", "",
+              f"`code_conflict` pairs: **{n_conf:,}** (a code-like field present in both records differs after normalization, so the pair cannot be a match). "
+              "Decision status: review when the pair would otherwise have passed (score at or above the effective threshold and evidence mass at or above the minimum) or when its score is inside the review band; otherwise non_match. "
+              "For these rows `evidence_passes` is true exactly when the pair would otherwise have passed.", "",
+              md_table(["decision status", "code_conflict pairs"], [[st, f"{v:,}"] for (st, mt), v in sorted(F["cross"].items()) if mt == "code_conflict"]) if n_conf else "No code_conflict pair in this run.", ""]
+    cards = ([("the first code_signal match", F.get("first_code"), "no code_signal match"), ("the first code_conflict pair", F.get("first_conflict"), "no code_conflict pair")]
+             if code_card else [("the first matched pair that is not an exact duplicate", F["first"], "no matched pair that is not an exact duplicate")])
+    for n_card, (what_card, card_pair, none_msg) in enumerate(cards):
+        rows, extra = explanation_card(card_pair) if card_pair else ([], {"result": none_msg})
+        L += [f"## g{n_card + 1 if code_card else ''}. Explanation card: {what_card}, by sorted record ids", "",
+              "Field names, similarities, weights and evidence similarities only; no values.", "",
+              md_table(["field", "similarity", "weight", "evidence similarity"], rows) if rows else
+              f"There is no such pair in this run ({none_msg}), so there is no card to show. Exact duplicates are scored 1.0 by rule and carry no per-field data (section e).", "",
+              md_table(["item", "value"], [[k, v] for k, v in extra.items()]), ""]
+    L += [
           "## Copies in this folder", "",
           "Small copies of `column_classification.json`, `attribute_weights.json`, `learned_threshold.json`, `learned_rules.md` and `run_info.json`. In `attribute_weights.json` the values of "
           f"`source_csv` and `column_classification_path` were replaced by \"{PATH_REMOVED}\". The same marker replaces the input path in `learned_rules.md` and `input_csv` in `run_info.json`. "

@@ -44,29 +44,36 @@ class UnitTests(unittest.TestCase):
 
     def test_pair_scoring_by_hand(self):
         disc = {"id1": 0.6, "id2": 0.3, "cat": 0.1}
-        uniq = {"id1": 0.9, "id2": 0.7, "cat": 0.1}
-        cols = frozenset({"id1", "id2", "cat"})
+        code = frozenset({"id1", "id2"})
+        content = frozenset({"id1", "id2", "cat"})
         a = {"id1": "AB-12", "id2": "xy9", "cat": "Acme", "other": "zzz"}
         b = {"id1": "ab_12", "id2": "xy8", "cat": "ACME"}
-        r = M.code_path_pair(a, b, cols, disc, uniq)
+        r = M.code_path_pair(a, b, code, content, disc)
         self.assertAlmostEqual(r["weights"]["id1"], 0.6)
-        self.assertAlmostEqual(r["evidence_mass"], 0.7)                    # id1 and cat equal: 0.6 + 0.1
-        self.assertAlmostEqual(r["conflict_mass"], 0.3)                    # id2 differs and its uniqueness 0.7 >= 0.5
-        sim_id2 = 2 / 4                                                    # {x,y,9} vs {x,y,8}: 2 common of 4
-        self.assertAlmostEqual(r["sims"]["id2"], sim_id2)
-        self.assertAlmostEqual(r["score_uncapped"], 0.6 + 0.3 * sim_id2 + 0.1)
-        self.assertFalse(r["passes"])                                      # conflict 0.3 > 0.25
-        self.assertIsNone(M.code_path_pair({"id1": "x"}, {"id2": "x"}, cols, disc, uniq))   # no shared code-like value
-        self.assertIsNone(M.code_path_pair({"id1": "--"}, {"id1": "--"}, cols, disc, uniq))  # empty after normalizing
+        self.assertAlmostEqual(r["evidence_mass"], 0.7)                    # id1 and cat equal after normalizing: 0.6 + 0.1
+        self.assertAlmostEqual(r["conflict_mass"], 0.3)                    # id2 is code-like, present in both, and differs
+        self.assertTrue(r["conflict"])
+        self.assertAlmostEqual(r["sims"]["id2"], 2 * 2 / 6)                # SequenceMatcher: "xy" matches, 4 of 6 characters
+        self.assertAlmostEqual(r["score_uncapped"], 0.6 + 0.3 * (2 * 2 / 6) + 0.1)
+        self.assertTrue(r["passes"])                                       # evidence 0.7 >= MIN_EVIDENCE_MASS; the conflict is a separate rule
+        self.assertIsNone(M.code_path_pair({"id1": "x"}, {"id2": "x"}, code, content, disc))      # no shared code-like value
+        self.assertIsNone(M.code_path_pair({"id1": "--"}, {"id1": "--"}, code, content, disc))    # empty after normalizing
+        self.assertIsNone(M.code_path_pair({"cat": "x"}, {"cat": "x"}, code, content, disc))      # shared, but not in a code-like column
 
-    def test_low_uniqueness_difference_is_not_a_conflict(self):
-        r = M.code_path_pair({"id1": "k1", "cat": "red"}, {"id1": "k1", "cat": "blue"}, frozenset({"id1", "cat"}), {"id1": 0.5, "cat": 0.5}, {"id1": 0.9, "cat": 0.2})
+    def test_order_aware_similarity_is_not_a_character_set(self):
+        r = M.code_path_pair({"c": "AB1234"}, {"c": "AB4321"}, frozenset({"c"}), frozenset({"c"}), {"c": 1.0})
+        self.assertAlmostEqual(r["sims"]["c"], 0.5)                        # same characters, different order: not 1.0
+        self.assertTrue(r["conflict"])
+
+    def test_difference_in_a_field_that_is_not_code_like_is_not_a_conflict(self):
+        r = M.code_path_pair({"id1": "k1", "cat": "red"}, {"id1": "k1", "cat": "blue"}, frozenset({"id1"}), frozenset({"id1", "cat"}), {"id1": 0.5, "cat": 0.5})
+        self.assertFalse(r["conflict"])
         self.assertAlmostEqual(r["conflict_mass"], 0.0)
         self.assertAlmostEqual(r["evidence_mass"], 0.5)
         self.assertTrue(r["passes"])
 
     def test_equal_weights_when_all_learned_weights_are_zero(self):
-        r = M.code_path_pair({"a": "x", "b": "y"}, {"a": "x", "b": "z"}, frozenset({"a", "b"}), {}, {})
+        r = M.code_path_pair({"a": "x", "b": "y"}, {"a": "x", "b": "z"}, frozenset({"a", "b"}), frozenset({"a", "b"}), {})
         self.assertEqual(r["weights"], {"a": 0.5, "b": 0.5})
 
 
@@ -97,6 +104,9 @@ def code_rows() -> list[list[str]]:
         ["P1", "AB-9234", "4006381333931", "Orbit"], ["P2", "ab_9234", "4006-381-333931", "ORBIT"],        # same product, case and punctuation differ
         ["Q1", "KT-5521", "5012345678900", "Zenith"], ["Q2", "MX-9086", "7312345678123", "Zenith"],        # same vendor, different unique codes
         ["R1", "CD-2468", "8712345000017", "Vega"], ["R2", "CD-8642", "8712345000017", "Vega"],            # same gtin and vendor, conflicting unique code
+        ["T1", "EF-7777", "6001234567895", "Lyra"], ["T2", "ef 7777", "6001234567895", "Altair"],          # same codes, conflicting vendor
+        ["U1", "GH-3141", "9001234567893", "Rigel"], ["U2", "GH-3142", "9001234567893", "Rigel"],          # one character off in the unique code
+        ["V1", "AB1234", "9501234567899", "Sirius"], ["V2", "AB4321", "9501234567899", "Sirius"],          # same characters, other order
     ]
     return rows
 
@@ -132,12 +142,50 @@ class EndToEnd(unittest.TestCase):
             self.assertNotIn(("Q1", "Q2"), mc)
             if q:
                 self.assertNotEqual(q["match_type"], "code_signal")
-            r = sp[("R1", "R2")]                                                        # a conflicting unique code blocks the match
-            self.assertGreater(float(r["score"]), 0.82)                                 # the score alone would pass the threshold
-            self.assertEqual(r["match_type"], "insufficient_evidence")
-            self.assertEqual(r["evidence_passes"], "false")
-            self.assertGreater(float(r["conflict_mass"]), M.MAX_CONFLICT_MASS)
-            self.assertNotIn(("R1", "R2"), mc)
+                self.assertNotEqual(q["decision_status"], "match")
+            for pair in (("U1", "U2"), ("T1", "T2")):                                     # would have matched but for a conflicting code-like field: review, not match
+                r = sp[pair]
+                self.assertEqual(r["match_type"], "code_conflict", pair)
+                self.assertEqual(r["decision_status"], "review", pair)
+                self.assertEqual(r["evidence_passes"], "true", pair)                      # for code_conflict: the pair would otherwise have passed
+                self.assertGreaterEqual(float(r["score"]), 0.82, pair)
+                self.assertGreater(float(r["conflict_mass"]), 0.0, pair)
+                self.assertNotIn(pair, mc)
+            for pair in (("R1", "R2"), ("V1", "V2")):                                     # the unique code differs a lot: score below the threshold, still never a match
+                r = sp[pair]
+                self.assertEqual(r["match_type"], "code_conflict", pair)
+                self.assertNotEqual(r["decision_status"], "match", pair)
+                self.assertEqual(r["evidence_passes"], "false", pair)
+                self.assertLess(float(r["score"]), 0.82, pair)
+                self.assertNotIn(pair, mc)
+            v = json.loads(sp[("V1", "V2")]["field_similarities"])
+            self.assertAlmostEqual(min(v.values()), 0.5, places=5)                    # AB1234 vs AB4321 scores 0.5, not 1.0
+
+    def test_same_postal_code_and_house_number_with_a_different_name_does_not_match(self):
+        first = ["Amber", "Birch", "Cobalt", "Dune", "Ember", "Fjord", "Garnet", "Harbor"]
+        second = ["Holdings", "Partners", "Systems", "Logistics", "Textiles", "Marine"]
+        rows = [[f"A{i:03d}", f"{first[i % 8]} {second[(i * 5) % 6]} {i}", str(10 + i * 3), f"{20000 + (i % 25) * 111}"] for i in range(60)]
+        rows[1][1] = rows[0][1]                                                         # repeated names keep the name column below the primary-key cut (99% unique)
+        rows[3][1] = rows[2][1]
+        rows += [["S1", "Quill", "4521", "55102"], ["S2", "Rowan Cartage Limited", "4521", "55102"]]
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d).resolve()
+            src = d / "addr.csv"
+            with src.open("w", newline="", encoding="utf-8") as f:
+                w = csv.writer(f)
+                w.writerow(["Id", "Party Label", "House No", "Zip Area"])
+                w.writerows(rows)
+            ri = run_verity(REPO / "verity" / "src", src, d / "data", d)
+            sp = {(r["record_a"], r["record_b"]): r for r in read_csv(d / "data" / "scored_pairs.csv")}
+            mc = {(r["record_a"], r["record_b"]) for r in read_csv(d / "data" / "match_candidates.csv")}
+            self.assertGreater(ri["code_path_pairs"], 0)
+            r = sp[("S1", "S2")]
+            self.assertNotEqual(r["decision_status"], "match")
+            self.assertNotEqual(r["match_type"], "code_signal")
+            self.assertNotIn(("S1", "S2"), mc)
+            fs = json.loads(r["field_similarities"])
+            self.assertEqual(sorted(fs.values())[-2:], [1.0, 1.0])                    # house number and postal code equal; the name is compared too and is not
+            self.assertLess(min(fs.values()), 0.5)
 
     def test_company_style_file_is_identical_with_and_without_the_change(self):
         words = ["Amber", "Birch", "Cobalt", "Dune", "Ember", "Fjord", "Garnet", "Harbor", "Indigo", "Juniper", "Kestrel", "Lumen"]

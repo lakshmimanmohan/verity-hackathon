@@ -1,5 +1,5 @@
 """
-Tests for eval/blind_review.py on a synthetic run folder (no Verity run, arbitrary column names): which pairs count as code-path, the 3-group sample, that
+Tests for eval/blind_review.py on a synthetic run folder (no Verity run, arbitrary column names): which pairs count as code-path, the fill order of the sample, that
 review_pairs.csv carries no Verity decision, determinism with the seed, and the agreement arithmetic of --score.
 
   python eval/test_blind_review.py
@@ -62,32 +62,44 @@ class Tests(unittest.TestCase):
         self.assertFalse(BR.is_code_path({"t": "x w"}, {"t": "y z"}, ["t"]))         # both have a space: text path
         self.assertFalse(BR.is_code_path({"t": "x"}, {"t": "y"}, []))                # no guard column: the guard does not apply
 
-    def test_sample_groups_and_no_decision_in_the_review_file(self):
+    def test_fill_order_matches_then_review_then_random(self):
         with tempfile.TemporaryDirectory() as d:
             run, src = build(Path(d))
-            info = BR.write_review(run, src, run / "review", 0, 5, 3, 4)
+            info = BR.write_review([run], [src], run / "review", 0, 12, 4)
             self.assertEqual(info["code_path_pairs_available"], 15)
-            self.assertEqual(info["by_group"], {"code_signal_match": 5, "near_threshold": 3, "random_code_path": 4})
-            pairs = BR.read_rows(run / "review" / "review_pairs.csv")
-            self.assertEqual(len(pairs), 12)
-            self.assertEqual(list(pairs[0])[:3], ["pair_id", "record_a", "record_b"])
+            self.assertEqual(info["by_group"], {"code_signal_match": 4, "in_review": 4, "random_code_path": 4})      # 4 matches (cap), 4 review pairs exist, 4 random fill the rest
+            info = BR.write_review([run], [src], run / "review2", 0, 9, 20)
+            self.assertEqual(info["by_group"], {"code_signal_match": 6, "in_review": 3})                              # all 6 matches, then review pairs, then nothing is left to fill
+            info = BR.write_review([run], [src], run / "review3", 0, 30, 20)
+            self.assertEqual(info["written"], 15)                                                                       # never more than the code-path pairs available
+
+    def test_no_decision_in_the_review_file_and_two_runs_pool(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            run1, src1 = build(root / "one")
+            run2, src2 = build(root / "two")
+            info = BR.write_review([run1, run2], [src1, src2], root / "out", 0, 20, 5)
+            self.assertEqual(info["code_path_pairs_available"], 30)
+            self.assertEqual(info["written"], 20)
+            self.assertEqual(set(info["by_run"]), {"run"})                                                               # both run folders are named "run"
+            pairs = BR.read_rows(root / "out" / "review_pairs.csv")
+            self.assertEqual(list(pairs[0])[:4], ["pair_id", "run", "record_a", "record_b"])
             self.assertIn("Item Ref_a", pairs[0])
-            self.assertIn("your_label", pairs[0])
             self.assertTrue(all(r["your_label"] == "" for r in pairs))
-            text = (run / "review" / "review_pairs.csv").read_text(encoding="utf-8")
-            for word in ("code_signal", "review", "match_type", "decision", "score", "verity", "near_threshold", "random_code_path"):
+            text = (root / "out" / "review_pairs.csv").read_text(encoding="utf-8")
+            for word in ("code_signal", "review", "match_type", "decision", "score", "verity", "in_review", "random_code_path"):
                 self.assertNotIn(word, text)
             self.assertFalse(any(r["record_a"] in ("R6", "R7") for r in pairs))      # text-path and exact rows are never sampled
-            key = BR.read_rows(run / "review" / "review_key.csv")
+            key = BR.read_rows(root / "out" / "review_key.csv")
             self.assertEqual(sorted(r["pair_id"] for r in key), sorted(r["pair_id"] for r in pairs))
             self.assertEqual(sum(int(r["verity_match"]) for r in key if r["group"] == "code_signal_match"), 5)
 
     def test_same_seed_same_sample_and_other_seed_differs(self):
         with tempfile.TemporaryDirectory() as d:
             run, src = build(Path(d))
-            BR.write_review(run, src, run / "a", 0, 3, 2, 2)
-            BR.write_review(run, src, run / "b", 0, 3, 2, 2)
-            BR.write_review(run, src, run / "c", 1, 3, 2, 2)
+            BR.write_review([run], [src], run / "a", 0, 7, 3)
+            BR.write_review([run], [src], run / "b", 0, 7, 3)
+            BR.write_review([run], [src], run / "c", 1, 7, 3)
             read = lambda n: (run / n / "review_pairs.csv").read_text(encoding="utf-8")
             self.assertEqual(read("a"), read("b"))
             self.assertNotEqual(read("a"), read("c"))
@@ -96,7 +108,7 @@ class Tests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             run, src = build(Path(d))
             out = run / "review"
-            BR.write_review(run, src, out, 0, 4, 2, 2)
+            BR.write_review([run], [src], out, 0, 8, 4)
             key = {r["pair_id"]: r for r in BR.read_rows(out / "review_key.csv")}
             rows = BR.read_rows(out / "review_pairs.csv")
             # label every pair as Verity decided, except two pairs flipped and one left blank
