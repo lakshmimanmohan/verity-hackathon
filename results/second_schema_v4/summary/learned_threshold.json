@@ -1,0 +1,25 @@
+{
+  "threshold": 0.414924,
+  "columns_excluded_from_learning": [
+    "Id"
+  ],
+  "n_pairs": 1000,
+  "similarity_statistics": {
+    "min": 0.10671224577034744,
+    "max": 0.914476123059709,
+    "mean": 0.377064199925522,
+    "std": 0.08629846709178825
+  },
+  "plot_path": "(local path removed)\\threshold_similarity_distribution.png",
+  "n_rows": 14570,
+  "threshold_method": "low_cluster_mean_plus_k_sd",
+  "sd_multiplier": 2.0,
+  "low_cluster_n": 492,
+  "low_cluster_mean": 0.3087608789847747,
+  "low_cluster_std": 0.053081324893557436,
+  "kmeans_midpoint": 0.3759885570760614,
+  "cluster_center_low": 0.3087608789847747,
+  "cluster_center_high": 0.4432162351673481,
+  "inertia": 2.929021728386389,
+  "method": "KMeans (k=2) on 1D similarity scores of random row pairs; threshold = mean of the lower cluster + 2 x its standard deviation (population sd). The centroid midpoint is kept as kmeans_midpoint for reference."
+}

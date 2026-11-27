@@ -1,0 +1,31 @@
+{
+  "content_columns": [
+    "Alias Account",
+    "Box1 Number",
+    "City Name",
+    "House Number1",
+    "Postal Code",
+    "Street Name"
+  ],
+  "metadata_columns": [
+    "Id"
+  ],
+  "record_id_column": "Id",
+  "reasoning": {
+    "Alias Account": "included: 62.6% unique, 9115 distinct; human-readable text signal",
+    "Box1 Number": "included: 3.3% unique, 480 distinct; no metadata rule matched (entity-describing field)",
+    "City Name": "included: 21.2% unique, 3091 distinct; human-readable text signal",
+    "House Number1": "included: 20.2% unique, 2947 distinct; no metadata rule matched (entity-describing field)",
+    "Id": "excluded: [primary_key] primary key (uniqueness ratio 100.00% ≥ 99%) | [system_process_field] system process field (name contains: id; only flagged because values are 100% unique)",
+    "Postal Code": "included: 44.7% unique, 6506 distinct; no metadata rule matched (entity-describing field)",
+    "Street Name": "included: 24.0% unique, 3498 distinct; human-readable text signal"
+  },
+  "semantic_types": {
+    "Alias Account": "NAME",
+    "Street Name": "DESCRIPTIVE",
+    "House Number1": "DESCRIPTIVE",
+    "Box1 Number": "DESCRIPTIVE",
+    "Postal Code": "DESCRIPTIVE",
+    "City Name": "DESCRIPTIVE"
+  }
+}
