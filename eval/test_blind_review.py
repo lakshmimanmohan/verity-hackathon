@@ -88,6 +88,17 @@ class Tests(unittest.TestCase):
             info = BR.write_review([run], [src], run / "o2", 0, 12, 3, 10)
             self.assertEqual(info["by_group"], {"code_signal_match": 3, "code_conflict_review": 4, "random_code_path": 5})
 
+    def test_text_path_weak_signal_group(self):
+        with tempfile.TemporaryDirectory() as d:
+            run, src = build(Path(d))
+            info = BR.write_review([run], [src], run / "o", 0, 7, 6, 0, 1)
+            self.assertEqual(info["by_group"], {"code_signal_match": 6, "text_weak_signal_match": 1})              # R6-R7 is the only text-path weak_signal match
+            self.assertEqual(info["text_path_pairs_available"], 1)
+            pairs = BR.read_rows(run / "o" / "review_pairs.csv")
+            self.assertTrue(any(r["record_a"] == "R6" for r in pairs))
+            info = BR.write_review([run], [src], run / "o2", 0, 6, 6, 0, 0)
+            self.assertNotIn("text_weak_signal_match", info["by_group"])                                            # off by default
+
     def test_no_decision_in_the_review_file_and_two_runs_pool(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
@@ -102,7 +113,7 @@ class Tests(unittest.TestCase):
             self.assertIn("Item Ref_a", pairs[0])
             self.assertTrue(all(r["your_label"] == "" for r in pairs))
             text = (root / "out" / "review_pairs.csv").read_text(encoding="utf-8")
-            for word in ("code_signal", "review", "match_type", "decision", "score", "verity", "in_review", "code_conflict", "random_code_path"):
+            for word in ("code_signal", "review", "match_type", "decision", "score", "verity", "in_review", "code_conflict", "random_code_path", "text_weak"):
                 self.assertNotIn(word, text)
             self.assertFalse(any(r["record_a"] in ("R6", "R7") for r in pairs))      # text-path and exact rows are never sampled
             key = BR.read_rows(root / "out" / "review_key.csv")
@@ -148,6 +159,27 @@ class Tests(unittest.TestCase):
             self.assertEqual(res["agree"], 7 - flips)
             self.assertAlmostEqual(res["agreement"], round((7 - flips) / 7, 4))
             self.assertEqual(sum(res["confusion"].values()), 7)
+
+    def test_unsure_is_left_out_of_one_rate_and_counts_against_the_other(self):
+        with tempfile.TemporaryDirectory() as d:
+            run, src = build(Path(d))
+            out = run / "review"
+            BR.write_review([run], [src], out, 0, 6, 3)
+            key = {r["pair_id"]: r for r in BR.read_rows(out / "review_key.csv")}
+            rows = BR.read_rows(out / "review_pairs.csv")
+            for i, r in enumerate(rows):
+                v = int(key[r["pair_id"]]["verity_match"])
+                r["your_label"] = " Un Sure " if i == 0 else ("different" if v else "same") if i == 1 else ("same" if v else "different")
+            with (out / "review_pairs.csv").open("w", newline="", encoding="utf-8") as f:
+                w = csv.DictWriter(f, fieldnames=list(rows[0]))
+                w.writeheader()
+                w.writerows(rows)
+            res = BR.score(out, run.parent)
+            self.assertEqual((res["pairs"], res["labeled"], res["unsure"], res["skipped"], res["agree"]), (6, 5, 1, 0, 4))
+            self.assertAlmostEqual(res["agreement_excluding_unsure"], round(4 / 5, 4))
+            self.assertAlmostEqual(res["agreement_unsure_as_disagreement"], round(4 / 6, 4))
+            self.assertEqual(len(res["disagreements"]), 2)                                  # the flipped pair and the unsure pair
+            self.assertEqual(sum(g["unsure"] for g in res["by_group"].values()), 1)
 
     def test_label_parsing(self):
         self.assertEqual([BR.parse_label(x) for x in ("1", "Yes", " same ", "0", "NO", "different", "", "?", "maybe")], [1, 1, 1, 0, 0, 0, None, None, None])

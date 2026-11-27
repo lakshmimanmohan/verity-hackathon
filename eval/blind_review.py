@@ -12,7 +12,8 @@ Writes into --out-dir:
                     blank where a run's file has no such column), and an empty your_label column. It carries no Verity decision, score, group or match type.
   review_key.csv    pair_id, the sampling group, Verity's decision (match_type, decision_status, score, verity_match). Do not open it before labeling.
 
-Sample (seed 0 unless changed), filled in this order until --total pairs are chosen: every code_signal match, up to --max-match; then code-path pairs whose
+Sample (seed 0 unless changed), filled in this order until --total pairs are chosen: every code_signal match, up to --max-match; then, with --n-text-weak N, up to N
+text-path weak_signal matches (pairs that pass the multi-word test); then code-path pairs whose
 decision_status is review; then other code-path pairs, at random. With --max-conflict N the second step takes up to N code_conflict pairs in review instead, and
 every remaining place is filled with random code-path pairs. A code-path pair is a neighbor-scored pair for which the multi-word test fails (the two records
 do not each have a space in some NAME, DESCRIPTIVE or STREET_ADDRESS value), the same test match.py applies. The folder is gitignored; never commit it.
@@ -36,7 +37,7 @@ sys.path.insert(0, str(REPO / "verity" / "src"))
 from column_classification import col_key  # noqa: E402
 
 WRITE_TYPES = {"full_signal", "weak_signal", "embedding_only", "code_signal"}
-GROUP_NAMES = ("code_signal_match", "in_review", "random_code_path", "code_conflict_review")
+GROUP_NAMES = ("code_signal_match", "in_review", "random_code_path", "code_conflict_review", "text_weak_signal_match")
 YES, NO = {"1", "y", "yes", "same", "true", "match"}, {"0", "n", "no", "different", "false", "non_match", "nonmatch"}
 csv.field_size_limit(10**9)
 
@@ -73,20 +74,22 @@ def is_code_path(a: dict, b: dict, guard_cols: list[str]) -> bool:
 
 
 def code_path_pairs(run: Path, input_csv: Path | None) -> tuple[list[dict], list[str], list[str]]:
-    """The neighbor-scored code-path pairs of one run (rows tagged with the run name and the two records' content), and its content columns."""
+    """The neighbor-scored pairs of one run (rows tagged with the run name, the two records' content and whether the pair is code-path), and its content columns."""
     V, by_id, guard_cols, show_cols = load_inputs(run, input_csv)
     out = []
     for r in read_rows(V / "scored_pairs.csv"):
         if r["pair_source"] != "neighbor":
             continue
         a, b = by_id.get(r["record_a"]), by_id.get(r["record_b"])
-        if a is None or b is None or not is_code_path(a, b, guard_cols):
+        if a is None or b is None:
             continue
-        out.append({**r, "run": run.name, "_a": a, "_b": b})
+        out.append({**r, "run": run.name, "_a": a, "_b": b, "_code": is_code_path(a, b, guard_cols)})
     return out, show_cols, guard_cols
 
 
-def sample(pairs: list[dict], seed: int, total: int, max_match: int, max_conflict: int | None = None):
+def sample(pairs: list[dict], seed: int, total: int, max_match: int, max_conflict: int | None = None, n_text_weak: int = 0):
+    text_pairs = [r for r in pairs if not r["_code"]]
+    pairs = [r for r in pairs if r["_code"]]
     pairs = sorted(pairs, key=lambda r: (r["run"], r["record_a"], r["record_b"]))
     rng = random.Random(seed)
     chosen: list[tuple[str, dict]] = []
@@ -99,6 +102,8 @@ def sample(pairs: list[dict], seed: int, total: int, max_match: int, max_conflic
             chosen.append((group, r))
 
     take(GROUP_NAMES[0], [r for r in pairs if r["match_type"] == "code_signal" and r["decision_status"] == "match"], min(max_match, total))
+    take(GROUP_NAMES[4], sorted([r for r in text_pairs if r["match_type"] == "weak_signal" and r["decision_status"] == "match"], key=lambda r: (r["run"], r["record_a"], r["record_b"])),
+         min(n_text_weak, total - len(chosen)))
     if max_conflict is None:
         take(GROUP_NAMES[1], [r for r in pairs if r["decision_status"] == "review"], total - len(chosen))
     else:                                                                       # up to max_conflict code_conflict review pairs, then random code-path pairs
@@ -108,14 +113,14 @@ def sample(pairs: list[dict], seed: int, total: int, max_match: int, max_conflic
     return chosen
 
 
-def write_review(runs: list[Path], input_csvs: list[Path | None], out_dir: Path, seed: int, total: int, max_match: int, max_conflict: int | None = None) -> dict:
+def write_review(runs: list[Path], input_csvs: list[Path | None], out_dir: Path, seed: int, total: int, max_match: int, max_conflict: int | None = None, n_text_weak: int = 0) -> dict:
     pairs: list[dict] = []
     show_cols: list[str] = []
     for run, inp in zip(runs, input_csvs):
         p, cols, _ = code_path_pairs(run, inp)
         pairs += p
         show_cols += [c for c in cols if c not in show_cols]
-    chosen = sample(pairs, seed, total, max_match, max_conflict)
+    chosen = sample(pairs, seed, total, max_match, max_conflict, n_text_weak)
     out_dir.mkdir(parents=True, exist_ok=True)
     rid_cols = [f"{c}_{s}" for c in show_cols for s in ("a", "b")]
     with (out_dir / "review_pairs.csv").open("w", newline="", encoding="utf-8") as f, (out_dir / "review_key.csv").open("w", newline="", encoding="utf-8") as g:
@@ -127,7 +132,7 @@ def write_review(runs: list[Path], input_csvs: list[Path | None], out_dir: Path,
             pid = f"P{i:02d}"
             w.writerow([pid, r["run"], r["record_a"], r["record_b"], *[x for c in show_cols for x in (r["_a"].get(c, ""), r["_b"].get(c, ""))], ""])
             k.writerow([pid, group, r["match_type"], r["decision_status"], r["score"], int(r["match_type"] in WRITE_TYPES)])
-    return {"code_path_pairs_available": len(pairs), "written": len(chosen), "by_group": dict(Counter(g for g, _ in chosen)), "by_run": dict(Counter(r["run"] for _, r in chosen)),
+    return {"code_path_pairs_available": sum(1 for r in pairs if r["_code"]), "text_path_pairs_available": sum(1 for r in pairs if not r["_code"]), "written": len(chosen), "by_group": dict(Counter(g for g, _ in chosen)), "by_run": dict(Counter(r["run"] for _, r in chosen)),
             "out_dir": str(out_dir)}
 
 
@@ -136,26 +141,54 @@ def parse_label(x: str) -> int | None:
     return 1 if x in YES else 0 if x in NO else None
 
 
-def score(out_dir: Path) -> dict:
-    labels = {r["pair_id"]: parse_label(r.get("your_label", "")) for r in read_rows(out_dir / "review_pairs.csv")}
+def field_detail(results_dir: Path | None, run: str, a: str, b: str) -> dict:
+    """Per-field similarities and weights of one pair from the run's scored_pairs.csv (names and numbers only)."""
+    if results_dir is None:
+        return {}
+    sp = results_dir / run / "verity_data" / "scored_pairs.csv"
+    if not sp.is_file():
+        return {}
+    for r in read_rows(sp):
+        if {r["record_a"], r["record_b"]} == {a, b}:
+            return {"field_similarities": json.loads(r.get("field_similarities") or "{}"), "field_weights": json.loads(r.get("field_weights") or "{}")}
+    return {}
+
+
+def score(out_dir: Path, results_dir: Path | None = None) -> dict:
+    """Agreement of the filled labels with Verity's decision. Labels: same/yes/1, different/no/0, unsure (counted as a disagreement in the second rate, left out of the first), blank (skipped)."""
+    pairs = {r["pair_id"]: r for r in read_rows(out_dir / "review_pairs.csv")}
+    raw = {pid: (r.get("your_label", "") or "").strip().lower().replace(" ", "") for pid, r in pairs.items()}
+    labels = {pid: parse_label(x) for pid, x in raw.items()}
     key = {r["pair_id"]: r for r in read_rows(out_dir / "review_key.csv")}
-    res = {"pairs": len(key), "labeled": 0, "skipped": 0, "agree": 0, "by_group": {}, "confusion": Counter()}
+    res = {"pairs": len(key), "labeled": 0, "unsure": 0, "skipped": 0, "agree": 0, "by_group": {}, "confusion": Counter(), "disagreements": []}
     per: dict[str, Counter] = {}
     for pid, kr in key.items():
+        c = per.setdefault(kr["group"], Counter())
         lab = labels.get(pid)
-        if lab is None:
+        v = int(kr["verity_match"])
+        if raw.get(pid) == "unsure":
+            res["unsure"] += 1
+            c["unsure"] += 1
+        elif lab is None:
             res["skipped"] += 1
             continue
-        v = int(kr["verity_match"])
-        res["labeled"] += 1
-        res["agree"] += int(lab == v)
-        res["confusion"][f"verity_match={v},label={lab}"] += 1
-        c = per.setdefault(kr["group"], Counter())
-        c["labeled"] += 1
-        c["agree"] += int(lab == v)
-    res["by_group"] = {g: {"labeled": c["labeled"], "agree": c["agree"], "agreement": round(c["agree"] / c["labeled"], 4)} for g, c in per.items()}
-    res["agreement"] = round(res["agree"] / res["labeled"], 4) if res["labeled"] else None
-    tp, fp, fn = (res["confusion"].get(f"verity_match=1,label=1", 0), res["confusion"].get("verity_match=1,label=0", 0), res["confusion"].get("verity_match=0,label=1", 0))
+        else:
+            res["labeled"] += 1
+            res["agree"] += int(lab == v)
+            res["confusion"][f"verity_match={v},label={lab}"] += 1
+            c["labeled"] += 1
+            c["agree"] += int(lab == v)
+        if raw.get(pid) == "unsure" or lab != v:
+            pr = pairs[pid]
+            res["disagreements"].append({"pair": pid, "group": kr["group"], "label": raw.get(pid), "verity_match": v, "decision_status": kr["decision_status"],
+                                         "match_type": kr["match_type"], "score": kr["score"], **field_detail(results_dir, pr.get("run", ""), pr["record_a"], pr["record_b"])})
+    res["by_group"] = {g: {"pairs": sum(1 for k in key.values() if k["group"] == g), "labeled": c["labeled"], "unsure": c["unsure"], "agree": c["agree"],
+                           "agreement_excluding_unsure": round(c["agree"] / c["labeled"], 4) if c["labeled"] else None,
+                           "agreement_unsure_as_disagreement": round(c["agree"] / (c["labeled"] + c["unsure"]), 4) if c["labeled"] + c["unsure"] else None}
+                       for g, c in per.items()}
+    res["agreement"] = res["agreement_excluding_unsure"] = round(res["agree"] / res["labeled"], 4) if res["labeled"] else None
+    res["agreement_unsure_as_disagreement"] = round(res["agree"] / (res["labeled"] + res["unsure"]), 4) if res["labeled"] + res["unsure"] else None
+    tp, fp, fn = (res["confusion"].get("verity_match=1,label=1", 0), res["confusion"].get("verity_match=1,label=0", 0), res["confusion"].get("verity_match=0,label=1", 0))
     res["precision_of_verity_matches"] = round(tp / (tp + fp), 4) if tp + fp else None
     res["recall_among_labeled_same"] = round(tp / (tp + fn), 4) if tp + fn else None
     res["confusion"] = dict(res["confusion"])
@@ -171,17 +204,19 @@ def main() -> int:
     ap.add_argument("--total", type=int, default=40)
     ap.add_argument("--max-match", type=int, default=20)
     ap.add_argument("--max-conflict", type=int, default=None, help="take up to this many code_conflict review pairs instead of any review pairs; the rest are random code-path pairs")
+    ap.add_argument("--n-text-weak", type=int, default=0, help="also take up to this many text-path weak_signal matches (a separate group)")
+    ap.add_argument("--results-dir", type=Path, default=None, help="with --score: the folder that holds the run folders named in review_pairs.csv, for per-field detail of disagreements")
     ap.add_argument("--score", action="store_true", help="report agreement from the filled review_pairs.csv and review_key.csv")
     args = ap.parse_args()
     if args.score:
-        print(json.dumps(score(args.out_dir), indent=2))
+        print(json.dumps(score(args.out_dir, args.results_dir), indent=2))
         return 0
     if not args.runs:
         ap.error("give at least one run folder")
     inputs = args.input_csv or [None] * len(args.runs)
     if len(inputs) != len(args.runs):
         ap.error("--input-csv must be given once per run folder, or not at all")
-    print(json.dumps(write_review(args.runs, inputs, args.out_dir, args.seed, args.total, args.max_match, args.max_conflict), indent=2))
+    print(json.dumps(write_review(args.runs, inputs, args.out_dir, args.seed, args.total, args.max_match, args.max_conflict, args.n_text_weak), indent=2))
     return 0
 
 
