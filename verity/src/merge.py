@@ -35,7 +35,7 @@ SKIP_NEO_PROPS = frozenset({"embedding"})
 
 # Community detection edges: merge-quality signal types (incl. embedding-only neighbors).
 COMMUNITY_DETECTION_MATCH_TYPES = frozenset(
-    {"full_signal", "weak_signal", "embedding_only"}
+    {"full_signal", "weak_signal", "embedding_only", "code_signal"}
 )
 
 # After community detection: cap golden-record size; larger groups split by confidence.

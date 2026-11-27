@@ -42,7 +42,7 @@ DEFAULT_INPUT_PATH = None
 OUTPUT_PATH = data_dir() / "match_candidates.csv"
 # Align with ``merge.COMMUNITY_DETECTION_MATCH_TYPES`` — only these rows become merge edges.
 MATCH_CANDIDATES_WRITE_MATCH_TYPES = frozenset(
-    {"full_signal", "weak_signal", "embedding_only"}
+    {"full_signal", "weak_signal", "embedding_only", "code_signal"}
 )
 MATCH_CANDIDATES_FIELDNAMES = [
     "record_a",
@@ -119,6 +119,12 @@ SEMANTIC_ONLY_COSINE_MIN = 0.88
 EMBEDDING_ONLY_COSINE_MIN = 0.92
 FIELD_BLEND_MIN = 1.0 - EMBED_BLEND_MAX
 CSV_FALLBACK_JACCARD_MIN = 0.8
+
+# Code path: pairs whose text fields hold no multi-word value (part numbers, codes, ids) are
+# compared on code-like columns only. Chosen per run from the data, never by column name.
+CODE_NOSPACE_SHARE_MIN = 0.90          # a content column is code-like when this share of its non-empty values has no space
+CODE_CONFLICT_UNIQUENESS_MIN = 0.50    # a differing field counts as conflict only when its uniqueness ratio is at least this
+_CODE_DROP = re.compile(r"[\W_]+")
 
 # Internal delimiter for attribute fingerprint (av.type + sep + av.value)
 _ATTR_SEP = "\x1f"
@@ -1325,6 +1331,91 @@ def fingerprints_to_attr_map(fps: set[str]) -> dict[str, str]:
     return out
 
 
+def code_normalize(value: Any) -> str:
+    """Casefold and drop spaces and punctuation."""
+    return _CODE_DROP.sub("", str(value).casefold())
+
+
+def code_like_columns(
+    semantic_by_col: dict[str, str],
+    rows_by_id: dict[str, dict[str, str]],
+    content_cols: frozenset[str],
+) -> frozenset[str]:
+    """
+    Code-like columns, decided from this run's data: semantic type IDENTIFIER or
+    QUASI_IDENTIFIER, or any content column where at least CODE_NOSPACE_SHARE_MIN of the
+    non-empty values contain no space.
+    """
+    out: set[str] = set()
+    for col in sorted(content_cols):
+        if str(semantic_by_col.get(col, "")).strip().upper() in ("IDENTIFIER", "QUASI_IDENTIFIER"):
+            out.add(col)
+            continue
+        n = n_nospace = 0
+        for row in rows_by_id.values():
+            v = str(row.get(col, "") or "").strip()
+            if v:
+                n += 1
+                if " " not in v:
+                    n_nospace += 1
+        if n and n_nospace >= CODE_NOSPACE_SHARE_MIN * n:
+            out.add(col)
+    return frozenset(out)
+
+
+def code_path_pair(
+    attrs_a: dict[str, str],
+    attrs_b: dict[str, str],
+    code_cols: frozenset[str],
+    disc: dict[str, float],
+    uniqueness: dict[str, float],
+) -> dict[str, Any] | None:
+    """
+    Field-only score for a pair on the code-like columns both records have a value in
+    (None when there is no such column). Values are normalized (casefold, no spaces or
+    punctuation); equal values score 1.0, otherwise char_jaccard of the normalized values.
+    Weights are the learned discriminative weights renormalized over the shared fields (equal
+    weights when all are zero). Evidence mass: weight share of fields equal after
+    normalization. Conflict mass: weight share of fields with uniqueness ratio at least
+    CODE_CONFLICT_UNIQUENESS_MIN present in both that differ after normalization.
+    """
+    fields = []
+    for c in sorted(code_cols):
+        na, nb = code_normalize(attrs_a.get(c, "")), code_normalize(attrs_b.get(c, ""))
+        if na and nb:
+            fields.append((c, na, nb))
+    if not fields:
+        return None
+    raw = {c: max(0.0, float(disc.get(c, 0.0))) for c, _, _ in fields}
+    total = sum(raw.values())
+    weights = {c: (raw[c] / total if total > 1e-12 else 1.0 / len(fields)) for c in raw}
+    sims: dict[str, float] = {}
+    contributions: dict[str, float] = {}
+    equal_values: dict[str, str] = {}
+    evidence_mass = conflict_mass = 0.0
+    for c, na, nb in fields:
+        equal = na == nb
+        sim = 1.0 if equal else char_jaccard(na, nb)
+        sims[c] = sim
+        contributions[c] = weights[c] * sim
+        if equal:
+            evidence_mass += weights[c]
+            equal_values[c] = na
+        elif float(uniqueness.get(c, 0.0)) >= CODE_CONFLICT_UNIQUENESS_MIN:
+            conflict_mass += weights[c]
+    passes = evidence_mass >= MIN_EVIDENCE_MASS and conflict_mass <= MAX_CONFLICT_MASS
+    return {
+        "score_uncapped": sum(contributions.values()),
+        "sims": sims,
+        "weights": weights,
+        "contributions": contributions,
+        "equal_values": equal_values,
+        "evidence_mass": evidence_mass,
+        "conflict_mass": conflict_mass,
+        "passes": passes,
+    }
+
+
 def weighted_field_similarity(
     attrs_a: dict[str, str],
     attrs_b: dict[str, str],
@@ -1558,7 +1649,7 @@ def dedupe_match_candidate_rows(rows: list[dict[str, Any]]) -> list[dict[str, An
     exact duplicate first, then stronger match type (full_signal, weak_signal,
     embedding_only), then higher score. Ties keep the earlier row.
     """
-    type_rank = {"full_signal": 2, "weak_signal": 1}
+    type_rank = {"full_signal": 2, "weak_signal": 1, "code_signal": 1}
 
     def rank(r: dict[str, Any]) -> tuple[int, int, float]:
         is_exact = int(r.get("shared_attributes") == EXACT_DUPLICATE_SHARED_ATTRIBUTES)
@@ -1973,6 +2064,11 @@ def main(
     skipped_missing_embeddings = 0
     skipped_no_semantic_field = 0
     skipped_single_token_semantic_fields = 0
+    # Code path (pairs that fail the multi-word test): counters and per-run context, built on first use.
+    text_path_pairs = 0
+    code_path_pairs = 0
+    skipped_no_code_field = 0
+    code_ctx: dict[str, Any] = {}
     # Pairs that would have been embedding_only (no shared keys, high cosine, score above
     # the embedding-only threshold) but were blocked because both records share an input file.
     embedding_only_blocked_same_file = 0
@@ -2036,7 +2132,42 @@ def main(
             has_b = any(" " in str(ab.get(k, "")) for k in sem_fields)
             if not has_a or not has_b:
                 skipped_single_token_semantic_fields += 1
+                if not code_ctx:
+                    code_ctx["cols"] = code_like_columns(sem_by_lower, rows_by_id, csv_compare_cols_lower)
+                    with weights_path.open(encoding="utf-8") as _wf:
+                        _wcols = (json.load(_wf).get("columns") or {})
+                    code_ctx["uniq"] = {
+                        col_key(k): float((m or {}).get("uniqueness_ratio", 0.0) or 0.0) for k, m in _wcols.items()
+                    }
+                cp = code_path_pair(aa, ab, code_ctx["cols"], disc, code_ctx["uniq"])
+                if cp is None:
+                    skipped_no_code_field += 1
+                    continue
+                code_path_pairs += 1
+                eq_labels = "|".join(f"{c}:{v}" for c, v in sorted(cp["equal_values"].items()))
+                pending.append(
+                    {
+                        "score": min(cp["score_uncapped"], 1.0),
+                        "cos_part": cos_part,
+                        "rid_a": str(ca["record_id"]),
+                        "rid_b": str(cb["record_id"]),
+                        "shared_attributes": eq_labels or "code_path",
+                        "resolved_type": "code_signal",
+                        "has_shared_keys": True,
+                        "evidence_passes": cp["passes"],
+                        "evidence_mass": cp["evidence_mass"],
+                        "conflict_mass": cp["conflict_mass"],
+                        "evidence_detail": "code path: " + ("evidence pass" if cp["passes"] else "insufficient evidence"),
+                        "field_contributions": cp["contributions"],
+                        "field_similarities": cp["sims"],
+                        "score_uncapped": cp["score_uncapped"],
+                        "field_jaccard": cp["sims"],
+                        "field_weights": cp["weights"],
+                    }
+                )
+                pair_seconds.append(time.perf_counter() - t_pair)
                 continue
+        text_path_pairs += 1
 
         (
             field_sim,
@@ -2363,6 +2494,10 @@ def main(
         skipped_missing_embeddings=skipped_missing_embeddings,
         skipped_no_semantic_field=skipped_no_semantic_field,
         skipped_single_token_semantic_fields=skipped_single_token_semantic_fields,
+        text_path_pairs=text_path_pairs,
+        code_path_pairs=code_path_pairs,
+        skipped_no_code_field=skipped_no_code_field,
+        code_like_columns=sorted(code_ctx["cols"]) if code_ctx else [],
         embedding_only_blocked_same_file=embedding_only_blocked_same_file,
         scored_neighbor_pairs=len(rows_out),
         exact_duplicate_pairs=len(exact_pairs),

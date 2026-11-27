@@ -105,6 +105,17 @@ class CardAndFindingTests(unittest.TestCase):
         self.assertIn("0 have a space", text)
         self.assertNotIn("alias", text)
 
+    def test_code_path_finding_and_counters(self):
+        ri = {"neighbor_pairs": 100, "scored_neighbor_pairs": 90, "text_path_pairs": 60, "code_path_pairs": 30, "skipped_no_code_field": 8,
+              "skipped_single_token_semantic_fields": 38, "skipped_missing_store_context": 0, "skipped_missing_embeddings": 0, "skipped_no_semantic_field": 2,
+              "exact_duplicate_pairs": 5, "code_like_columns": ["a", "b"]}
+        text = "\n".join(SS.finding({"ri": ri}, False))
+        self.assertIn("**90 were scored** and 10 were skipped", text)                   # 8 + 2: the single-token total is not double counted
+        self.assertIn("**Text path:** 60 pairs", text)
+        self.assertIn("**Code path:** 30 pairs", text)
+        self.assertIn("`a`, `b`", text)
+        self.assertNotIn("first run of this file", text)
+
     def test_the_header_line(self):
         self.assertEqual(SS.HEADER_LINE, "EXPLORATORY: not a protocol result; no labels exist for this file, so no accuracy is claimed.")
 

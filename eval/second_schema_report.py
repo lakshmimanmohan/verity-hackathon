@@ -115,6 +115,7 @@ def facts(V: Path) -> dict:
     ri = json.loads((V / "run_info.json").read_text(encoding="utf-8"))["runs"][-1]
     status, mtype, cross = Counter(), Counter(), Counter()
     first = None
+    first_code = None
     n = 0
     for r in read_rows(V / "scored_pairs.csv"):
         n += 1
@@ -125,13 +126,17 @@ def facts(V: Path) -> dict:
             k = tuple(sorted((r["record_a"], r["record_b"])))
             if first is None or k < first[0]:
                 first = (k, r)
+        if r["match_type"] == "code_signal" and r["decision_status"] == "match":                  # the first code_signal match by sorted record ids
+            k = tuple(sorted((r["record_a"], r["record_b"])))
+            if first_code is None or k < first_code[0]:
+                first_code = (k, r)
     golden = Counter(int(r["member_count"]) for r in read_rows(V / "golden_records.csv"))
     groups: dict[str, int] = {}
     for r in read_rows(V / "match_summary.csv"):
         groups[r["match_id"]] = int(r["group_size"])
     matched_groups = Counter(s for m, s in groups.items() if not m.startswith("U"))
     singles = sum(1 for m in groups if m.startswith("U"))
-    return {"cl": cl, "aw": aw, "th": th, "sc": sc, "ri": ri, "rows": n, "status": status, "mtype": mtype, "cross": cross, "first": first, "golden": golden,
+    return {"cl": cl, "aw": aw, "th": th, "sc": sc, "ri": ri, "rows": n, "status": status, "mtype": mtype, "cross": cross, "first": first, "first_code": first_code, "golden": golden,
             "matched_groups": matched_groups, "singletons": singles, "n_records_in_summary": len(groups)}
 
 
@@ -195,6 +200,17 @@ def finding_single_token(F: dict) -> list[str]:
 def finding(F: dict, earlier_run_note: bool = True) -> list[str]:
     """A plain statement when the neighbor search scored nothing: every neighbor pair was skipped before scoring. When pairs were scored, a short note on what was scored and skipped."""
     ri = F["ri"]
+    if ri.get("scored_neighbor_pairs", 0) != 0 and "code_path_pairs" in ri:
+        sk = {k: ri.get(k, 0) for k in ("skipped_missing_store_context", "skipped_missing_embeddings", "skipped_no_semantic_field", "skipped_no_code_field")}
+        return ["### Neighbor pairs scored, by path", "",
+                f"Of {ri['neighbor_pairs']:,} neighbor pairs, **{ri['scored_neighbor_pairs']:,} were scored** and {sum(sk.values()):,} were skipped before scoring "
+                f"({', '.join(f'{k.replace(chr(95), chr(32))}: {v:,}' for k, v in sk.items())}). "
+                f"**Text path:** {ri['text_path_pairs']:,} pairs (embedding cosine blended with field similarity, the original scoring). "
+                f"**Code path:** {ri['code_path_pairs']:,} pairs that fail the multi-word test and were scored on code-like columns only (no embedding cosine); "
+                f"code-like columns chosen from the data: {', '.join(f'`{c}`' for c in ri.get('code_like_columns', [])) or '(none)'}. "
+                f"The exact-duplicate pairs ({ri['exact_duplicate_pairs']:,}) are scored 1.0 by rule. "
+                + ("The first run of this file (`results/second_schema/summary`) scored none of the neighbor pairs; this run follows the key fix and the code path. " if earlier_run_note else "")
+                + "No labels exist, so nothing here says whether a pair is right.", ""]
     if ri.get("scored_neighbor_pairs", 0) != 0:
         sk = {k: ri.get(k, 0) for k in ("skipped_missing_store_context", "skipped_missing_embeddings", "skipped_no_semantic_field", "skipped_single_token_semantic_fields")}
         return ["### Neighbor pairs scored", "",
@@ -248,7 +264,8 @@ def render(F: dict, input_facts: dict, command: str, title: str = "Second-schema
          f"Scored pairs: **{F['rows']:,}** (`scored_pairs_rows` in run_info: {ri['scored_pairs_rows']:,}); records in the index: {ri['n_records_in_index']:,}; neighbor search `{ri['nn_mode_resolved']}`.", "",
          md_table(["neighbor-search counter (run_info.json)", "pairs"],
                   [[k, f"{ri.get(k):,}"] for k in ("neighbor_pairs", "skipped_missing_store_context", "skipped_missing_embeddings", "skipped_no_semantic_field",
-                                                   "skipped_single_token_semantic_fields", "scored_neighbor_pairs", "exact_duplicate_pairs", "exact_only_pairs")]), "",
+                                                   "skipped_single_token_semantic_fields", "scored_neighbor_pairs", "exact_duplicate_pairs", "exact_only_pairs")] +
+                  [[k, f"{ri.get(k):,}"] for k in ("text_path_pairs", "code_path_pairs", "skipped_no_code_field") if k in ri]), "",
          md_table(["decision status", "pairs"], [[k, f"{v:,}"] for k, v in sorted(F["status"].items())]), "",
          md_table(["match type", "pairs"], [[k, f"{v:,}"] for k, v in sorted(F["mtype"].items())]), "",
          md_table(["decision status", "match type", "pairs"], [[a, b, f"{v:,}"] for (a, b), v in sorted(F["cross"].items())]), "",
@@ -263,11 +280,14 @@ def render(F: dict, input_facts: dict, command: str, title: str = "Second-schema
          "## f. Timing (run_info.json)", "",
          md_table(["stage", "parent", "seconds", "items"], [[t["stage"], t.get("parent") or "", f"{t['seconds']:.3f}", t.get("items") if t.get("items") is not None else ""] for t in ri["timings"]]), "",
          f"Total (`verity.total`): {[t['seconds'] for t in ri['timings'] if t['stage'] == 'verity.total'][0]:.1f} s. Host: {ri['host']['cpu_model']}, {ri['host']['logical_cores']} logical cores.", ""]
-    rows, extra = explanation_card(F["first"]) if F["first"] else ([], {"result": "no matched pair that is not an exact duplicate"})
-    L += ["## g. Explanation card: the first matched pair that is not an exact duplicate, by sorted record ids", "",
+    code_card = "code_path_pairs" in ri
+    card_pair = F.get("first_code") if code_card else F["first"]
+    rows, extra = explanation_card(card_pair) if card_pair else ([], {"result": "no code_signal match" if code_card else "no matched pair that is not an exact duplicate"})
+    L += ["## g. Explanation card: the first code_signal match, by sorted record ids" if code_card else
+          "## g. Explanation card: the first matched pair that is not an exact duplicate, by sorted record ids", "",
           "Field names, similarities, weights and evidence similarities only; no values.", "",
           md_table(["field", "similarity", "weight", "evidence similarity"], rows) if rows else
-          "No matched pair that is not an exact duplicate exists in this run, so there is no card to show. Exact duplicates are scored 1.0 by rule and carry no per-field data (section e).", "",
+          ("No code_signal match exists in this run, so there is no card to show. " if code_card else "No matched pair that is not an exact duplicate exists in this run, so there is no card to show. ") + " Exact duplicates are scored 1.0 by rule and carry no per-field data (section e).", "",
           md_table(["item", "value"], [[k, v] for k, v in extra.items()]), "",
           "## Copies in this folder", "",
           "Small copies of `column_classification.json`, `attribute_weights.json`, `learned_threshold.json`, `learned_rules.md` and `run_info.json`. In `attribute_weights.json` the values of "
