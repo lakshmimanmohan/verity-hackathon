@@ -1,0 +1,63 @@
+{
+  "source_csv": "(local path removed)",
+  "n_rows": 500,
+  "column_classification_path": "(local path removed)",
+  "columns_excluded_from_learning": [
+    "product_id",
+    "source_system"
+  ],
+  "n_pairs_sampled": 1000,
+  "columns": {
+    "manufacturer_part_number": {
+      "semantic_type": "DESCRIPTIVE",
+      "physical_kind": "STRING",
+      "uniqueness_ratio": 0.526,
+      "null_rate": 0.0,
+      "discriminative_score": 0.526,
+      "normalized_discriminative_weight": 0.248826,
+      "reliability_score": 0.399497,
+      "composite_weight": 0.487612
+    },
+    "member_part_number": {
+      "semantic_type": "IDENTIFIER",
+      "physical_kind": "STRING",
+      "uniqueness_ratio": 0.924,
+      "null_rate": 0.0,
+      "discriminative_score": 0.924,
+      "normalized_discriminative_weight": 0.437101,
+      "reliability_score": 0.1,
+      "composite_weight": 0.214411
+    },
+    "upc_ean": {
+      "semantic_type": "QUASI_IDENTIFIER",
+      "physical_kind": "STRING",
+      "uniqueness_ratio": 0.678,
+      "null_rate": 0.124,
+      "discriminative_score": 0.593928,
+      "normalized_discriminative_weight": 0.280959,
+      "reliability_score": 0.1,
+      "composite_weight": 0.137819
+    },
+    "manufacturer_code": {
+      "semantic_type": "DESCRIPTIVE",
+      "physical_kind": "STRING",
+      "uniqueness_ratio": 0.04,
+      "null_rate": 0.0,
+      "discriminative_score": 0.04,
+      "normalized_discriminative_weight": 0.018922,
+      "reliability_score": 1.0,
+      "composite_weight": 0.092818
+    },
+    "brand_code": {
+      "semantic_type": "DESCRIPTIVE",
+      "physical_kind": "STRING",
+      "uniqueness_ratio": 0.03,
+      "null_rate": 0.0,
+      "discriminative_score": 0.03,
+      "normalized_discriminative_weight": 0.014192,
+      "reliability_score": 0.967337,
+      "composite_weight": 0.06734
+    }
+  },
+  "notes": "discriminative_score = uniqueness_ratio * (1 - null_rate); normalized_discriminative_weight sums to 1. composite_weight merges discriminative weight with empirical cross-field reliability."
+}

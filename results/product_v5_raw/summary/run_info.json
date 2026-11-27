@@ -1,0 +1,205 @@
+{
+  "runs": [
+    {
+      "started_utc": "2026-11-27T19:36:52Z",
+      "run_mode": "full",
+      "input_csv": "(local path removed)",
+      "nn_mode_requested": "exact",
+      "nn_mode_source": "--nn-mode",
+      "annoy_installed": false,
+      "nn_mode_resolved": "exact",
+      "n_records_in_index": 500,
+      "git_commit": "0d2b4081f0206312733467f8e374a646a5ac319f",
+      "git_src_uncommitted_changes": true,
+      "python_version": "3.13.16",
+      "sentence_transformers_version": "6.3.0",
+      "embedding_model": "all-MiniLM-L6-v2",
+      "pythonhashseed": "0",
+      "model_cache_hit": true,
+      "embedding_model_revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+      "embedding_weights": "model.safetensors",
+      "neighbor_pairs": 11584,
+      "skipped_missing_store_context": 0,
+      "skipped_missing_embeddings": 0,
+      "skipped_no_semantic_field": 0,
+      "skipped_single_token_semantic_fields": 11584,
+      "text_path_pairs": 0,
+      "code_path_pairs": 11584,
+      "skipped_no_code_field": 0,
+      "code_like_columns": [
+        "brand_code",
+        "manufacturer_code",
+        "manufacturer_part_number",
+        "member_part_number",
+        "upc_ean"
+      ],
+      "identifying_columns": [
+        "manufacturer_part_number",
+        "member_part_number",
+        "upc_ean"
+      ],
+      "embedding_only_blocked_same_file": 0,
+      "scored_neighbor_pairs": 11584,
+      "exact_duplicate_pairs": 321,
+      "exact_only_pairs": 18,
+      "scored_pairs_rows": 11602,
+      "match_candidates_rows": 321,
+      "review_margin": 0.05,
+      "decision_status_counts": {
+        "match": 321,
+        "non_match": 11270,
+        "review": 11
+      },
+      "host": {
+        "cpu_model": "Intel(R) Core(TM) Ultra 7 265U",
+        "logical_cores": 14,
+        "ram_gb": 31.5,
+        "os": "Windows-11-10.0.26300-SP0",
+        "python": "3.13.16",
+        "torch_threads": 12,
+        "omp_num_threads": null
+      },
+      "timings": [
+        {
+          "stage": "verity.startup",
+          "parent": null,
+          "seconds": 7.909188,
+          "items": null,
+          "item": null,
+          "note": "main.py imports, argument parsing, data folder, store check"
+        },
+        {
+          "stage": "verity.rule_learning",
+          "parent": null,
+          "seconds": 3.55323,
+          "items": null,
+          "item": null,
+          "note": "rule_learner subprocess, including its Python start-up"
+        },
+        {
+          "stage": "verity.build_graph",
+          "parent": null,
+          "seconds": 0.056925,
+          "items": null,
+          "item": null,
+          "note": ""
+        },
+        {
+          "stage": "verity.embed.model_load",
+          "parent": "verity.embed",
+          "seconds": 0.531128,
+          "items": null,
+          "item": null,
+          "note": "model all-MiniLM-L6-v2; model_cache_hit=True"
+        },
+        {
+          "stage": "verity.embed.encode",
+          "parent": "verity.embed",
+          "seconds": 1.36886,
+          "items": 1098,
+          "item": "segment",
+          "note": "sentence-transformers encode only, 500 record(s) embedded"
+        },
+        {
+          "stage": "verity.embed",
+          "parent": null,
+          "seconds": 1.954243,
+          "items": null,
+          "item": null,
+          "note": ""
+        },
+        {
+          "stage": "verity.embed.other",
+          "parent": "verity.embed",
+          "seconds": 0.054255,
+          "items": null,
+          "item": null,
+          "note": "untimed remainder of the parent stage"
+        },
+        {
+          "stage": "verity.neighbors.build",
+          "parent": "verity.match",
+          "seconds": 0.016165,
+          "items": 500,
+          "item": "record",
+          "note": "sklearn NearestNeighbors fit (cosine, brute)"
+        },
+        {
+          "stage": "verity.neighbors.query",
+          "parent": "verity.match",
+          "seconds": 0.141632,
+          "items": 500,
+          "item": "record",
+          "note": "kneighbors top-30 + pair set"
+        },
+        {
+          "stage": "verity.score",
+          "parent": "verity.match",
+          "seconds": 0.828862,
+          "items": 11584,
+          "item": "pair",
+          "note": "per pair: field similarity, score, shared keys, evidence; plus the decision pass",
+          "per_item_ms": {
+            "p50": 0.0601,
+            "p95": 0.1118,
+            "max": 4.5363
+          }
+        },
+        {
+          "stage": "verity.write_outputs",
+          "parent": "verity.match",
+          "seconds": 0.310352,
+          "items": 11923,
+          "item": "row",
+          "note": "match_candidates.csv, scored_pairs.csv, scored_pairs_columns.json"
+        },
+        {
+          "stage": "verity.match",
+          "parent": null,
+          "seconds": 1.452875,
+          "items": null,
+          "item": null,
+          "note": ""
+        },
+        {
+          "stage": "verity.match.other",
+          "parent": "verity.match",
+          "seconds": 0.155864,
+          "items": null,
+          "item": null,
+          "note": "untimed remainder of the parent stage"
+        },
+        {
+          "stage": "verity.merge",
+          "parent": null,
+          "seconds": 0.094459,
+          "items": null,
+          "item": null,
+          "note": ""
+        },
+        {
+          "stage": "verity.explore",
+          "parent": null,
+          "seconds": 0.01314,
+          "items": null,
+          "item": null,
+          "note": "match_explorer.html and match_summary.csv"
+        },
+        {
+          "stage": "verity.total",
+          "parent": null,
+          "seconds": 15.036012,
+          "items": null,
+          "item": null,
+          "note": "from main.py import to the end of the run (interpreter start-up excluded)"
+        }
+      ],
+      "timing_summary": {
+        "cold_total_s": 15.036,
+        "warm_total_s": 14.505,
+        "model_load_s": 0.531,
+        "definition": "cold = total; warm = total minus model load"
+      }
+    }
+  ]
+}
