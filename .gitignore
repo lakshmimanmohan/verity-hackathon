@@ -67,3 +67,7 @@ results/product_v5_semantic/verity_data/
 results/second_schema_v5/verity_data/
 results/product_v5_review/
 results/second_schema_v5_review/
+
+# scan output with flagged values (never commit)
+results/_scan_flagged.txt
+_old_versions/
